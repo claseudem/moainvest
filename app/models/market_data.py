@@ -99,6 +99,11 @@ def get_quote(ticker: str) -> Quote:
     return _cached(f"quote:{ticker}", Config.QUOTE_CACHE_TTL, load)
 
 
+def get_display_name(ticker: str) -> str:
+    """Nombre del símbolo según Yahoo Finance (el ticker si no se encuentra)."""
+    return _get_display_name(ticker)
+
+
 def _get_display_name(ticker: str) -> str:
     """Nombre "bonito" del símbolo. Se cachea mucho más tiempo que el precio
     porque casi nunca cambia, y consultarlo (``Ticker.info``) es más lento

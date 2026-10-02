@@ -20,7 +20,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-AppKind = Literal["watchlists", "blank"]
+AppKind = Literal["watchlists", "sections", "blank"]
+
+
+@dataclass(frozen=True, slots=True)
+class AppSection:
+    """Subsección fija de una app de ``kind="sections"`` (una página propia)."""
+
+    slug: str
+    name: str
+    icon: str
+    endpoint: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,12 +40,28 @@ class App:
     icon: str
     endpoint: str
     kind: AppKind = "blank"
+    sections: tuple[AppSection, ...] = ()
 
 
 APPS: tuple[App, ...] = (
     App(slug="graficas", name="Gráficas", icon="📈", endpoint="graficas.index", kind="watchlists"),
     App(slug="analisis-varianza", name="Análisis de Varianza", icon="🧮", endpoint="varianza.index", kind="blank"),
-    App(slug="analisis-uec", name="Análisis UEC", icon="☢️", endpoint="uec.index", kind="blank"),
+    App(
+        slug="quant-stats",
+        name="QUANT STATS",
+        icon="🧪",
+        endpoint="quant_stats.index",
+        kind="sections",
+        sections=(
+            AppSection(
+                slug="fundamentales",
+                name="Gráficas y fundamentales estadísticos",
+                icon="📊",
+                endpoint="quant_stats.fundamentales",
+            ),
+            AppSection(slug="revision", name="Revisión analítica", icon="🔍", endpoint="quant_stats.revision"),
+        ),
+    ),
     App(slug="informes", name="Informes", icon="📨", endpoint="informes.index", kind="blank"),
 )
 

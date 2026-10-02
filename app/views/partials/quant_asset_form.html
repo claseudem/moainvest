@@ -1,0 +1,27 @@
+{# Selector de activo y período de QUANT STATS. ``keep`` son los parámetros
+   de la página actual que se conservan al cambiar de activo o período. #}
+<form class="varianza-form quant-asset-form" method="get">
+  <label class="revision-form__field">
+    <span>Activo (ticker de Yahoo Finance)</span>
+    <input class="varianza-form__input quant-asset-form__ticker" name="ticker" value="{{ ticker }}"
+           list="quant-known-assets" autocomplete="off" spellcheck="false" required
+           pattern="[A-Za-z0-9\^][A-Za-z0-9.\-=\^]{0,14}" title="Ej.: UEC, AAPL, ^GSPC, BTC-USD, EURUSD=X">
+    <datalist id="quant-known-assets">
+      {% for value, label in known_assets %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </datalist>
+  </label>
+  <label class="revision-form__field">
+    <span>Período</span>
+    <select name="period" class="varianza-form__select" onchange="this.form.submit()">
+      {% for value, label in periods.items() %}
+      <option value="{{ value }}" {% if value == period %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% for name, value in (keep or {}).items() if value %}
+  <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {% endfor %}
+  <button type="submit" class="varianza-form__btn">Analizar</button>
+</form>

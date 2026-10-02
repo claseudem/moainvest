@@ -40,6 +40,19 @@
         {% endfor %}
       </div>
       {% endif %}
+
+      {% if app.kind == "sections" and active_app and active_app.slug == app.slug %}
+      <div class="sidebar__watchlists">
+        {% for section in app.sections %}
+        <div class="sidebar__section {% if active_section == section.slug %}is-active{% endif %}">
+          <a class="sidebar__section-header" href="{{ url_for(section.endpoint, **(section_args or {})) }}">
+            <span class="sidebar__icon">{{ section.icon }}</span>
+            <span class="sidebar__section-name">{{ section.name }}</span>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </nav>

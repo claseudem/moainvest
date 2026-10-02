@@ -674,6 +674,181 @@ input[type="radio"] {
   margin-top: 0.75rem;
 }
 
+/* ---------- QUANT STATS: módulos y revisión analítica ---------- */
+
+.quant-modules {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.quant-modules a,
+.revision-chip {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+}
+
+.quant-modules a:hover,
+.quant-modules a.is-active,
+.revision-chip:hover,
+.revision-chip.is-active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.quant-asset-form {
+  align-items: flex-end;
+}
+
+.quant-asset-form__ticker {
+  width: 11rem;
+  text-transform: uppercase;
+}
+
+.quant-note {
+  margin: 0.6rem 0;
+}
+
+.revision-chips {
+  margin-top: 0.75rem;
+}
+
+.plot-card {
+  margin: 0;
+}
+
+.plot-card figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.quant-module-tag {
+  margin-left: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  font-family: ui-monospace, monospace;
+  color: var(--text-muted);
+}
+
+.stat-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.stat-groups--compare {
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  margin-bottom: 0.75rem;
+}
+
+.stat-groups .varianza-table td:not(:first-child),
+.stat-groups .varianza-table th:not(:first-child) {
+  text-align: right;
+}
+
+.plot-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 0.75rem;
+}
+
+.plot-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.plot-card:hover {
+  border-color: var(--accent);
+}
+
+.plot-card__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.plot-card__desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.plot-card img {
+  width: 100%;
+  margin-top: 0.35rem;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.revision-form {
+  align-items: flex-end;
+}
+
+.revision-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.revision-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.revision-nav__current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.revision-charts {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.revision-charts.is-compare {
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+}
+
+.revision-chart {
+  margin: 0;
+}
+
+.revision-chart figcaption {
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.revision-chart img {
+  width: 100%;
+  background: #fff;
+}
+
+.revision-chips {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 760px) {

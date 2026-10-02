@@ -97,3 +97,106 @@ def test_charts_render_without_data(monkeypatch, render):
     monkeypatch.setattr(quant.market_data, "get_candles", lambda *a, **k: [])
     monkeypatch.setattr(quant.market_data, "get_earnings", lambda *a, **k: [])
     assert render("FAKE").startswith(PNG_SIGNATURE)
+
+
+def test_stats_groups_cover_the_catalog(fake_market):
+    groups = quant.stats_groups(quant.daily_returns("UEC", "2y"))
+    assert [title for title, _ in groups] == [title for title, _ in quant.STAT_GROUPS]
+    metrics = {m.label: m for _, group in groups for m in group}
+    # Las métricas de las tarjetas de resumen no se repiten en las tablas.
+    assert not {label for label, _, _ in quant.SUMMARY_STATS} & metrics.keys()
+    assert metrics["CAGR"].display.endswith("%")
+    assert metrics["Máx. días ganadores seguidos"].display.isdigit()
+
+
+def test_stats_groups_empty_without_data():
+    import pandas as pd
+
+    assert quant.stats_groups(pd.Series(dtype=float)) == []
+
+
+def test_stat_metric_display_handles_missing_values():
+    assert quant.StatMetric("x", None, "pct").display == "—"
+    assert quant.StatMetric("x", None, "pct").sign == ""
+    assert quant.StatMetric("x", -0.1234, "pct").display == "-12.34%"
+    assert quant.StatMetric("x", -0.1234, "pct").sign == "is-down"
+
+
+@pytest.mark.parametrize("slug", [p.slug for p in quant.PLOTS])
+def test_every_qs_plot_renders_png(monkeypatch, slug):
+    # El benchmark necesita datos distintos: quantstats cachea los resampleos
+    # por contenido y dos series idénticas colisionan al unirlas.
+    monkeypatch.setattr(
+        quant.market_data, "get_candles", lambda ticker, **k: _fake_candles(400 if ticker == "SPY" else 420)
+    )
+    png = quant.render_qs_plot("UEC", "2y", slug, benchmark="SPY", window=63)
+    assert png.startswith(b"\x89PNG")
+
+
+def test_qs_plot_renders_without_data(monkeypatch):
+    monkeypatch.setattr("app.models.quant.market_data.get_candles", lambda *a, **k: [])
+    assert quant.render_qs_plot("UEC", "2y", "snapshot").startswith(b"\x89PNG")
+
+
+def test_tearsheet_html(fake_market):
+    html = quant.tearsheet_html("UEC", "2y", benchmark="SPY")
+    assert "UEC · Tearsheet" in html
+
+
+def test_tearsheet_none_without_data(monkeypatch):
+    monkeypatch.setattr("app.models.quant.market_data.get_candles", lambda *a, **k: [])
+    assert quant.tearsheet_html("UEC", "2y") is None
+
+
+def test_normalize_ticker():
+    assert quant.normalize_ticker(" aapl ") == "AAPL"
+    for ticker in ("^GSPC", "BTC-USD", "EURUSD=X", "GC=F", "BRK-B", "WALMEX.MX"):
+        assert quant.normalize_ticker(ticker) == ticker
+    for bad in (None, "", "<script>", "A B", "X" * 20):
+        assert quant.normalize_ticker(bad) is None
+
+
+def test_asset_name_prefers_watchlist_label(monkeypatch):
+    monkeypatch.setattr(quant.market_data, "get_display_name", lambda ticker: f"yahoo {ticker}")
+    assert quant.asset_name("UEC") == "Uranium Energy Corp"
+    assert quant.asset_name("ZZZZ") == "yahoo ZZZZ"
+
+
+def test_montecarlo_summary(fake_market):
+    returns = quant.daily_returns("FAKE", "2y")
+    summary = quant.montecarlo_summary(returns, sims=250, bust=-0.2, goal=0.5)
+    assert summary.sims == 250
+    assert 0 <= summary.bust_probability <= 1
+    # Barajar no cambia el retorno final: goal es 0% o 100%.
+    assert summary.goal_probability in (0.0, 1.0)
+    assert summary.terminal["median"] == pytest.approx(quant.performance_metrics(returns).cumulative_return)
+    assert summary.max_drawdown["percentile_5"] <= summary.max_drawdown["median"] <= 0
+    # Semilla fija: mismas simulaciones en la página y en la gráfica.
+    assert quant.montecarlo_summary(returns, sims=250) == quant.montecarlo_summary(returns, sims=250)
+
+
+def test_montecarlo_summary_none_without_data():
+    import pandas as pd
+
+    assert quant.montecarlo_summary(pd.Series(dtype=float)) is None
+
+
+def test_montecarlo_chart_is_png(fake_market):
+    assert quant.render_montecarlo_chart("FAKE", "2y", sims=250).startswith(b"\x89PNG")
+
+
+def test_compare_stats_puts_asset_and_benchmark_side_by_side(monkeypatch):
+    monkeypatch.setattr(
+        quant.market_data, "get_candles", lambda ticker, **k: _fake_candles(400 if ticker == "SPY" else 420)
+    )
+    returns = quant.daily_returns("UEC", "2y")
+    groups = quant.compare_stats(returns, quant.benchmark_returns("SPY", "2y", returns.index))
+    assert groups[0][0] == "Resumen"
+    first = groups[0][1][0]
+    assert first.label == "Retorno acumulado"
+    assert first.asset.value != first.benchmark.value
+
+
+def test_absolute_plots_exclude_benchmark_only_plots():
+    assert all(not p.requires_benchmark for p in quant.ABSOLUTE_PLOTS)
+    assert "rolling-beta" in {p.slug for p in quant.BENCHMARK_PLOTS}

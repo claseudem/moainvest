@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}QUANT STATS · Revisión analítica {{ ticker }} · Market Dashboard{% endblock %}
+
+{% macro plot_src(for_period) -%}
+  {{ url_for('api.quant_plot', ticker=ticker, slug=plot.slug, period=for_period,
+             benchmark=(benchmark if mode == 'benchmark' else None),
+             window=(window if plot.rolling else None)) }}
+{%- endmacro %}
+
+{% macro revision_url(chart) -%}
+  {{ url_for('quant_stats.revision', ticker=ticker, mode=mode, chart=chart, period=period,
+             compare=compare, benchmark=benchmark, window=window) }}
+{%- endmacro %}
+
+{% block content %}
+<div class="varianza-page">
+  <header class="varianza-header">
+    <h1>Revisión analítica · {{ ticker }}</h1>
+    <p class="varianza-header__hint">
+      <strong>{{ asset_name }}</strong> en comparación: contra un benchmark, entre dos períodos o entre sus
+      reportes de resultados. Las gráficas y métricas del activo por sí solo están en
+      <a href="{{ url_for('quant_stats.fundamentales', ticker=ticker, period=period) }}">Gráficas y fundamentales estadísticos</a>.
+    </p>
+  </header>
+
+  {% with keep={"mode": mode, "chart": plot.slug if plot else None, "benchmark": benchmark, "compare": compare, "window": window} %}
+  {% include "partials/quant_asset_form.html" %}
+  {% endwith %}
+
+  <nav class="quant-modules revision-modes">
+    {% for value, label in modes.items() %}
+    <a class="{% if value == mode %}is-active{% endif %}"
+       href="{{ url_for('quant_stats.revision', ticker=ticker, mode=value, period=period) }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+
+  {% if mode == "earnings" %}
+  <section class="volatility-section">
+    <h2>Últimos {{ earnings_count }} earnings</h2>
+    {% if earnings %}
+    <p class="varianza-header__hint">
+      Cada reporte frente al anterior: distancia en días, variación del EPS reportado y variación del precio
+      de cierre (primera sesión tras cada reporte).
+    </p>
+    <div class="volatility-chart-wrap">
+      <img src="{{ url_for('api.quant_earnings', ticker=ticker, count=earnings_count) }}"
+           alt="Comparación de los últimos reportes de resultados de {{ ticker }}" loading="lazy">
+    </div>
+    <div class="varianza-table-wrap">
+      <table class="varianza-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>EPS estimado</th>
+            <th>EPS reportado</th>
+            <th>Sorpresa</th>
+            <th>Días desde anterior</th>
+            <th>Δ EPS vs. anterior</th>
+            <th>Cierre</th>
+            <th>Δ precio vs. anterior</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in earnings %}
+          <tr>
+            <td>{{ r.label }}</td>
+            <td>{{ "%.2f"|format(r.eps_estimate) if r.eps_estimate is not none else "—" }}</td>
+            <td class="{{ 'is-up' if r.eps_beat else ('is-down' if r.eps_beat is sameas false else '') }}">{{ "%.2f"|format(r.eps_reported) }}</td>
+            <td>{{ "%+.0f%%"|format(r.surprise_percent) if r.surprise_percent is not none else "—" }}</td>
+            <td>{{ r.days_since_previous if r.days_since_previous is not none else "—" }}</td>
+            <td>{{ "%+.2f"|format(r.eps_change) if r.eps_change is not none else "—" }}</td>
+            <td>{{ "%.2f"|format(r.close) if r.close is not none else "—" }}</td>
+            <td class="{{ '' if r.price_change_percent is none else ('is-up' if r.price_change_percent >= 0 else 'is-down') }}">
+              {{ "%+.1f%%"|format(r.price_change_percent) if r.price_change_percent is not none else "—" }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="varianza-status is-error">
+      No hay datos de earnings para {{ ticker }} (los índices, ETFs, divisas y criptos no publican resultados).
+    </p>
+    {% endif %}
+  </section>
+
+  {% else %}
+  <form class="varianza-form revision-form" method="get">
+    <input type="hidden" name="ticker" value="{{ ticker }}">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    <input type="hidden" name="period" value="{{ period }}">
+    <label class="revision-form__field">
+      <span>Gráfica</span>
+      <select name="chart" class="varianza-form__select" onchange="this.form.submit()">
+        {% for p in plots %}
+        <option value="{{ p.slug }}" {% if p.slug == plot.slug %}selected{% endif %}>{{ p.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if mode == "benchmark" %}
+    <label class="revision-form__field">
+      <span>Benchmark (cualquier ticker)</span>
+      <input class="varianza-form__input" name="benchmark" value="{{ benchmark }}" list="quant-benchmarks"
+             autocomplete="off" spellcheck="false" required
+             pattern="[A-Za-z0-9\^][A-Za-z0-9.\-=\^]{0,14}" onchange="this.form.submit()">
+      <datalist id="quant-benchmarks">
+        {% for value, label in benchmarks.items() %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+        {% for value, label in known_assets %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </datalist>
+    </label>
+    {% else %}
+    <label class="revision-form__field">
+      <span>Comparar con</span>
+      <select name="compare" class="varianza-form__select" onchange="this.form.submit()">
+        {% for value, label in periods.items() if value != period %}
+        <option value="{{ value }}" {% if value == compare %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    {% if plot.rolling %}
+    <label class="revision-form__field">
+      <span>Ventana móvil</span>
+      <select name="window" class="varianza-form__select" onchange="this.form.submit()">
+        {% for value, label in windows.items() %}
+        <option value="{{ value }}" {% if value == window %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% else %}
+    <input type="hidden" name="window" value="{{ window }}">
+    {% endif %}
+    <button type="submit" class="varianza-form__btn">Aplicar</button>
+  </form>
+
+  <div class="revision-nav">
+    <a class="varianza-form__btn varianza-form__btn--secondary" href="{{ revision_url(previous_plot.slug) }}">← {{ previous_plot.label }}</a>
+    <div class="revision-nav__current">
+      <strong>{{ plot.label }}</strong>
+      <span class="varianza-header__hint">{{ plot.description }}</span>
+    </div>
+    <a class="varianza-form__btn varianza-form__btn--secondary" href="{{ revision_url(next_plot.slug) }}">{{ next_plot.label }} →</a>
+  </div>
+
+  <div class="revision-charts {% if mode == 'periodos' %}is-compare{% endif %}">
+    <figure class="volatility-chart-wrap revision-chart">
+      <figcaption>
+        {% if mode == "benchmark" %}{{ ticker }} vs. {{ benchmark }} · {{ periods[period] }}{% else %}{{ periods[period] }}{% endif %}
+      </figcaption>
+      <a href="{{ plot_src(period) }}" target="_blank" title="Abrir a tamaño completo">
+        <img src="{{ plot_src(period) }}" alt="{{ plot.label }} de {{ ticker }} · {{ periods[period] }}">
+      </a>
+    </figure>
+    {% if mode == "periodos" %}
+    <figure class="volatility-chart-wrap revision-chart">
+      <figcaption>{{ periods[compare] }}</figcaption>
+      <a href="{{ plot_src(compare) }}" target="_blank" title="Abrir a tamaño completo">
+        <img src="{{ plot_src(compare) }}" alt="{{ plot.label }} de {{ ticker }} · {{ periods[compare] }}">
+      </a>
+    </figure>
+    {% endif %}
+  </div>
+
+  <div class="revision-chips">
+    {% for p in plots %}
+    <a class="revision-chip {% if p.slug == plot.slug %}is-active{% endif %}" href="{{ revision_url(p.slug) }}">{{ p.label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if mode == "benchmark" %}
+  <section class="volatility-section">
+    <h2>Métricas: {{ ticker }} vs. {{ benchmark }}</h2>
+    <p class="varianza-header__hint">{{ asset_name }} frente a {{ benchmark_name }}, sobre las mismas sesiones.</p>
+    {% if comparison %}
+    <div class="stat-groups stat-groups--compare">
+      {% for title, rows in comparison %}
+      <div class="varianza-table-wrap">
+        <table class="varianza-table">
+          <thead><tr><th>{{ title }}</th><th>{{ ticker }}</th><th>{{ benchmark }}</th></tr></thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td class="{{ row.asset.sign }}">{{ row.asset.display }}</td>
+              <td class="{{ row.benchmark.sign }}">{{ row.benchmark.display }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="varianza-status is-error">No se pudieron descargar precios de {{ ticker }} o de {{ benchmark }}.</p>
+    {% endif %}
+    <form class="varianza-form" method="get" action="{{ url_for('quant_stats.tearsheet') }}" target="_blank">
+      <input type="hidden" name="ticker" value="{{ ticker }}">
+      <input type="hidden" name="period" value="{{ period }}">
+      <input type="hidden" name="benchmark" value="{{ benchmark }}">
+      <button type="submit" class="varianza-form__btn">Tearsheet {{ ticker }} vs. {{ benchmark }}</button>
+      <button type="submit" name="download" value="1" class="varianza-form__btn varianza-form__btn--secondary">Descargar HTML</button>
+    </form>
+  </section>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

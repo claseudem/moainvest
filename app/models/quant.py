@@ -2,15 +2,33 @@
 y riesgo, drawdown, heatmap de retornos mensuales y comparación de los
 últimos reportes de resultados (earnings).
 
+También expone los 3 módulos principales de quantstats tal cual:
+
+- ``stats``: catálogo agrupado de métricas (``stats_groups``).
+- ``plots``: catálogo de gráficas nativas de quantstats (``PLOTS`` y
+  ``render_qs_plot``), con benchmark y ventana móvil opcionales.
+- ``reports``: tearsheet HTML completo (``tearsheet_html``).
+
+Además, la simulación Monte Carlo de ``quantstats.stats.montecarlo``
+(``montecarlo_summary`` / ``render_montecarlo_chart``) y la comparación de
+métricas entre un activo y su benchmark (``compare_stats``). Todo funciona
+con cualquier ticker de Yahoo Finance (``normalize_ticker``).
+
 Igual que ``analysis``, reutiliza los datos ya descargados/cacheados por
 ``market_data`` y genera las gráficas en el servidor como PNG.
 """
 from __future__ import annotations
 
 import io
+import os
+import re
+import tempfile
+import threading
 import time
+import warnings
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Literal
 
 import matplotlib
 
@@ -29,6 +47,32 @@ from app.models.analysis import _PALETTE
 UP_COLOR = "#0F8A5F"
 DOWN_COLOR = "#D93025"
 MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+
+# --------------------------------------------------------------------------
+# Activos
+# --------------------------------------------------------------------------
+
+# Tickers de Yahoo Finance: letras, dígitos y los símbolos de índices (^GSPC),
+# divisas (EURUSD=X), futuros (GC=F), clases de acciones (BRK-B) y mercados (.MX).
+_TICKER_RE = re.compile(r"^[A-Z0-9^][A-Z0-9.\-=^]{0,14}$")
+
+
+def normalize_ticker(value: str | None) -> str | None:
+    """Ticker en mayúsculas si tiene un formato válido; ``None`` si no."""
+    ticker = (value or "").strip().upper()
+    return ticker if _TICKER_RE.match(ticker) else None
+
+
+def asset_name(ticker: str) -> str:
+    """Nombre del activo: la etiqueta de las watchlists o, si no está, la de Yahoo Finance."""
+    from app.models.watchlists import WATCHLISTS
+
+    for watchlist in WATCHLISTS:
+        for symbol in watchlist.symbols:
+            if symbol.ticker == ticker and symbol.label:
+                return symbol.label
+    return market_data.get_display_name(ticker)
 
 
 # --------------------------------------------------------------------------
@@ -333,6 +377,382 @@ def _plot_price_between_earnings(ax, ticker: str, reports: list[EarningsReport])
     if not window.empty:
         ax.set_xlim(window.index[0], window.index[-1])
     ax.tick_params(axis="x", labelsize=8)
+
+
+# --------------------------------------------------------------------------
+# Módulo quantstats.stats: catálogo agrupado de métricas
+# --------------------------------------------------------------------------
+
+StatKind = Literal["pct", "share", "ratio", "int"]  # share: porcentaje sin signo ni color
+
+
+@dataclass(frozen=True, slots=True)
+class StatMetric:
+    label: str
+    value: float | None
+    kind: StatKind
+
+    @property
+    def display(self) -> str:
+        if self.value is None:
+            return "—"
+        if self.kind == "pct":
+            return f"{self.value * 100:+.2f}%"
+        if self.kind == "share":
+            return f"{self.value * 100:.2f}%"
+        if self.kind == "int":
+            return f"{self.value:.0f}"
+        return f"{self.value:.2f}"
+
+    @property
+    def sign(self) -> str:
+        """``is-up``/``is-down`` para colorear retornos; vacío para ratios."""
+        if self.value is None or self.kind != "pct":
+            return ""
+        return "is-up" if self.value >= 0 else "is-down"
+
+
+_StatSpec = tuple[str, Callable[[pd.Series], Any], StatKind]
+
+STAT_GROUPS: tuple[tuple[str, tuple[_StatSpec, ...]], ...] = (
+    (
+        "Rendimiento",
+        (
+            ("CAGR", qs.stats.cagr, "pct"),
+            ("Retorno diario esperado", qs.stats.expected_return, "pct"),
+            ("Mejor día", qs.stats.best, "pct"),
+            ("Peor día", qs.stats.worst, "pct"),
+            ("Mejor mes", lambda r: qs.stats.best(r, aggregate="ME"), "pct"),
+            ("Peor mes", lambda r: qs.stats.worst(r, aggregate="ME"), "pct"),
+        ),
+    ),
+    (
+        "Riesgo",
+        (
+            ("Value at Risk diario (95%)", qs.stats.value_at_risk, "pct"),
+            ("Expected Shortfall (cVaR)", qs.stats.conditional_value_at_risk, "pct"),
+            ("Ulcer index", qs.stats.ulcer_index, "ratio"),
+            ("Asimetría (skew)", qs.stats.skew, "ratio"),
+            ("Curtosis", qs.stats.kurtosis, "ratio"),
+        ),
+    ),
+    (
+        "Rendimiento ajustado por riesgo",
+        (
+            ("Smart Sharpe", qs.stats.smart_sharpe, "ratio"),
+            ("Prob. Sharpe ratio", qs.stats.probabilistic_sharpe_ratio, "ratio"),
+            ("Calmar", qs.stats.calmar, "ratio"),
+            ("Omega", qs.stats.omega, "ratio"),
+            ("Recovery factor", qs.stats.recovery_factor, "ratio"),
+        ),
+    ),
+    (
+        "Operativa diaria",
+        (
+            ("% días ganadores", qs.stats.win_rate, "share"),
+            ("% meses ganadores", lambda r: qs.stats.win_rate(r, aggregate="ME"), "share"),
+            ("Ganancia media", qs.stats.avg_win, "pct"),
+            ("Pérdida media", qs.stats.avg_loss, "pct"),
+            ("Payoff ratio", qs.stats.payoff_ratio, "ratio"),
+            ("Profit factor", qs.stats.profit_factor, "ratio"),
+            ("Tail ratio", qs.stats.tail_ratio, "ratio"),
+            ("Kelly criterion", qs.stats.kelly_criterion, "pct"),
+            ("Máx. días ganadores seguidos", qs.stats.consecutive_wins, "int"),
+            ("Máx. días perdedores seguidos", qs.stats.consecutive_losses, "int"),
+        ),
+    ),
+)
+
+
+# Las 5 métricas de ``PerformanceMetrics`` (las tarjetas de resumen) no se
+# repiten en ``STAT_GROUPS``; ``SUMMARY_STATS`` las expone con el mismo
+# formato para la comparación contra benchmark.
+SUMMARY_STATS: tuple[_StatSpec, ...] = (
+    ("Retorno acumulado", qs.stats.comp, "pct"),
+    ("Volatilidad anualizada", qs.stats.volatility, "share"),
+    ("Sharpe", qs.stats.sharpe, "ratio"),
+    ("Sortino", qs.stats.sortino, "ratio"),
+    ("Máximo drawdown", qs.stats.max_drawdown, "pct"),
+)
+
+
+def stats_groups(returns: pd.Series) -> list[tuple[str, list[StatMetric]]]:
+    """Evalúa ``STAT_GROUPS`` sobre ``returns``. Una métrica que quantstats no
+    puede calcular (p. ej. por falta de datos) queda como ``None``.
+    """
+    if returns.empty:
+        return []
+    groups = []
+    for title, specs in STAT_GROUPS:
+        metrics = [StatMetric(label, _safe_stat(fn, returns), kind) for label, fn, kind in specs]
+        groups.append((title, metrics))
+    return groups
+
+
+@dataclass(frozen=True, slots=True)
+class StatComparison:
+    label: str
+    asset: StatMetric
+    benchmark: StatMetric
+
+
+def compare_stats(
+    returns: pd.Series, benchmark: pd.Series
+) -> list[tuple[str, list[StatComparison]]]:
+    """Todas las métricas (resumen + ``STAT_GROUPS``) del activo junto a las del
+    benchmark, sobre las mismas fechas."""
+    if returns.empty or benchmark.empty:
+        return []
+    groups = (("Resumen", SUMMARY_STATS), *STAT_GROUPS)
+    return [
+        (
+            title,
+            [
+                StatComparison(
+                    label,
+                    StatMetric(label, _safe_stat(fn, returns), kind),
+                    StatMetric(label, _safe_stat(fn, benchmark), kind),
+                )
+                for label, fn, kind in specs
+            ],
+        )
+        for title, specs in groups
+    ]
+
+
+def _safe_stat(fn: Callable[[pd.Series], Any], returns: pd.Series) -> float | None:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            value = float(fn(returns))
+    except (ValueError, TypeError, ZeroDivisionError):
+        return None
+    return value if np.isfinite(value) else None
+
+
+# --------------------------------------------------------------------------
+# Módulo quantstats.plots: catálogo de gráficas nativas
+# --------------------------------------------------------------------------
+
+BENCHMARKS = {
+    "SPY": "S&P 500 (SPY)",
+    "URA": "Global X Uranium ETF (URA)",
+    "QQQ": "Nasdaq 100 (QQQ)",
+}
+ROLLING_WINDOWS = {21: "1 mes", 63: "3 meses", 126: "6 meses", 252: "1 año"}
+DEFAULT_ROLLING_WINDOW = 126
+QS_FONT = "DejaVu Sans"  # la fuente por defecto de quantstats (Arial) no existe en el servidor
+
+
+@dataclass(frozen=True, slots=True)
+class PlotSpec:
+    slug: str
+    label: str
+    description: str
+    function: str  # nombre de la función en ``quantstats.plots``
+    benchmark: bool = False  # acepta benchmark
+    requires_benchmark: bool = False
+    rolling: bool = False  # acepta ventana móvil (``period``)
+
+
+PLOTS: tuple[PlotSpec, ...] = (
+    PlotSpec("snapshot", "Snapshot", "Retorno acumulado, drawdown y retornos diarios en una sola vista.", "snapshot"),
+    PlotSpec("returns", "Retornos acumulados", "Evolución del retorno compuesto.", "returns", benchmark=True),
+    PlotSpec(
+        "log-returns", "Retornos acumulados (log)", "Retorno compuesto en escala logarítmica.", "log_returns",
+        benchmark=True,
+    ),
+    PlotSpec("daily-returns", "Retornos diarios", "Retorno de cada sesión.", "daily_returns", benchmark=True),
+    PlotSpec("yearly-returns", "Retornos anuales", "Retorno de cada año calendario.", "yearly_returns", benchmark=True),
+    PlotSpec(
+        "histogram", "Histograma mensual", "Distribución de los retornos mensuales.", "histogram", benchmark=True,
+    ),
+    PlotSpec(
+        "distribution", "Distribución por horizonte", "Boxplots de retornos diarios, semanales, mensuales, "
+        "trimestrales y anuales.", "distribution",
+    ),
+    PlotSpec(
+        "monthly-heatmap", "Heatmap mensual", "Retorno de cada mes por año.", "monthly_heatmap", benchmark=True,
+    ),
+    PlotSpec("drawdown", "Drawdown (underwater)", "Caída desde el máximo previo.", "drawdown"),
+    PlotSpec(
+        "drawdowns-periods", "Peores 5 drawdowns", "Los 5 peores periodos de drawdown sobre el retorno acumulado.",
+        "drawdowns_periods",
+    ),
+    PlotSpec(
+        "rolling-volatility", "Volatilidad móvil", "Volatilidad anualizada en ventana móvil.", "rolling_volatility",
+        benchmark=True, rolling=True,
+    ),
+    PlotSpec(
+        "rolling-sharpe", "Sharpe móvil", "Sharpe anualizado en ventana móvil.", "rolling_sharpe",
+        benchmark=True, rolling=True,
+    ),
+    PlotSpec(
+        "rolling-sortino", "Sortino móvil", "Sortino anualizado en ventana móvil.", "rolling_sortino",
+        benchmark=True, rolling=True,
+    ),
+    PlotSpec(
+        "rolling-beta", "Beta móvil", "Beta frente al benchmark (usa SPY si no eliges otro).", "rolling_beta",
+        benchmark=True, requires_benchmark=True,
+    ),
+    PlotSpec(
+        "earnings", "Crecimiento de 100.000 USD", "Valor de una inversión inicial de 100.000 USD.", "earnings",
+    ),
+)
+PLOTS_BY_SLUG = {p.slug: p for p in PLOTS}
+# Gráficas del activo por sí solo (las que no necesitan benchmark).
+ABSOLUTE_PLOTS = tuple(p for p in PLOTS if not p.requires_benchmark)
+# Gráficas que se pueden superponer con un benchmark.
+BENCHMARK_PLOTS = tuple(p for p in PLOTS if p.benchmark)
+
+# quantstats dibuja sobre el estado global de pyplot: se serializa para que
+# dos peticiones simultáneas no mezclen figuras.
+_QS_PLOT_LOCK = threading.Lock()
+
+
+def get_plot(slug: str) -> PlotSpec | None:
+    return PLOTS_BY_SLUG.get(slug)
+
+
+def render_qs_plot(
+    ticker: str,
+    period: str,
+    slug: str,
+    benchmark: str | None = None,
+    window: int | None = None,
+) -> bytes:
+    """PNG de la gráfica ``slug`` de ``PLOTS`` generada por ``quantstats.plots``."""
+    spec = PLOTS_BY_SLUG[slug]
+    returns = daily_returns(ticker, period)
+    if returns.size < 2:
+        fig, ax = plt.subplots(figsize=(10, 3))
+        _no_data(ax, ticker)
+        return _to_png(fig)
+
+    kwargs: dict[str, Any] = {"show": False, "fontname": QS_FONT}
+    if spec.benchmark:
+        symbol = benchmark or ("SPY" if spec.requires_benchmark else None)
+        if symbol:
+            kwargs["benchmark"] = benchmark_returns(symbol, period, returns.index)
+        elif spec.function == "daily_returns":
+            kwargs["benchmark"] = None  # argumento obligatorio en quantstats
+    if spec.rolling:
+        window = window or DEFAULT_ROLLING_WINDOW
+        kwargs["period"] = window
+        kwargs["period_label"] = ROLLING_WINDOWS.get(window, f"{window} sesiones")
+    if spec.function in {"snapshot", "earnings"}:
+        kwargs["title"] = ticker
+    if spec.function == "monthly_heatmap":
+        kwargs["returns_label"] = ticker
+
+    with _QS_PLOT_LOCK, warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        fig = getattr(qs.plots, spec.function)(returns.rename(ticker), **kwargs)
+        return _to_png(fig)
+
+
+def benchmark_returns(symbol: str, period: str, index: pd.DatetimeIndex) -> pd.Series:
+    """Retornos del benchmark alineados a las fechas de ``index`` (0 donde falten)."""
+    bench = daily_returns(symbol, period).rename(symbol)
+    return bench.reindex(index).fillna(0.0)
+
+
+# --------------------------------------------------------------------------
+# Simulación Monte Carlo (quantstats.stats.montecarlo)
+# --------------------------------------------------------------------------
+
+MONTECARLO_SIMS = (250, 500, 1000, 2000)
+DEFAULT_MONTECARLO_SIMS = 1000
+DEFAULT_BUST = -0.20
+DEFAULT_GOAL = 0.50
+# Semilla fija: la página (probabilidades) y la gráfica deben ver las mismas simulaciones.
+MONTECARLO_SEED = 42
+
+
+@dataclass(frozen=True, slots=True)
+class MonteCarloSummary:
+    sims: int
+    bust: float
+    goal: float
+    bust_probability: float
+    goal_probability: float
+    terminal: dict[str, float]  # retorno acumulado final: min/median/max/percentiles
+    max_drawdown: dict[str, float]  # máximo drawdown de cada camino
+
+
+def _montecarlo(returns: pd.Series, sims: int, bust: float, goal: float):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return qs.stats.montecarlo(returns, sims=sims, bust=bust, goal=goal, seed=MONTECARLO_SEED)
+
+
+def montecarlo_summary(
+    returns: pd.Series,
+    sims: int = DEFAULT_MONTECARLO_SIMS,
+    bust: float = DEFAULT_BUST,
+    goal: float = DEFAULT_GOAL,
+) -> MonteCarloSummary | None:
+    """Probabilidad de "bust" (drawdown peor que ``bust``) y de "goal" (retorno
+    final de al menos ``goal``) barajando ``sims`` veces los retornos históricos.
+    """
+    if returns.size < 2:
+        return None
+    mc = _montecarlo(returns, sims, bust, goal)
+    return MonteCarloSummary(
+        sims=sims,
+        bust=bust,
+        goal=goal,
+        bust_probability=float(mc.bust_probability),
+        goal_probability=float(mc.goal_probability),
+        terminal={k: float(v) for k, v in mc.stats.items()},
+        max_drawdown={k: float(v) for k, v in mc.maxdd.items()},
+    )
+
+
+def render_montecarlo_chart(
+    ticker: str,
+    period: str,
+    sims: int = DEFAULT_MONTECARLO_SIMS,
+    bust: float = DEFAULT_BUST,
+    goal: float = DEFAULT_GOAL,
+) -> bytes:
+    """PNG de ``MonteCarloResult.plot()``: caminos simulados, banda de
+    confianza y umbrales de bust/goal."""
+    returns = daily_returns(ticker, period)
+    if returns.size < 2:
+        fig, ax = plt.subplots(figsize=(10, 3))
+        _no_data(ax, ticker)
+        return _to_png(fig)
+    with _QS_PLOT_LOCK:
+        mc = _montecarlo(returns.rename(ticker), sims, bust, goal)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            fig = mc.plot(show=False, fontname=QS_FONT, title=f"{ticker} · Monte Carlo ({sims} simulaciones)")
+        return _to_png(fig)
+
+
+# --------------------------------------------------------------------------
+# Módulo quantstats.reports: tearsheet HTML
+# --------------------------------------------------------------------------
+
+
+def tearsheet_html(ticker: str, period: str, benchmark: str | None = None) -> str | None:
+    """Tearsheet HTML completo de ``quantstats.reports.html`` (``None`` sin datos)."""
+    returns = daily_returns(ticker, period)
+    if returns.size < 2:
+        return None
+
+    kwargs: dict[str, Any] = {"title": f"{ticker} · Tearsheet", "figfmt": "svg"}
+    if benchmark:
+        kwargs["benchmark"] = benchmark_returns(benchmark, period, returns.index)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "tearsheet.html")
+        with _QS_PLOT_LOCK, warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            qs.reports.html(returns.rename(ticker), output=path, **kwargs)
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
 
 
 def _no_data(ax, ticker: str) -> None:

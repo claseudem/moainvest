@@ -22,19 +22,21 @@ app/
     analysis.py                # Volatilidad mensual + histogramas (seaborn)
     report.py                   # Informe HTML de cotizaciones para enviar por email
     media.py                     # Imágenes optimizadas vía Cloudinary (f_auto,q_auto)
-    quant.py                    # Métricas quantstats, drawdown, heatmap y earnings
+    quant.py                    # quantstats: stats, Monte Carlo, plots, reports y earnings
   controllers/            # CONTROLLER: blueprints de Flask
     home.py                   # "/" -> redirige a la app por defecto
     graficas.py                # App "Gráficas": sidebar de watchlists + gráfico
     varianza.py                 # App "Análisis de Varianza" (placeholder)
-    uec.py                       # App "Análisis UEC" (quantstats)
+    quant_stats.py               # App "QUANT STATS" (quantstats, cualquier activo)
     api.py                       # API JSON que consume el JavaScript
   views/                   # VIEW: plantillas Jinja2
     base.html                 # Layout con el sidebar
     dashboard.html             # Cabecera + toolbar + contenedor del gráfico
     varianza.html               # Página en blanco de Análisis de Varianza
-    uec.html                     # Métricas, gráficas y earnings de UEC
+    quant_fundamentales.html     # QUANT STATS: stats + Monte Carlo, plots, reports
+    quant_revision.html          # QUANT STATS: benchmark, períodos y earnings
     partials/sidebar.html
+    partials/quant_asset_form.html  # Selector de activo y período de QUANT STATS
   static/
     css/style.css
     js/app.js                 # Fetch a la API + render con lightweight-charts
@@ -134,24 +136,35 @@ calidad elegidos por Cloudinary para cada navegador) y un `srcset` de 640,
 
 Sin `CLOUDINARY_URL`, la página usa las copias locales de `app/static/img/informes/`.
 
-### Análisis UEC
+### QUANT STATS
 
-Sección dedicada a **Uranium Energy Corp (UEC)** en `/analisis-uec/`,
-construida con [quantstats](https://github.com/ranaroussi/quantstats)
-sobre los retornos diarios del período elegido (1, 2 o 5 años, o todo):
+Análisis cuantitativo con [quantstats](https://github.com/ranaroussi/quantstats)
+de **cualquier activo de Yahoo Finance** (`?ticker=AAPL`, `^GSPC`, `BTC-USD`...;
+UEC por defecto) en `/quant-stats/`, sobre los retornos diarios del período
+elegido (1, 2 o 5 años, o todo). Tiene dos subsecciones en el sidebar que no
+se solapan:
 
-- **Métricas**: retorno acumulado, volatilidad anualizada, Sharpe, Sortino
-  (tasa libre de riesgo 0, 252 sesiones) y máximo drawdown.
-- **Drawdown** desde máximos y **heatmap de retornos mensuales**.
-- **Últimos 4 earnings**: EPS estimado vs. reportado (con la sorpresa) y la
-  distancia entre un reporte y el siguiente: días, variación del EPS y
-  variación del precio de cierre, en gráfica y en tabla.
+- **Gráficas y fundamentales estadísticos** (`/quant-stats/fundamentales`):
+  el activo por sí solo, según los 3 módulos principales de quantstats.
+  - **stats**: 5 métricas de resumen y 26 más agrupadas (rendimiento, riesgo,
+    ajustado por riesgo y operativa diaria), más la **simulación Monte Carlo**
+    (`qs.stats.montecarlo`) con número de simulaciones y umbrales de bust y
+    goal configurables. Al barajar retornos el resultado final no cambia, así
+    que goal siempre es 0% o 100%; bust y los drawdowns son lo informativo.
+  - **plots**: 14 gráficas nativas de `qs.plots`.
+  - **reports**: tearsheet HTML de `qs.reports.html` (abrir o descargar).
+- **Revisión analítica** (`/quant-stats/revision`): todo lo comparativo.
+  - **Activo vs. benchmark** (cualquier ticker): gráficas superpuestas, beta
+    móvil, todas las métricas lado a lado y tearsheet con benchmark.
+  - **Período vs. período**: la misma gráfica en dos períodos, lado a lado.
+  - **Reporte vs. reporte**: últimos 4 earnings (EPS estimado vs. reportado,
+    días, variación de EPS y de precio entre reportes).
 
-La lógica vive en `app/models/quant.py`, que no depende de UEC: las
-gráficas se sirven para cualquier ticker desde
-`GET /api/quant/<ticker>/drawdown.png?period=2y`,
-`GET /api/quant/<ticker>/monthly-heatmap.png?period=2y` y
-`GET /api/quant/<ticker>/earnings.png?count=4`.
+La API sirve las gráficas para cualquier ticker:
+`GET /api/quant/<ticker>/plot/<gráfica>.png?period=2y&benchmark=SPY&window=126`,
+`GET /api/quant/<ticker>/montecarlo.png?period=2y&sims=1000&bust=-20&goal=50`,
+`GET /api/quant/<ticker>/earnings.png?count=4` y las versiones propias de
+`drawdown.png` y `monthly-heatmap.png`.
 
 ## Puesta en marcha
 

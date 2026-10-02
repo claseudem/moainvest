@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}QUANT STATS · Fundamentales {{ ticker }} · Market Dashboard{% endblock %}
+
+{% macro pct(value) -%}
+  {%- if value is none %}—{% else %}{{ "%+.1f"|format(value * 100) }}%{% endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="varianza-page">
+  <header class="varianza-header">
+    <h1>Gráficas y fundamentales estadísticos · {{ ticker }}</h1>
+    <p class="varianza-header__hint">
+      <strong>{{ asset_name }}</strong> por sí solo, analizado con los 3 módulos principales de
+      <strong>quantstats</strong>: <strong>stats</strong> (métricas y simulación Monte Carlo),
+      <strong>plots</strong> (visualizaciones) y <strong>reports</strong> (tearsheet completo).
+      Las comparaciones (contra un benchmark, entre períodos o entre earnings) están en
+      <a href="{{ url_for('quant_stats.revision', ticker=ticker, period=period) }}">Revisión analítica</a>.
+    </p>
+  </header>
+
+  {% with keep={"sims": request.args.get("sims"), "bust": request.args.get("bust"), "goal": request.args.get("goal")} %}
+  {% include "partials/quant_asset_form.html" %}
+  {% endwith %}
+
+  {% if metrics %}
+  <nav class="quant-modules">
+    <a href="#stats">1 · Stats</a>
+    <a href="#montecarlo">1.1 · Monte Carlo</a>
+    <a href="#plots">2 · Plots</a>
+    <a href="#reports">3 · Reports</a>
+  </nav>
+
+  <section class="volatility-section" id="stats">
+    <h2>1 · Stats <span class="quant-module-tag">quantstats.stats</span></h2>
+    <p class="varianza-header__hint">
+      Del {{ metrics.start }} al {{ metrics.end }} · {{ metrics.trading_days }} sesiones. Sharpe y Sortino
+      usan tasa libre de riesgo 0 y se anualizan con 252 sesiones.
+    </p>
+    <div class="metric-grid">
+      <div class="metric-tile">
+        <span class="metric-tile__label">Retorno acumulado</span>
+        <span class="metric-tile__value {{ 'is-up' if metrics.cumulative_return >= 0 else 'is-down' }}">{{ pct(metrics.cumulative_return) }}</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Volatilidad anualizada</span>
+        <span class="metric-tile__value">{{ "%.1f"|format(metrics.annual_volatility * 100) }}%</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Sharpe</span>
+        <span class="metric-tile__value">{{ "%.2f"|format(metrics.sharpe) }}</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Sortino</span>
+        <span class="metric-tile__value">{{ "%.2f"|format(metrics.sortino) }}</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Máximo drawdown</span>
+        <span class="metric-tile__value is-down">{{ pct(metrics.max_drawdown) }}</span>
+      </div>
+    </div>
+
+    <div class="stat-groups">
+      {% for title, group in stat_groups %}
+      <div class="varianza-table-wrap">
+        <table class="varianza-table">
+          <thead><tr><th>{{ title }}</th><th>{{ ticker }}</th></tr></thead>
+          <tbody>
+            {% for m in group %}
+            <tr><td>{{ m.label }}</td><td class="{{ m.sign }}">{{ m.display }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if montecarlo %}
+  <section class="volatility-section" id="montecarlo">
+    <h2>1.1 · Simulación Monte Carlo <span class="quant-module-tag">qs.stats.montecarlo</span></h2>
+    <p class="varianza-header__hint">
+      Baraja {{ montecarlo.sims }} veces el orden de los retornos diarios históricos. <strong>Bust</strong>:
+      probabilidad de sufrir un drawdown igual o peor que el umbral. <strong>Goal</strong>: probabilidad de
+      terminar con un retorno acumulado igual o mayor que el objetivo.
+    </p>
+    <form class="varianza-form revision-form" method="get" action="#montecarlo">
+      <input type="hidden" name="ticker" value="{{ ticker }}">
+      <input type="hidden" name="period" value="{{ period }}">
+      <label class="revision-form__field">
+        <span>Simulaciones</span>
+        <select name="sims" class="varianza-form__select">
+          {% for n in montecarlo_sims %}
+          <option value="{{ n }}" {% if n == montecarlo.sims %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="revision-form__field">
+        <span>Bust: drawdown (%)</span>
+        <input class="varianza-form__input" type="number" name="bust" min="-99" max="-1" step="1"
+               value="{{ '%.0f'|format(montecarlo.bust * 100) }}">
+      </label>
+      <label class="revision-form__field">
+        <span>Goal: retorno (%)</span>
+        <input class="varianza-form__input" type="number" name="goal" min="1" max="2000" step="1"
+               value="{{ '%.0f'|format(montecarlo.goal * 100) }}">
+      </label>
+      <button type="submit" class="varianza-form__btn">Simular</button>
+    </form>
+
+    <div class="metric-grid">
+      <div class="metric-tile">
+        <span class="metric-tile__label">Prob. de bust (DD ≤ {{ "%.0f"|format(montecarlo.bust * 100) }}%)</span>
+        <span class="metric-tile__value is-down">{{ "%.1f"|format(montecarlo.bust_probability * 100) }}%</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Prob. de goal (retorno ≥ +{{ "%.0f"|format(montecarlo.goal * 100) }}%)</span>
+        <span class="metric-tile__value is-up">{{ "%.1f"|format(montecarlo.goal_probability * 100) }}%</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Máx. drawdown mediano</span>
+        <span class="metric-tile__value">{{ pct(montecarlo.max_drawdown.median) }}</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Máx. drawdown · peor 5%</span>
+        <span class="metric-tile__value">{{ pct(montecarlo.max_drawdown.percentile_5) }}</span>
+      </div>
+      <div class="metric-tile">
+        <span class="metric-tile__label">Máx. drawdown · mejor 5%</span>
+        <span class="metric-tile__value">{{ pct(montecarlo.max_drawdown.percentile_95) }}</span>
+      </div>
+    </div>
+    <p class="varianza-header__hint quant-note">
+      Al barajar solo cambia el <em>camino</em>: el retorno final es el mismo en todas las simulaciones
+      ({{ pct(montecarlo.terminal.median) }}), así que la probabilidad de goal siempre es 0% o 100%. La
+      información útil está en el riesgo del recorrido (bust y drawdowns).
+    </p>
+    <div class="volatility-chart-wrap">
+      <img src="{{ url_for('api.quant_montecarlo', ticker=ticker, period=period, sims=montecarlo.sims,
+                           bust='%.0f'|format(montecarlo.bust * 100), goal='%.0f'|format(montecarlo.goal * 100)) }}"
+           alt="Simulación Monte Carlo de {{ ticker }}" loading="lazy">
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="volatility-section" id="plots">
+    <h2>2 · Plots <span class="quant-module-tag">quantstats.plots</span></h2>
+    <p class="varianza-header__hint">
+      Gráficas nativas de quantstats del activo por sí solo. Para verlas contra un benchmark o comparar
+      dos períodos, usa <a href="{{ url_for('quant_stats.revision', ticker=ticker, period=period) }}">Revisión analítica</a>.
+    </p>
+    <div class="plot-gallery">
+      {% for p in plots %}
+      <figure class="plot-card">
+        <figcaption>
+          <span class="plot-card__title">{{ p.label }}</span>
+          <span class="plot-card__desc">{{ p.description }}</span>
+        </figcaption>
+        <a href="{{ url_for('api.quant_plot', ticker=ticker, slug=p.slug, period=period) }}" target="_blank" title="Abrir a tamaño completo">
+          <img src="{{ url_for('api.quant_plot', ticker=ticker, slug=p.slug, period=period) }}"
+               alt="{{ p.label }} de {{ ticker }}" loading="lazy">
+        </a>
+      </figure>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="volatility-section" id="reports">
+    <h2>3 · Reports <span class="quant-module-tag">quantstats.reports</span></h2>
+    <p class="varianza-header__hint">
+      Tearsheet HTML completo generado por <code>qs.reports.html</code>: todas las métricas y gráficas
+      en un solo informe. Tarda unos segundos en generarse.
+    </p>
+    <form class="varianza-form" method="get" action="{{ url_for('quant_stats.tearsheet') }}" target="_blank">
+      <input type="hidden" name="ticker" value="{{ ticker }}">
+      <input type="hidden" name="period" value="{{ period }}">
+      <button type="submit" class="varianza-form__btn">Abrir tearsheet</button>
+      <button type="submit" name="download" value="1" class="varianza-form__btn varianza-form__btn--secondary">Descargar HTML</button>
+    </form>
+  </section>
+  {% else %}
+  <p class="varianza-status is-error">No se pudieron descargar precios de {{ ticker }}. Revisa que el ticker exista en Yahoo Finance.</p>
+  {% endif %}
+</div>
+{% endblock %}

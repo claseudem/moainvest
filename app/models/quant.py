@@ -26,8 +26,8 @@ from matplotlib.colors import TwoSlopeNorm
 from app.models import market_data
 from app.models.analysis import _PALETTE
 
-UP_COLOR = "#26a69a"
-DOWN_COLOR = "#ef5350"
+UP_COLOR = "#0F8A5F"
+DOWN_COLOR = "#D93025"
 MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
 

@@ -19,9 +19,9 @@
   if (!layers.length) return;
 
   const COLORS = {
-    accent: "41, 98, 255",
-    up: "38, 166, 154",
-    down: "239, 83, 80",
+    accent: "200, 16, 46",
+    up: "15, 138, 95",
+    down: "217, 48, 37",
     grid: "124, 138, 158",
   };
   const rgba = (rgb, a) => `rgba(${rgb}, ${a})`;
@@ -215,7 +215,7 @@
       const finishX = w - cell * 3;
       for (let yy = 0, row = 0; yy < h; yy += cell, row++) {
         for (let c = 0; c < 2; c++) {
-          ctx.fillStyle = rgba("215, 221, 229", (row + c) % 2 ? 0.35 : 0.08);
+          ctx.fillStyle = rgba("31, 41, 55", (row + c) % 2 ? 0.35 : 0.08);
           ctx.fillRect(finishX + c * cell, yy, cell, cell);
         }
       }

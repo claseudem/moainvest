@@ -1,0 +1,21 @@
+<header class="site-header">
+  <a class="site-header__brand" href="{{ url_for('home.index') }}">
+    <img class="site-header__logo"
+         src="{{ url_for('static', filename='img/udem-logo-rojo.png') }}"
+         alt="Universidad de Medellín — Ciencia y Libertad" width="281" height="78">
+    <span class="site-header__divider" aria-hidden="true"></span>
+    <span class="site-header__product">Market Dashboard</span>
+  </a>
+
+  <nav class="site-header__nav" aria-label="Navegación principal">
+    {% for app in apps %}
+    <a class="site-header__link {% if active_app and active_app.slug == app.slug %}is-active{% endif %}"
+       href="{{ url_for(app.endpoint) }}"
+       {% if active_app and active_app.slug == app.slug %}aria-current="page"{% endif %}>{{ app.name }}</a>
+    {% endfor %}
+  </nav>
+
+  {% if request.endpoint == "home.index" %}
+  <a class="btn btn--primary site-header__cta" href="{{ url_for('graficas.index') }}">Entrar al panel</a>
+  {% endif %}
+</header>

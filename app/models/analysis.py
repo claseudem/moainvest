@@ -19,10 +19,10 @@ import seaborn as sns
 
 from app.models import market_data
 
-sns.set_theme(style="darkgrid")
+sns.set_theme(style="whitegrid")
 
 # Colores consistentes con el resto del panel (ver static/css/style.css).
-_PALETTE = ["#2962ff", "#26a69a", "#ef5350", "#f5a623", "#7c8a9e", "#ab47bc"]
+_PALETTE = ["#C8102E", "#0F8A5F", "#1F2937", "#F5A623", "#6B7280", "#7C3AED"]
 
 # Máximo de histogramas por fila, para poder comparar varios activos de un
 # vistazo (con 5 tickers, por ejemplo, quedan 3 arriba y 2 abajo).

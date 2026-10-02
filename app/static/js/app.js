@@ -95,24 +95,24 @@
 
     const chart = LightweightCharts.createChart(container, {
       layout: {
-        background: { color: "#131a24" },
-        textColor: "#7c8a9e",
+        background: { color: "#ffffff" },
+        textColor: "#6b7280",
       },
       grid: {
-        vertLines: { color: "#1b2431" },
-        horzLines: { color: "#1b2431" },
+        vertLines: { color: "#f1f3f5" },
+        horzLines: { color: "#f1f3f5" },
       },
-      rightPriceScale: { borderColor: "#232c3a" },
-      timeScale: { borderColor: "#232c3a", timeVisible: true, secondsVisible: false },
+      rightPriceScale: { borderColor: "#e5e7eb" },
+      timeScale: { borderColor: "#e5e7eb", timeVisible: true, secondsVisible: false },
       crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     });
 
     const series = chart.addCandlestickSeries({
-      upColor: "#26a69a",
-      downColor: "#ef5350",
+      upColor: "#0f8a5f",
+      downColor: "#d93025",
       borderVisible: false,
-      wickUpColor: "#26a69a",
-      wickDownColor: "#ef5350",
+      wickUpColor: "#0f8a5f",
+      wickDownColor: "#d93025",
     });
 
     new ResizeObserver((entries) => {

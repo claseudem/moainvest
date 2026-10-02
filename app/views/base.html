@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Market Dashboard{% endblock %}</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="app-body">
+  {% include "partials/header.html" %}
   <div class="layout">
     {% include "partials/sidebar.html" %}
     <main class="content">

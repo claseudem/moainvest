@@ -3,136 +3,174 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Market Dashboard — Sigue el mercado en tiempo real</title>
+  <title>Market Dashboard · Universidad de Medellín</title>
   <meta name="description" content="Consulta precios en vivo de tus acciones favoritas y entiende su riesgo con gráficos claros, sin necesidad de ser experto en finanzas.">
+  <meta name="theme-color" content="#C8102E">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body class="landing-body">
 
-  <header class="landing-nav">
-    <div class="landing-nav__brand">
-      <img class="landing-nav__logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Market Dashboard">
-      <span>Market Dashboard</span>
-    </div>
-    <a class="landing-nav__cta" href="{{ url_for('graficas.index') }}">Entrar al panel</a>
-  </header>
+  {% include "partials/header.html" %}
 
   <main>
-    <section class="landing-hero">
-      <img class="landing-hero__watermark" src="{{ url_for('static', filename='img/logo.png') }}" alt="" aria-hidden="true">
-      <div class="landing-hero__text">
-        <span class="landing-hero__badge">Datos en vivo · Yahoo Finance</span>
-        <h1>Entiende el mercado, sin ser un experto</h1>
-        <p class="landing-hero__lead">
-          Consulta el precio de tus acciones favoritas en tiempo real y
-          descubre qué tan arriesgadas han sido, con gráficos simples
-          pensados para cualquier persona&mdash;no solo para traders.
-        </p>
-        <div class="landing-hero__actions">
-          <a class="landing-btn landing-btn--primary" href="{{ url_for('graficas.index') }}">
-            Ver gráficas en vivo
-          </a>
-          <a class="landing-btn landing-btn--ghost" href="{{ url_for('varianza.index') }}">
-            Analizar el riesgo de una acción
-          </a>
+    <section class="landing-hero" aria-labelledby="hero-title">
+      <div class="landing-hero__inner">
+        <div class="landing-hero__text">
+          <img class="landing-hero__logo"
+               src="{{ url_for('static', filename='img/udem-logo-blanco.png') }}"
+               alt="Universidad de Medellín — Ciencia y Libertad" width="281" height="78">
+          <span class="landing-hero__badge">Datos en vivo · Yahoo Finance</span>
+          <h1 id="hero-title">Entiende el mercado, sin ser un experto</h1>
+          <p class="landing-hero__lead">
+            Consulta el precio de tus acciones favoritas en tiempo real y
+            descubre qué tan arriesgadas han sido, con gráficos simples
+            pensados para cualquier persona&mdash;no solo para traders.
+          </p>
+          <div class="landing-hero__actions">
+            <a class="btn btn--light" href="{{ url_for('graficas.index') }}">
+              Ver gráficas en vivo
+            </a>
+            <a class="btn btn--outline-light" href="{{ url_for('varianza.index') }}">
+              Analizar el riesgo de una acción
+            </a>
+          </div>
         </div>
-      </div>
-      <div class="landing-hero__preview" aria-hidden="true">
-        <div class="landing-hero__preview-bar">
-          <span></span><span></span><span></span>
-        </div>
-        <div class="landing-hero__preview-price">
-          <span class="landing-hero__preview-ticker">AAPL</span>
-          <span class="landing-hero__preview-value">$232.14</span>
-          <span class="landing-hero__preview-change is-up">+1.8%</span>
-        </div>
-        <div class="landing-hero__preview-chart">
-          <svg viewBox="0 0 300 100" preserveAspectRatio="none">
-            <polyline points="0,70 30,60 60,65 90,45 120,50 150,30 180,38 210,20 240,28 270,15 300,22" />
-          </svg>
+
+        <div class="landing-hero__preview" aria-hidden="true">
+          <div class="landing-hero__preview-bar">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="landing-hero__preview-price">
+            <span class="landing-hero__preview-ticker">AAPL</span>
+            <span class="landing-hero__preview-value">$232.14</span>
+            <span class="landing-hero__preview-change is-up">+1.8%</span>
+          </div>
+          <div class="landing-hero__preview-chart">
+            <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+              <polygon points="0,70 30,60 60,65 90,45 120,50 150,30 180,38 210,20 240,28 270,15 300,22 300,100 0,100" />
+              <polyline points="0,70 30,60 60,65 90,45 120,50 150,30 180,38 210,20 240,28 270,15 300,22" />
+            </svg>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="landing-features">
-      <h2>Todo lo que necesitas para seguir tus inversiones</h2>
+    <section class="landing-features" aria-labelledby="features-title">
+      <p class="landing-eyebrow">Herramientas</p>
+      <h2 id="features-title">Todo lo que necesitas para seguir tus inversiones</h2>
       <div class="landing-features__grid">
         <article class="landing-card">
-          <span class="landing-card__icon">📊</span>
+          <span class="landing-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg>
+          </span>
           <h3>Gráficas en vivo</h3>
           <p>
             Mira cómo se mueve el precio de una acción a lo largo del día,
             la semana o el año, con el mismo tipo de gráfico que usan las
             plataformas de bolsa profesionales.
           </p>
+          <a class="landing-card__link" href="{{ url_for('graficas.index') }}">Abrir gráficas →</a>
         </article>
         <article class="landing-card">
-          <span class="landing-card__icon">⭐</span>
+          <span class="landing-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+          </span>
           <h3>Listas de seguimiento</h3>
           <p>
             Organiza tus acciones favoritas en listas por tema (tecnología,
             bancos, energía&hellip;) y consulta su precio y variación de un
             solo vistazo.
           </p>
+          <a class="landing-card__link" href="{{ url_for('graficas.index') }}">Ver watchlists →</a>
         </article>
         <article class="landing-card">
-          <span class="landing-card__icon">🧮</span>
+          <span class="landing-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="4" y="12" width="3" height="8"/><rect x="10.5" y="6" width="3" height="14"/><rect x="17" y="9" width="3" height="11"/></svg>
+          </span>
           <h3>Análisis de riesgo</h3>
           <p>
             Descubre qué tan volátil ha sido una acción mes a mes, explicado
             con un histograma sencillo: entre más ancho, más riesgo ha
             tenido.
           </p>
+          <a class="landing-card__link" href="{{ url_for('varianza.index') }}">Analizar riesgo →</a>
         </article>
       </div>
     </section>
 
-    <section class="landing-how">
-      <h2>¿Cómo funciona?</h2>
-      <ol class="landing-how__steps">
-        <li>
-          <span class="landing-how__step-number">1</span>
-          <div>
+    <section class="landing-how" aria-labelledby="how-title">
+      <div class="landing-how__inner">
+        <p class="landing-eyebrow">Paso a paso</p>
+        <h2 id="how-title">¿Cómo funciona?</h2>
+        <ol class="landing-how__steps">
+          <li>
+            <span class="landing-how__step-number">1</span>
             <h3>Elige una acción</h3>
             <p>Busca entre las listas ya preparadas o el ticker que te interese, como AAPL o MSFT.</p>
-          </div>
-        </li>
-        <li>
-          <span class="landing-how__step-number">2</span>
-          <div>
+          </li>
+          <li>
+            <span class="landing-how__step-number">2</span>
             <h3>Consulta su precio</h3>
             <p>Verás el precio actual y el gráfico de su evolución, actualizado con datos reales.</p>
-          </div>
-        </li>
-        <li>
-          <span class="landing-how__step-number">3</span>
-          <div>
+          </li>
+          <li>
+            <span class="landing-how__step-number">3</span>
             <h3>Entiende su riesgo</h3>
             <p>Revisa el análisis de volatilidad para saber si esa acción suele tener movimientos bruscos.</p>
-          </div>
-        </li>
-      </ol>
+          </li>
+        </ol>
+      </div>
     </section>
 
-    <section class="landing-final-cta">
-      <img class="landing-final-cta__logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Market Dashboard">
-      <h2>Empieza a explorar el mercado ahora mismo</h2>
+    <section class="landing-final-cta" aria-labelledby="cta-title">
+      <h2 id="cta-title">Empieza a explorar el mercado ahora mismo</h2>
       <p>Es gratis y no necesitas crear una cuenta.</p>
-      <a class="landing-btn landing-btn--primary" href="{{ url_for('graficas.index') }}">
-        Ir al panel de gráficas
-      </a>
+      <div class="landing-final-cta__actions">
+        <a class="btn btn--primary" href="{{ url_for('graficas.index') }}">Ir al panel de gráficas</a>
+        <a class="btn btn--secondary" href="{{ url_for('informes.index') }}">Generar un informe</a>
+      </div>
     </section>
   </main>
 
   <footer class="landing-footer">
-    <img class="landing-footer__logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Market Dashboard">
-    <p>
-      Los precios provienen de Yahoo Finance y pueden tener un ligero
-      retraso. Esta herramienta es informativa y no constituye
-      asesoramiento financiero.
-    </p>
+    <div class="landing-footer__grid">
+      <div class="landing-footer__brand">
+        <img class="landing-footer__logo"
+             src="{{ url_for('static', filename='img/udem-logo-blanco.png') }}"
+             alt="Universidad de Medellín — Ciencia y Libertad" width="281" height="78">
+        <p class="landing-footer__slogan">Ciencia y Libertad</p>
+      </div>
+
+      <nav class="landing-footer__col" aria-label="Accesos rápidos">
+        <h3>Accesos rápidos</h3>
+        <ul>
+          {% for app in apps %}
+          <li><a href="{{ url_for(app.endpoint) }}">{{ app.name }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+
+      <div class="landing-footer__col">
+        <h3>Contacto</h3>
+        <address>
+          Carrera 87 N.° 30-65<br>
+          Medellín, Colombia<br>
+          <a href="tel:+576043405555">(604) 340 5555</a><br>
+          <a href="https://udemedellin.edu.co/" target="_blank" rel="noopener">udemedellin.edu.co</a>
+        </address>
+      </div>
+    </div>
+
+    <div class="landing-footer__bottom">
+      <p>
+        Los precios provienen de Yahoo Finance y pueden tener un ligero
+        retraso. Esta herramienta es informativa y no constituye
+        asesoramiento financiero.
+      </p>
+      <p>© Universidad de Medellín</p>
+    </div>
   </footer>
 
 </body>

@@ -17,6 +17,7 @@ class Config:
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"
+    MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
 
     # Segundos que se conservan en caché los datos descargados de Yahoo Finance,
     # para no golpear la API en cada refresco de página o petición del sidebar.

@@ -112,6 +112,34 @@ volatilidades a lo largo del período elegido. El histograma se genera en
 el servidor con **seaborn/matplotlib** (`app/varianza/analysis.py`) y se
 sirve como PNG desde `GET /api/volatility-chart?tickers=AAPL,MSFT&period=5y`.
 
+### Regresión ML
+
+La app `/app/regresion/` entrena modelos para predecir el retorno logarítmico
+a un horizonte de días hábiles. Usa históricos diarios de `market_data`, un
+split cronológico 80/20 y compara regresión lineal, Ridge, Random Forest y
+Gradient Boosting con paseo aleatorio y paseo con deriva. Las ejecuciones se
+registran en MLflow en `mlflow.db` (SQLite), con modelos, métricas y
+predicciones CSV y gráficos en `./mlartifacts/`. La URI se configura con
+`MLFLOW_TRACKING_URI` (por defecto `sqlite:///mlflow.db`).
+
+```bash
+uv run flask --app run train-regression --ticker SPY --horizon 5
+uv run mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5001
+```
+
+Abre la interfaz de MLflow en <http://127.0.0.1:5001> para comparar runs,
+revisar artefactos y versiones del modelo. El experimento se llama
+`moainvest-regresion`; cada modelo registrado se nombra
+`moainvest-regresion-<ticker>`.
+
+- **KS** compara dos distribuciones: un estadístico cercano a 0 indica mayor
+  similitud; un p-value bajo (por ejemplo, menor que 0,05) indica evidencia de
+  un cambio entre train y test. No mide por sí sola el impacto práctico.
+- **PSI** mide el tamaño del cambio usando 10 intervalos definidos por los
+  cuantiles de train: por debajo de 0,1 suele ser pequeño, entre 0,1 y 0,2
+  moderado y por encima de 0,2 relevante. `drift_alert` se activa cuando el PSI
+  de las predicciones supera 0,2.
+
 ### Informe de mercado por email
 
 `app/informes/report.py` obtiene las cotizaciones de las watchlists, construye
@@ -183,7 +211,8 @@ La API sirve las gráficas para cualquier ticker:
 Los textos de los enlaces del sidebar (apps de `apps.py`, sus `sections` y las
 watchlists de `watchlists.py`) se escriben en formato frase: primera letra en
 mayúscula y el resto en minúscula ("Quant stats", "Análisis de varianza"). Se
-escriben así en su origen, sin `text-transform`; `tests/test_apps.py` lo
+escriben así en su origen, sin `text-transform`; la sigla del nombre
+solicitado «Regresión ML» se conserva. `tests/core/test_navigation.py` lo
 comprueba.
 
 ### Iconos de Informes
@@ -265,6 +294,7 @@ Todo lo que se ve con el layout oscuro de sidebar cuelga de `/app/`:
 | `/app/informes/` | Informes |
 | `/app/analisis-varianza/` | Análisis de varianza |
 | `/app/quant-stats/` (`fundamentales`, `revision`, `tearsheet`) | Quant stats |
+| `/app/regresion/` | Regresión ML |
 
 Las APIs siguen en `/api/...`. Las rutas antiguas (`/analisis-varianza/...`,
 `/quant-stats/...`, `/informes/...`) redirigen con **301** a su equivalente

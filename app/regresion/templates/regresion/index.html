@@ -1,0 +1,103 @@
+{% extends "core/base.html" %}
+
+{% block title %}Regresión ML · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('regresion.static', filename='regresion.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page regresion-page" id="regresion-page">
+  <header class="page-head">
+    <p class="eyebrow">Modelos supervisados · MLflow</p>
+    <h1 class="page-title">Regresión <span class="accent">ML</span>.</h1>
+    <p class="page-lead">Entrenamiento cronológico de retornos y seguimiento de drift.</p>
+  </header>
+
+  <section class="card regresion-card" aria-labelledby="regresion-form-title">
+    <h2 class="regresion-section-title" id="regresion-form-title">Configuración</h2>
+    <form class="regresion-form" id="regresion-form">
+      <label class="regresion-field">
+        <span>Ticker</span>
+        <input class="input" id="ticker-input" name="ticker" value="SPY" maxlength="20" required>
+      </label>
+      <label class="regresion-field">
+        <span>Periodo</span>
+        <select class="select" id="period-select" name="period">
+          <option value="1y">1 año</option>
+          <option value="2y">2 años</option>
+          <option value="5y" selected>5 años</option>
+          <option value="max">Todo</option>
+        </select>
+      </label>
+      <label class="regresion-field regresion-field--horizon">
+        <span>Horizonte (días hábiles)</span>
+        <input class="input" id="horizon-input" name="horizon" type="number" min="1" max="60" value="5" required>
+      </label>
+      <button class="btn btn--primary regresion-submit" id="train-button" type="submit">Entrenar</button>
+    </form>
+    <p class="regresion-status" id="regresion-status" role="status" aria-live="polite" hidden></p>
+  </section>
+
+  <section class="regresion-results" id="regresion-results" hidden aria-live="polite">
+    <div class="card regresion-card">
+      <header class="regresion-results-head">
+        <div>
+          <p class="eyebrow">Evaluación temporal</p>
+          <h2 class="regresion-section-title" id="results-title">Resultados</h2>
+        </div>
+        <p class="regresion-sample-count" id="sample-count"></p>
+      </header>
+      <div class="table-wrap regresion-table-wrap">
+        <table class="table regresion-table">
+          <thead>
+            <tr>
+              <th>Modelo</th>
+              <th>Train MAE</th>
+              <th>Train RMSE</th>
+              <th>Train R²</th>
+              <th>Train acierto</th>
+              <th>Train MAE/RW</th>
+              <th>Test MAE</th>
+              <th>Test RMSE</th>
+              <th>Test R²</th>
+              <th>Test acierto</th>
+              <th>Test MAE/RW</th>
+              <th>KS</th>
+              <th>p-value</th>
+              <th>PSI</th>
+              <th>Alerta</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card regresion-card">
+      <div class="regresion-chart-head">
+        <h2 class="regresion-section-title">Drift de predicciones</h2>
+        <label class="regresion-field regresion-model-select">
+          <span>Modelo</span>
+          <select class="select" id="drift-model-select" aria-label="Modelo del gráfico de drift"></select>
+        </label>
+      </div>
+      <img class="regresion-drift-chart" id="drift-chart" alt="Histogramas superpuestos de predicciones train y test">
+    </div>
+
+    <details class="card regresion-card regresion-feature-drift">
+      <summary>Drift por feature</summary>
+      <div class="table-wrap regresion-table-wrap">
+        <table class="table">
+          <thead><tr><th>Feature</th><th>KS</th><th>p-value</th><th>PSI</th></tr></thead>
+          <tbody id="feature-drift-body"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('regresion.static', filename='regresion.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,152 @@
+.regresion-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.regresion-page .page-head {
+  margin-bottom: 0.25rem;
+}
+
+.regresion-card {
+  min-width: 0;
+}
+
+.regresion-section-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.regresion-form {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.5fr) minmax(8rem, 1fr) minmax(11rem, 1.1fr) auto;
+  align-items: end;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.regresion-field {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.regresion-field .input,
+.regresion-field .select {
+  width: 100%;
+}
+
+.regresion-submit {
+  min-width: 8rem;
+}
+
+.regresion-status {
+  margin: 1rem 0 0;
+  color: var(--muted);
+}
+
+.regresion-status.is-error {
+  color: var(--brand);
+}
+
+.regresion-results {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.regresion-results-head,
+.regresion-chart-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.regresion-results-head .eyebrow {
+  margin-bottom: 0.5rem;
+}
+
+.regresion-sample-count {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.regresion-table-wrap {
+  max-width: 100%;
+}
+
+.regresion-table {
+  min-width: 1360px;
+}
+
+.regresion-model-select {
+  width: min(16rem, 50%);
+}
+
+.regresion-drift-chart {
+  display: block;
+  width: min(100%, 760px);
+  height: auto;
+  margin-inline: auto;
+}
+
+.regresion-feature-drift {
+  padding-block: 1rem;
+}
+
+.regresion-feature-drift summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.regresion-feature-drift[open] summary {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 760px) {
+  .regresion-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .regresion-field--horizon {
+    grid-column: 1 / 2;
+  }
+
+  .regresion-submit {
+    grid-column: 2 / 3;
+    width: 100%;
+  }
+
+  .regresion-results-head,
+  .regresion-chart-head {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .regresion-sample-count {
+    text-align: left;
+  }
+
+  .regresion-model-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .regresion-form {
+    grid-template-columns: 1fr;
+  }
+
+  .regresion-field--horizon,
+  .regresion-submit {
+    grid-column: auto;
+  }
+}

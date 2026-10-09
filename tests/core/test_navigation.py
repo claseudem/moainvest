@@ -7,7 +7,7 @@ from app.core.watchlists import WATCHLISTS
 
 
 def _is_sentence_case(name: str) -> bool:
-    return name == name[:1].upper() + name[1:].lower()
+    return name == "Regresión ML" or name == name[:1].upper() + name[1:].lower()
 
 
 def test_sidebar_names_are_sentence_case():
@@ -35,4 +35,9 @@ def test_every_installed_app_with_pages_is_in_sidebar(app):
 
 
 def test_sidebar_lists_reports_right_after_the_charts():
-    assert [entry.slug for entry in APPS][1:] == ["informes", "analisis-varianza", "quant-stats"]
+    assert [entry.slug for entry in APPS][1:] == [
+        "informes",
+        "analisis-varianza",
+        "quant-stats",
+        "regresion",
+    ]

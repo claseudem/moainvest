@@ -31,6 +31,7 @@ INSTALLED_APPS = (
     "quant_stats",
     "informes",
     "graficador",
+    "regresion",
 )
 
 

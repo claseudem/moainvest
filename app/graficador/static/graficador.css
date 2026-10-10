@@ -208,6 +208,7 @@
 }
 
 .graficador__select:hover { border-color: rgba(23, 23, 23, 0.4); }
+.graficador__chip:disabled { opacity: 0.35; cursor: not-allowed; }
 .graficador__select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-color: var(--brand); }
 
 /* ───────────────────────── Gráfico ───────────────────────── */

@@ -392,6 +392,18 @@ velas, tarda ~3-4 s); el resultado se cachea `DUKASCOPY_CACHE_TTL` segundos
 (60 por defecto). Como con Yahoo, el rango se cuenta desde la última vela: «1D»
 en fin de semana muestra el último día con mercado.
 
+**Periodicidad (solo Dukascopy)**: con Dukascopy aparece un segundo selector,
+*Periodicidad*, agrupado como en su plataforma: **segundos** (1s, 10s, 30s),
+**minutos** (1m, 5m, 10m, 15m, 30m), **horas** (1h, 4h) y **días y más** (1D,
+1S, 1M). En *auto* la periodicidad la decide el botón de rango, como con los
+demás proveedores. Cada periodicidad tiene una historia máxima (`max_days`: 1
+día a 1s, 5 a 10s, 14 a 30s, 1 mes a 1m, 1 año a 5-30m, 5 años a 1h, sin límite
+a 4h o más) y los botones de rango que la superan se desactivan. La elección se
+recuerda por proveedor en `localStorage` (`graficador:interval:v1`). Un
+proveedor ofrece periodicidades propias con `interval_choices` (lo publica
+`/api/graficador/providers` en `intervals`); pedir a otro proveedor una que no
+admite (`?provider=yahoo&interval=1s`) responde 422.
+
 **Añadir un proveedor**: una subclase de `Provider` registrada en `PROVIDERS`.
 Aparece sola en el selector y en la API.
 

@@ -64,6 +64,13 @@
       </select>
       <span class="graficador__sr" id="graficador-provider-hint" role="status"></span>
     </div>
+    {# Solo con proveedores que permiten elegir la periodicidad (Dukascopy); lo rellena graficador.js. #}
+    <div class="graficador__provider" id="graficador-interval-wrap" hidden>
+      <label class="graficador__sr" for="graficador-interval">Periodicidad</label>
+      <select id="graficador-interval" class="graficador__select" title="Periodicidad de las velas">
+        <option value="">Periodicidad: auto</option>
+      </select>
+    </div>
     <button type="button" class="graficador__btn graficador__btn--outline" id="graficador-indicators-btn"
             aria-haspopup="dialog" aria-controls="gind-picker">
       {{ icons.icon("activity") }}<span>Indicadores</span>

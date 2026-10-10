@@ -257,3 +257,10 @@ def test_api_rejects_invalid_requests_without_downloading_anything(client, monke
     response = client.get(url)
     assert response.status_code == 400
     assert message in response.get_json()["error"]
+
+
+def test_warmup_range_for_dukascopy_intervals():
+    assert indicators.warmup_range("1d", "1s") == "1d"
+    assert indicators.warmup_range("5d", "30s") == "5d"
+    assert indicators.warmup_range("5d", "10m") == "1mo"
+    assert indicators.warmup_range("1mo", "4h") == "2y"

@@ -191,3 +191,51 @@ def test_candles_and_indicators_endpoints_with_dukascopy(client, monkeypatch):
 def test_candles_endpoint_reports_unsupported_ticker(client):
     response = client.get("/api/graficador/%5EIXIC/candles?provider=dukascopy&range=1d&interval=5m")
     assert response.status_code == 422 and "Yahoo" in response.get_json()["error"]
+
+
+# ───────────────────────── Periodicidades ─────────────────────────
+
+def test_dukascopy_offers_grouped_intervals_with_history_limits(client):
+    data = client.get("/api/graficador/providers").get_json()
+    by_id = {p["id"]: p for p in data["providers"]}
+    assert by_id["yahoo"]["intervals"] == []
+    choices = {c["value"]: c for c in by_id["dukascopy"]["intervals"]}
+    assert list(choices) == ["1s", "10s", "30s", "1m", "5m", "10m", "15m", "30m", "1h", "4h", "1d", "1wk", "1mo"]
+    assert choices["1s"]["group"] == "Segundos" and choices["1s"]["max_days"] == 1
+    assert choices["4h"]["group"] == "Horas" and choices["4h"]["max_days"] is None
+
+
+@pytest.mark.parametrize("interval,dk", [("1s", "1SEC"), ("10s", "10SEC"), ("30s", "30SEC"), ("10m", "10MIN"), ("4h", "4HOUR")])
+def test_extra_intervals_map_to_dukascopy(interval, dk):
+    provider, calls = provider_with(lambda p: [row(NOW)])
+    provider.get_candles("EURUSD=X", "1d", interval)
+    assert {c["interval"] for c in calls} == {dk}
+
+
+def test_seconds_are_capped_and_split_in_daily_windows():
+    provider, calls = provider_with(lambda p: [row(NOW)])
+    provider.get_candles("EURUSD=X", "1y", "1s")
+    # 1 día como mucho, más el margen de fin de semana, en ventanas de 12 horas.
+    assert len(calls) == 2 * (1 + providers.DK_PADDING_DAYS_SECONDS)
+    assert min(int(c["last_update"]) for c in calls) == MS(NOW - timedelta(days=1 + providers.DK_PADDING_DAYS_SECONDS))
+
+
+def test_seconds_endpoint_with_dukascopy(client, monkeypatch):
+    rows = [row(NOW - timedelta(seconds=i), 1.1) for i in range(30)]
+    fake, _ = provider_with(lambda p: rows)
+    monkeypatch.setitem(providers.PROVIDERS, "dukascopy", fake)
+    response = client.get("/api/graficador/EURUSD=X/candles?provider=dukascopy&range=1d&interval=1s")
+    assert response.status_code == 200 and len(response.get_json()) == 30
+    response = client.get("/api/graficador/EURUSD=X/indicators?provider=dukascopy&range=1d&interval=1s&ind=sma:5")
+    assert response.status_code == 200 and len(response.get_json()["time"]) == 30
+
+
+def test_other_providers_reject_dukascopy_only_intervals(client):
+    response = client.get("/api/graficador/AAPL/candles?provider=yahoo&range=1d&interval=1s")
+    assert response.status_code == 422 and "Yahoo Finance" in response.get_json()["error"]
+    assert client.get("/api/graficador/AAPL/candles?provider=dukascopy&interval=7s").status_code == 400
+
+
+def test_page_has_interval_selector(client):
+    html = client.get("/app/graficador/?ticker=AAPL").data
+    assert b'id="graficador-interval"' in html

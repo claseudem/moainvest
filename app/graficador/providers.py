@@ -8,12 +8,17 @@ así que el gráfico y los indicadores TA-Lib no saben de dónde vienen los dato
 * ``alphavantage``: API REST de Alpha Vantage (``TIME_SERIES_INTRADAY``,
   ``DAILY``, ``WEEKLY`` y ``MONTHLY`` según el intervalo). Necesita
   ``ALPHAVANTAGE_API_KEY``.
+* ``dukascopy``: el feed público de gráficos de Dukascopy Bank. Sin clave y con
+  intradía (de 1 minuto a 1 hora) de años atrás, no solo de los últimos días como
+  Yahoo. Cubre divisas, cripto, índices, materias primas y acciones (CFD).
 
 Cualquier fallo se comunica con ``ProviderError`` (mensaje en español listo para
 la UI y código HTTP sugerido) para que la gráfica nunca se rompa.
 """
 from __future__ import annotations
 
+import json
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
@@ -226,9 +231,209 @@ class AlphaVantageProvider(Provider):
         )
 
 
+# ───────────────────────── Dukascopy ─────────────────────────
+
+DK_URL = "https://freeserv.dukascopy.com/2.0/index.php"
+DK_TIMEOUT = 20
+DK_PAGE = 30_000  # máximo de velas por petición que admite el feed
+DK_MAX_PAGES = 8  # por ventana
+DK_WORKERS = 6
+# El feed rechaza las peticiones sin cabeceras de navegador y sin el Referer de
+# su propio widget de gráficos.
+DK_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0 Safari/537.36",
+    "Referer": "https://freeserv.dukascopy.com/2.0/?path=chart/index",
+}
+
+# Intervalo del gráfico -> intervalo de Dukascopy.
+DK_INTERVALS = {
+    "1m": "1MIN", "5m": "5MIN", "15m": "15MIN", "30m": "30MIN", "1h": "1HOUR",
+    "1d": "1DAY", "1wk": "1WEEK", "1mo": "1MONTH",
+}
+# Días de historia como máximo por intervalo, para no descargar cientos de
+# miles de velas (``max`` a 1 minuto); los rangos más largos se recortan.
+DK_MAX_DAYS = {"1m": 31, "5m": 366, "15m": 366, "30m": 366, "1h": 1827}
+# A 1-30 minutos el feed devuelve como mucho ~1 mes por petición (pocos miles de
+# velas aunque se pida más): el rango se parte en ventanas que se descargan en
+# paralelo. A 1 hora o más, una petición trae hasta 30 000 velas y basta con paginar.
+DK_WINDOW_DAYS = {"1m": 14, "5m": 28, "15m": 28, "30m": 28}
+DK_EPOCH = datetime(2003, 5, 1, tzinfo=timezone.utc)  # inicio del histórico de Dukascopy
+# Margen para que «1d» o «5d» tengan velas aunque se pidan en fin de semana o
+# festivo: se descarga de más y se recorta desde la última vela, como con Yahoo.
+DK_PADDING_DAYS = 5
+
+# Tickers de Yahoo sin equivalente directo por reglas.
+DK_SYMBOLS = {
+    "^GSPC": "USA500.IDX/USD",
+    "^NDX": "USATECH.IDX/USD",
+    "^DJI": "USA30.IDX/USD",
+    "^GDAXI": "DEU.IDX/EUR",
+    "^FTSE": "GBR.IDX/GBP",
+    "^N225": "JPN.IDX/JPY",
+    "^IBEX": "ESP.IDX/EUR",
+    "^STOXX50E": "EUS.IDX/EUR",
+    "^FCHI": "FRA.IDX/EUR",
+    "GC=F": "XAU/USD",
+    "SI=F": "XAG/USD",
+    "CL=F": "LIGHT.CMD/USD",
+    "BZ=F": "BRENT.CMD/USD",
+    "NG=F": "GAS.CMD/USD",
+}
+# Sufijo de bolsa de Yahoo -> mercado y divisa de Dukascopy (``SAN.MC`` -> ``SAN.ES/EUR``).
+DK_EXCHANGES = {
+    "MC": "ES/EUR", "DE": "DE/EUR", "PA": "FR/EUR", "AS": "NL/EUR",
+    "MI": "IT/EUR", "SW": "CH/CHF", "L": "GB/GBX",
+}
+_CURRENCIES = {"USD", "EUR", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD", "USDT"}
+
+
+def dukascopy_instrument(ticker: str) -> str:
+    """Instrumento de Dukascopy para un ticker de Yahoo (``AAPL`` -> ``AAPL.US/USD``)."""
+    if ticker in DK_SYMBOLS:
+        return DK_SYMBOLS[ticker]
+    if len(ticker) == 8 and ticker.endswith("=X"):  # divisas: EURUSD=X
+        return f"{ticker[:3]}/{ticker[3:6]}"
+    if any(ch in ticker for ch in "^="):
+        raise ProviderError(f"Dukascopy no tiene un equivalente de «{ticker}». Usa Yahoo Finance.", 422)
+    base, _, quote = ticker.partition("-")
+    if quote in _CURRENCIES:  # cripto: BTC-USD
+        return f"{base}/{quote}"
+    symbol, _, exchange = ticker.replace("-", "").partition(".")  # BRK-B -> BRKB
+    if not exchange:
+        return f"{symbol}.US/USD"
+    if exchange in DK_EXCHANGES:
+        return f"{symbol}.{DK_EXCHANGES[exchange]}"
+    raise ProviderError(f"Dukascopy no cubre la bolsa «.{exchange}» de «{ticker}». Usa Yahoo Finance.", 422)
+
+
+def parse_dukascopy(text: str) -> list[list[Any]] | None:
+    """Filas ``[ms, open, high, low, close, volume]`` de la respuesta JSONP.
+
+    ``None`` si Dukascopy no conoce el instrumento (responde ``[null]``).
+    """
+    start, end = text.find("("), text.rfind(")")
+    if start < 0 or end < start:
+        raise ProviderError("Dukascopy devolvió una respuesta inesperada.")
+    try:
+        rows = json.loads(text[start + 1 : end])
+    except ValueError as error:
+        raise ProviderError("Dukascopy devolvió una respuesta inesperada.") from error
+    if rows == [None]:
+        return None
+    if not isinstance(rows, list):
+        raise ProviderError("Dukascopy devolvió una respuesta inesperada.")
+    return rows
+
+
+class DukascopyProvider(Provider):
+    id = "dukascopy"
+    name = "Dukascopy"
+
+    def __init__(self, get: Callable[..., Any] | None = None, now: Callable[[], datetime] | None = None) -> None:
+        self._get = get
+        self._now = now or (lambda: datetime.now(timezone.utc))
+
+    def get_candles(self, ticker: str, range_: str, interval: str) -> list[Candle]:
+        if interval not in DK_INTERVALS:
+            raise ProviderError(f"Dukascopy no admite el intervalo «{interval}».", 422)
+        instrument = dukascopy_instrument(ticker)
+        days = RANGE_DAYS.get(range_)
+        cap = DK_MAX_DAYS.get(interval)
+        if cap is not None and (days is None or days > cap):
+            days = cap
+        key = f"dk:{instrument}:{interval}:{days}"
+        candles = market_data._cached(
+            key, Config.DUKASCOPY_CACHE_TTL, lambda: self._fetch(ticker, instrument, interval, days)
+        )
+        return _slice_days(candles, days)
+
+    def _fetch(self, ticker: str, instrument: str, interval: str, days: int | None) -> list[Candle]:
+        now = self._now()
+        start = DK_EPOCH if days is None else now - timedelta(days=days + DK_PADDING_DAYS)
+        step = timedelta(days=DK_WINDOW_DAYS.get(interval) or (now - start).days + 1)
+        windows = []
+        while start < now:
+            windows.append((int(start.timestamp() * 1000), int(min(start + step, now).timestamp() * 1000)))
+            start += step
+
+        dk_interval = DK_INTERVALS[interval]
+        with ThreadPoolExecutor(max_workers=min(DK_WORKERS, len(windows))) as pool:
+            pages = list(pool.map(lambda w: self._fetch_window(instrument, dk_interval, *w), windows))
+        if any(rows is None for rows in pages):
+            raise ProviderError(f"Dukascopy no tiene datos de «{ticker}» ({instrument}).", 404)
+
+        by_time: dict[int, Candle] = {}
+        for rows in pages:
+            for row in rows:
+                try:
+                    ms, open_, high, low, close, volume = row[:6]
+                    time_ = int(ms) // 1000
+                    by_time[time_] = {
+                        "time": time_,
+                        "open": float(open_),
+                        "high": float(high),
+                        "low": float(low),
+                        "close": float(close),
+                        "volume": float(volume or 0),
+                    }
+                except (TypeError, ValueError):
+                    continue  # fila incompleta: se omite, como hace Yahoo con los NaN
+        candles = [by_time[t] for t in sorted(by_time)]
+        if not candles:
+            raise ProviderError(f"Dukascopy no tiene datos de «{ticker}» ({instrument}) para este rango.", 404)
+        return candles
+
+    def _fetch_window(self, instrument: str, interval: str, start: int, end: int) -> list[list[Any]] | None:
+        """Velas entre ``start`` y ``end`` (ms), paginando; ``None`` si no existe el instrumento."""
+        cursor, rows = start, []
+        for _ in range(DK_MAX_PAGES):
+            page = self._request(instrument, interval, cursor)
+            if page is None:
+                return None
+            rows.extend(page)
+            last = int(page[-1][0]) if page else cursor
+            if last >= end or last <= cursor:  # ventana completa o sin más datos
+                break
+            cursor = last
+        return [r for r in rows if r and start <= int(r[0]) <= end]
+
+    def _request(self, instrument: str, interval: str, cursor: int) -> list[list[Any]] | None:
+        params = {
+            "path": "chart/json3",
+            "instrument": instrument,
+            "interval": interval,
+            "offer_side": "B",
+            "time_direction": "N",
+            "last_update": str(cursor),
+            "limit": str(DK_PAGE),
+            "splits": "true",
+            "stocks": "true",
+            "jsonp": "_callback",
+        }
+        get = self._get or requests.get
+        try:
+            response = get(DK_URL, params=params, headers=DK_HEADERS, timeout=DK_TIMEOUT)
+            if response.status_code == 429:
+                raise ProviderError("Dukascopy está limitando las peticiones. Espera un poco o usa Yahoo Finance.", 429)
+            response.raise_for_status()
+        except requests.Timeout as error:
+            raise ProviderError("Dukascopy tardó demasiado en responder.", 504) from error
+        except requests.RequestException as error:
+            raise ProviderError("No se pudo contactar con Dukascopy.") from error
+        return parse_dukascopy(response.text)
+
+
+def _slice_days(candles: list[Candle], days: int | None) -> list[Candle]:
+    """Recorta a ``days`` días contando desde la última vela (``None`` = todo)."""
+    if not candles or days is None:
+        return candles
+    cutoff = candles[-1]["time"] - days * 86400
+    return [c for c in candles if c["time"] > cutoff]
+
+
 # ───────────────────────── Registro ─────────────────────────
 
-PROVIDERS: dict[str, Provider] = {p.id: p for p in (YahooProvider(), AlphaVantageProvider())}
+PROVIDERS: dict[str, Provider] = {p.id: p for p in (YahooProvider(), AlphaVantageProvider(), DukascopyProvider())}
 
 
 def get_provider(provider_id: str | None) -> Provider:

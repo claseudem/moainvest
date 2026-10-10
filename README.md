@@ -362,6 +362,7 @@ TA-Lib funcionan igual) y avisa de los fallos con `ProviderError`.
 |---|---|
 | `yahoo` (por defecto) | `app.core.market_data` (yfinance); admite índices, divisas, futuros y cripto |
 | `alphavantage` | `TIME_SERIES_INTRADAY` (1m-1h), `DAILY`, `WEEKLY` y `MONTHLY` según el intervalo; no admite `^GSPC` ni `EURUSD=X` |
+| `dukascopy` | Feed público de Dukascopy Bank, sin clave. Intradía de 1m a 1h con mucha más historia que Yahoo (hasta 1 mes a 1m, 1 año a 5-30m y 5 años a 1h); divisas, cripto, índices, materias primas y acciones (CFD, precio *bid*) |
 
 **Configurar Alpha Vantage**: pide una clave gratuita en
 <https://www.alphavantage.co/support/#api-key> y ponla en el `.env`
@@ -378,6 +379,18 @@ cambio de rango o el cálculo de indicadores no gasta otra petición). Si el
 | `GET /api/graficador/providers` | `{"default", "providers": [{id, name, available, reason}]}` |
 | `GET /api/graficador/<ticker>/candles?provider=&range=&interval=` | Velas del proveedor elegido; errores `{"error"}` con 400/404/422/429/502/503/504 |
 | `GET /api/graficador/<ticker>/indicators?provider=...` | Igual que antes, calculado sobre las velas de ese proveedor |
+
+**Dukascopy** traduce el ticker de Yahoo a su instrumento
+(`dukascopy_instrument`): `AAPL` → `AAPL.US/USD`, `EURUSD=X` → `EUR/USD`,
+`BTC-USD` → `BTC/USD`, `SAN.MC` → `SAN.ES/EUR` (también `.DE`, `.PA`, `.AS`,
+`.MI`, `.SW` y `.L`) y una tabla `DK_SYMBOLS` para índices y futuros (`^GSPC` →
+`USA500.IDX/USD`, `GC=F` → `XAU/USD`...). Lo que no tiene equivalente (`^IXIC`,
+bolsas asiáticas) responde 422 con el aviso de usar Yahoo. A 1-30 minutos el
+feed devuelve como mucho ~1 mes por petición, así que el rango se parte en
+ventanas de 2-4 semanas que se descargan en paralelo (1 año a 5m, unas 70 000
+velas, tarda ~3-4 s); el resultado se cachea `DUKASCOPY_CACHE_TTL` segundos
+(60 por defecto). Como con Yahoo, el rango se cuenta desde la última vela: «1D»
+en fin de semana muestra el último día con mercado.
 
 **Añadir un proveedor**: una subclase de `Provider` registrada en `PROVIDERS`.
 Aparece sola en el selector y en la API.

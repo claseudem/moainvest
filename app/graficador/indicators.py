@@ -360,14 +360,18 @@ def warmup_range(range_: str, interval: str) -> str:
     calentados al primer punto visible. Nunca es menor que ``range_`` y respeta
     los límites de Yahoo (intradía: 1 mes a 5m/15m/30m, 1 año a 1h, 7 días a 1m).
     """
-    if interval == "1m":
-        return range_  # Yahoo solo da 7 días a 1 minuto: no se puede ampliar
+    if interval == "1m" or interval.endswith("s"):
+        # Yahoo solo da 7 días a 1 minuto, y a segundos (Dukascopy) la historia
+        # visible ya es casi todo lo que se puede pedir: no se amplía.
+        return range_
     if interval in ("1wk", "1mo"):
         wanted = "max"
     elif interval == "1d":
         wanted = "5y"
+    elif interval == "4h":
+        wanted = "2y"
     elif interval == "1h":
         wanted = "1y"
     else:
-        wanted = "1mo"  # 5m/15m/30m
+        wanted = "1mo"  # 5m/10m/15m/30m
     return wanted if _RANGE_ORDER.index(wanted) >= _RANGE_ORDER.index(range_) else range_

@@ -132,7 +132,7 @@ def test_providers_endpoint(client, monkeypatch):
     monkeypatch.setattr(Config, "ALPHAVANTAGE_API_KEY", "")
     data = client.get("/api/graficador/providers").get_json()
     assert data["default"] == "yahoo"
-    assert [p["id"] for p in data["providers"]] == ["yahoo", "alphavantage"]
+    assert [p["id"] for p in data["providers"]] == ["yahoo", "alphavantage", "dukascopy"]
     assert data["providers"][1]["available"] is False
 
 

@@ -7,6 +7,9 @@ from app.core.api import ALLOWED_INTERVALS, ALLOWED_RANGES
 from app.graficador import indicators, providers
 from app.graficador.views import TICKER_RE
 
+# Los de ``core`` más los que añade algún proveedor (segundos, 10m y 4h de Dukascopy).
+INTERVALS = ALLOWED_INTERVALS | providers.ALL_INTERVALS
+
 bp = Blueprint("graficador_api", __name__, url_prefix="/api/graficador")
 
 
@@ -26,6 +29,8 @@ def _fetch_candles(provider_id: str | None, ticker: str, range_: str, interval: 
     reason = provider.unavailable_reason()
     if reason:
         raise providers.ProviderError(reason, 503)
+    if not provider.supports(interval):
+        raise providers.ProviderError(f"{provider.name} no admite la periodicidad «{interval}».", 422)
     return provider.get_candles(ticker, range_, interval)
 
 
@@ -43,7 +48,7 @@ def candles(ticker: str):
     interval = request.args.get("interval", "1d")
     if not TICKER_RE.match(ticker):
         return _error(f"«{ticker[:20]}» no es un ticker válido", 400)
-    if range_ not in ALLOWED_RANGES or interval not in ALLOWED_INTERVALS:
+    if range_ not in ALLOWED_RANGES or interval not in INTERVALS:
         return _error("range o interval inválidos", 400)
     try:
         return jsonify(_fetch_candles(request.args.get("provider"), ticker, range_, interval))
@@ -69,7 +74,7 @@ def compute_indicators(ticker: str):
 
     if not TICKER_RE.match(ticker):
         return jsonify({"error": f"«{ticker[:20]}» no es un ticker válido"}), 400
-    if range_ not in ALLOWED_RANGES or interval not in ALLOWED_INTERVALS:
+    if range_ not in ALLOWED_RANGES or interval not in INTERVALS:
         return jsonify({"error": "range o interval inválidos"}), 400
     if not specs:
         return jsonify({"error": "Indica al menos un indicador (ind=sma:20)"}), 400

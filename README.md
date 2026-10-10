@@ -362,6 +362,7 @@ TA-Lib funcionan igual) y avisa de los fallos con `ProviderError`.
 |---|---|
 | `yahoo` (por defecto) | `app.core.market_data` (yfinance); admite índices, divisas, futuros y cripto |
 | `alphavantage` | `TIME_SERIES_INTRADAY` (1m-1h), `DAILY`, `WEEKLY` y `MONTHLY` según el intervalo; no admite `^GSPC` ni `EURUSD=X` |
+| `dukascopy` | Feed público de Dukascopy Bank, sin clave. Intradía de 1m a 1h con mucha más historia que Yahoo (hasta 1 mes a 1m, 1 año a 5-30m y 5 años a 1h); divisas, cripto, índices, materias primas y acciones (CFD, precio *bid*) |
 
 **Configurar Alpha Vantage**: pide una clave gratuita en
 <https://www.alphavantage.co/support/#api-key> y ponla en el `.env`
@@ -378,6 +379,30 @@ cambio de rango o el cálculo de indicadores no gasta otra petición). Si el
 | `GET /api/graficador/providers` | `{"default", "providers": [{id, name, available, reason}]}` |
 | `GET /api/graficador/<ticker>/candles?provider=&range=&interval=` | Velas del proveedor elegido; errores `{"error"}` con 400/404/422/429/502/503/504 |
 | `GET /api/graficador/<ticker>/indicators?provider=...` | Igual que antes, calculado sobre las velas de ese proveedor |
+
+**Dukascopy** traduce el ticker de Yahoo a su instrumento
+(`dukascopy_instrument`): `AAPL` → `AAPL.US/USD`, `EURUSD=X` → `EUR/USD`,
+`BTC-USD` → `BTC/USD`, `SAN.MC` → `SAN.ES/EUR` (también `.DE`, `.PA`, `.AS`,
+`.MI`, `.SW` y `.L`) y una tabla `DK_SYMBOLS` para índices y futuros (`^GSPC` →
+`USA500.IDX/USD`, `GC=F` → `XAU/USD`...). Lo que no tiene equivalente (`^IXIC`,
+bolsas asiáticas) responde 422 con el aviso de usar Yahoo. A 1-30 minutos el
+feed devuelve como mucho ~1 mes por petición, así que el rango se parte en
+ventanas de 2-4 semanas que se descargan en paralelo (1 año a 5m, unas 70 000
+velas, tarda ~3-4 s); el resultado se cachea `DUKASCOPY_CACHE_TTL` segundos
+(60 por defecto). Como con Yahoo, el rango se cuenta desde la última vela: «1D»
+en fin de semana muestra el último día con mercado.
+
+**Periodicidad (solo Dukascopy)**: con Dukascopy aparece un segundo selector,
+*Periodicidad*, agrupado como en su plataforma: **segundos** (1s, 10s, 30s),
+**minutos** (1m, 5m, 10m, 15m, 30m), **horas** (1h, 4h) y **días y más** (1D,
+1S, 1M). En *auto* la periodicidad la decide el botón de rango, como con los
+demás proveedores. Cada periodicidad tiene una historia máxima (`max_days`: 1
+día a 1s, 5 a 10s, 14 a 30s, 1 mes a 1m, 1 año a 5-30m, 5 años a 1h, sin límite
+a 4h o más) y los botones de rango que la superan se desactivan. La elección se
+recuerda por proveedor en `localStorage` (`graficador:interval:v1`). Un
+proveedor ofrece periodicidades propias con `interval_choices` (lo publica
+`/api/graficador/providers` en `intervals`); pedir a otro proveedor una que no
+admite (`?provider=yahoo&interval=1s`) responde 422.
 
 **Añadir un proveedor**: una subclase de `Provider` registrada en `PROVIDERS`.
 Aparece sola en el selector y en la API.

@@ -39,6 +39,10 @@ class Config:
     ALPHAVANTAGE_API_KEY = os.environ.get("ALPHAVANTAGE_API_KEY", "")
     ALPHAVANTAGE_CACHE_TTL = int(os.environ.get("ALPHAVANTAGE_CACHE_TTL", "300"))
 
+    # Dukascopy: proveedor de precios del Graficador con intradía de años atrás.
+    # No necesita clave; la caché evita repetir descargas grandes (hasta 1 año a 5m).
+    DUKASCOPY_CACHE_TTL = int(os.environ.get("DUKASCOPY_CACHE_TTL", "60"))
+
 
 class ProductionConfig(Config):
     DEBUG = False
@@ -51,3 +55,4 @@ class TestingConfig(Config):
     CANDLE_CACHE_TTL = 0
     ALPHAVANTAGE_API_KEY = ""
     ALPHAVANTAGE_CACHE_TTL = 0
+    DUKASCOPY_CACHE_TTL = 0

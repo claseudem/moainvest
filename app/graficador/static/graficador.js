@@ -26,6 +26,15 @@
   const providerSelect = document.getElementById("graficador-provider");
   const sourceEl = document.getElementById("graficador-source");
   const PROVIDER_KEY = "graficador:provider:v1";
+  const intervalWrap = document.getElementById("graficador-interval-wrap");
+  const intervalSelect = document.getElementById("graficador-interval");
+  const INTERVAL_KEY = "graficador:interval:v1";
+  // Días que abarca cada botón de rango, para desactivar los que superan la
+  // historia máxima de la periodicidad elegida (``max_days`` del proveedor).
+  const RANGE_DAYS = { "1d": 1, "5d": 5, "1mo": 31, "3mo": 93, "6mo": 186, "1y": 366, "2y": 731, "5y": 1827, max: Infinity };
+  const providersById = new Map();
+  let intervalChoices = []; // periodicidades elegibles del proveedor actual
+  let chosenInterval = ""; // "" = la del botón de rango
   let providerName = "Yahoo Finance";
   let providerId = "yahoo";
   try {
@@ -84,9 +93,11 @@
   }
 
   let intraday = false;
+  let withSeconds = false;
   function fmtTime(time) {
     const options = { timeZone: "UTC", day: "2-digit", month: "short", year: "numeric" };
     if (intraday) Object.assign(options, { hour: "2-digit", minute: "2-digit" });
+    if (withSeconds) options.second = "2-digit";
     return new Date(time * 1000).toLocaleString("es-ES", options);
   }
 
@@ -220,9 +231,12 @@
   const dataListeners = [];
   function load(button) {
     const id = ++request;
-    intraday = !/^(1d|1wk|1mo)$/.test(button.dataset.interval);
+    const interval = chosenInterval || button.dataset.interval;
+    intraday = !/^(1d|1wk|1mo)$/.test(interval);
+    withSeconds = /s$/.test(interval);
+    chart.applyOptions({ timeScale: { secondsVisible: withSeconds } });
     showStatus("Cargando datos de " + providerName + "…", "loading");
-    getJSON(candlesUrl + "?provider=" + encodeURIComponent(providerId) + "&range=" + button.dataset.range + "&interval=" + button.dataset.interval)
+    getJSON(candlesUrl + "?provider=" + encodeURIComponent(providerId) + "&range=" + button.dataset.range + "&interval=" + interval)
       .then((data) => {
         if (id !== request) return;
         candles = data;
@@ -231,7 +245,7 @@
         volumeSeries.setData(volumeData());
         chart.timeScale().fitContent();
         renderLegend(candles[candles.length - 1]);
-        context = { range: button.dataset.range, interval: button.dataset.interval, candles };
+        context = { range: button.dataset.range, interval, candles };
         dataListeners.forEach((listener) => listener(context));
         showStatus(
           candles.length ? "" : "No hay datos de «" + ticker + "» en " + providerName + " para este rango. Revisa el ticker.",
@@ -256,12 +270,82 @@
     providerId = id;
     providerName = name;
     if (sourceEl) sourceEl.textContent = "Datos de " + name;
+    setupIntervals((providersById.get(id) || {}).intervals || []);
+  }
+
+  // ───────────────────────── Periodicidad ─────────────────────────
+  // Con proveedores que la admiten (Dukascopy) se puede fijar a mano la
+  // periodicidad de las velas (segundos, minutos, horas…); si no, la decide el
+  // botón de rango. La elección se recuerda por proveedor.
+  function savedIntervals() {
+    try {
+      return JSON.parse(localStorage.getItem(INTERVAL_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function setupIntervals(choices) {
+    intervalChoices = choices;
+    if (!intervalSelect || !intervalWrap) return;
+    intervalWrap.hidden = !choices.length;
+    intervalSelect.innerHTML = '<option value="">Periodicidad: auto</option>';
+    const groups = new Map();
+    choices.forEach((c) => {
+      if (!groups.has(c.group)) {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = c.group;
+        groups.set(c.group, optgroup);
+        intervalSelect.appendChild(optgroup);
+      }
+      const option = document.createElement("option");
+      option.value = c.value;
+      option.textContent = c.label;
+      groups.get(c.group).appendChild(option);
+    });
+    const saved = savedIntervals()[providerId];
+    chosenInterval = choices.some((c) => c.value === saved) ? saved : "";
+    intervalSelect.value = chosenInterval;
+    updateRanges();
+  }
+
+  // Desactiva los rangos más largos que la historia de la periodicidad elegida
+  // (p. ej. 1 segundo solo llega a 1 día) y, si el pulsado queda fuera, pasa al
+  // más largo permitido.
+  function updateRanges() {
+    const choice = intervalChoices.find((c) => c.value === chosenInterval);
+    const maxDays = choice && choice.max_days ? choice.max_days : Infinity;
+    rangeButtons.forEach((b) => {
+      const tooLong = RANGE_DAYS[b.dataset.range] > maxDays;
+      b.disabled = tooLong;
+      b.title = tooLong ? "No disponible con «" + choice.label + "»" : "";
+    });
+    if (currentRange().disabled) {
+      const allowed = rangeButtons.filter((b) => !b.disabled);
+      press(rangeButtons, allowed[allowed.length - 1] || rangeButtons[0]);
+    }
+  }
+
+  if (intervalSelect) {
+    intervalSelect.addEventListener("change", () => {
+      chosenInterval = intervalSelect.value;
+      const saved = savedIntervals();
+      saved[providerId] = chosenInterval;
+      try {
+        localStorage.setItem(INTERVAL_KEY, JSON.stringify(saved));
+      } catch (e) {
+        /* sin almacenamiento: solo dura esta visita */
+      }
+      updateRanges();
+      load(currentRange());
+    });
   }
 
   function setupProviders(list) {
     if (!providerSelect || !list.length) return;
     providerSelect.innerHTML = "";
     list.forEach((p) => {
+      providersById.set(p.id, p);
       const option = document.createElement("option");
       option.value = p.id;
       option.textContent = p.available ? p.name : p.name + " (no disponible)";

@@ -55,6 +55,10 @@ app/
     media.py                   # Imágenes optimizadas vía Cloudinary
     templates/informes/        # index.html y emails/market_report.html
     static/                    # js/, img/informes/, video/
+  universo/                  # Mi universo de acciones: "/app/universo/"
+    views.py                   # Página con la tabla del universo
+    universe.py, universe.csv  # Las acciones (datos de referencia de Finviz)
+    templates/universo/, static/
 tests/                       # pytest, una carpeta por app (tests/<app>/...)
 ```
 
@@ -178,6 +182,19 @@ La API sirve las gráficas para cualquier ticker:
 `GET /api/quant/<ticker>/earnings.png?count=4` y las versiones propias de
 `drawdown.png` y `monthly-heatmap.png`.
 
+### Mi universo de acciones
+
+App `app/universo/` en `/app/universo/`: el universo de acciones que sigo, a
+modo de portafolio de acceso rápido. Una tabla con ticker, empresa, sector e
+industria, país, capitalización y PER (datos de referencia de un screener de
+Finviz), más el precio y la variación del día en vivo (`/api/quote/<ticker>`,
+pedidos desde `app/universo/static/universo.js`, 8 en paralelo). Se puede
+filtrar por sector, buscar por texto y ordenar por cualquier columna; cada fila
+enlaza al **Graficador** y a **Quant stats** con su ticker.
+
+Para añadir o quitar acciones, edita `app/universo/universe.csv` (una fila por
+acción, con el ticker de Yahoo Finance).
+
 ### Nombres del sidebar
 
 Los textos de los enlaces del sidebar (apps de `apps.py`, sus `sections` y las
@@ -265,6 +282,7 @@ Todo lo que se ve con el layout oscuro de sidebar cuelga de `/app/`:
 | `/app/informes/` | Informes |
 | `/app/analisis-varianza/` | Análisis de varianza |
 | `/app/quant-stats/` (`fundamentales`, `revision`, `tearsheet`) | Quant stats |
+| `/app/universo/` | Mi universo de acciones |
 
 Las APIs siguen en `/api/...`. Las rutas antiguas (`/analisis-varianza/...`,
 `/quant-stats/...`, `/informes/...`) redirigen con **301** a su equivalente

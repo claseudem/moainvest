@@ -35,4 +35,4 @@ def test_every_installed_app_with_pages_is_in_sidebar(app):
 
 
 def test_sidebar_lists_reports_right_after_the_charts():
-    assert [entry.slug for entry in APPS][1:] == ["informes", "analisis-varianza", "quant-stats"]
+    assert [entry.slug for entry in APPS][1:] == ["informes", "analisis-varianza", "quant-stats", "universo"]

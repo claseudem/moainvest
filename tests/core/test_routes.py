@@ -138,7 +138,7 @@ def test_sidebar_uses_line_icons_and_keeps_the_toggle(client, fake_uec):
     page = client.get("/app/quant-stats/fundamentales").get_data(as_text=True)
     sidebar = page.split('<aside class="sidebar"', 1)[1].split("</aside>", 1)[0]
     assert 'id="sidebar-toggle"' in sidebar
-    for name in ("candlestick-chart", "file-text", "sigma", "flask-conical", "chart-column", "search", "panel-left"):
+    for name in ("candlestick-chart", "file-text", "sigma", "flask-conical", "briefcase", "chart-column", "search", "panel-left"):
         assert f"ui-icon--{name}" in sidebar
     # Ningún emoji de apps ni de subsecciones.
     for entry in (*APPS, *(section for a in APPS for section in a.sections)):

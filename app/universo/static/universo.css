@@ -1,0 +1,244 @@
+/* App "Mi universo de acciones". La cabecera reutiliza .varianza-hero de core. */
+.universo {
+  padding: 1.5rem 1.5rem 3rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.universo__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.universo__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.universo__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.universo__chip span {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.universo__chip:hover {
+  border-color: var(--ink);
+}
+
+.universo__chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.universo__chip[aria-pressed="true"] span {
+  color: inherit;
+  opacity: 0.7;
+}
+
+.universo__search {
+  flex: 0 1 280px;
+  min-width: 0;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.universo__search:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.universo__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.universo__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.universo__table th,
+.universo__table td {
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.universo__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.universo__table tbody tr:hover {
+  background: var(--mist);
+}
+
+.universo__table th {
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.universo__table th button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.universo__table th[aria-sort] button {
+  color: var(--ink);
+}
+
+.universo__table th[aria-sort="ascending"] button::after {
+  content: " ↑";
+}
+
+.universo__table th[aria-sort="descending"] button::after {
+  content: " ↓";
+}
+
+.universo__table .is-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.universo__ticker {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.universo__ticker:hover {
+  text-decoration: underline;
+}
+
+.universo__table td.universo__name,
+.universo__table td.universo__wrap {
+  min-width: 9rem;
+  white-space: normal;
+}
+
+.universo__sector {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.universo__industry {
+  display: block;
+}
+
+.universo__pill {
+  display: inline-block;
+  min-width: 4.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  color: var(--muted);
+  text-align: right;
+}
+
+.universo__pill[data-tone="up"] {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.universo__pill[data-tone="down"] {
+  background: var(--down-soft);
+  color: var(--down);
+}
+
+.universo__actions {
+  text-align: right;
+}
+
+.universo__actions a {
+  margin-left: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.universo__actions a:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.universo__empty {
+  margin: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.universo__note {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.universo__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+@media (max-width: 720px) {
+  .universo {
+    padding: 1rem 1rem 2.5rem;
+  }
+
+  .universo__hide-sm {
+    display: none;
+  }
+
+  .universo__search {
+    flex-basis: 100%;
+  }
+}

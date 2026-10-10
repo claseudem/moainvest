@@ -67,6 +67,7 @@ APPS: tuple[App, ...] = (
             AppSection(slug="revision", name="Revisión analítica", icon="🔍", endpoint="quant_stats.revision"),
         ),
     ),
+    App(slug="universo", name="Mi universo de acciones", icon="🌐", endpoint="universo.index", kind="blank"),
 )
 
 

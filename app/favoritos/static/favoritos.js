@@ -1,42 +1,31 @@
 /**
- * "Mi universo de acciones": precios en vivo (/api/quote/<ticker>), filtro por
- * sector, búsqueda y ordenación de la tabla. Todo en el cliente.
+ * "Mis activos": precios en vivo (/api/quote/<ticker>), búsqueda y ordenación de la tabla. Todo en el cliente.
  */
 (function () {
   "use strict";
 
-  const root = document.getElementById("universo");
+  const root = document.getElementById("activos");
   if (!root) return; // esta página no está montada
 
-  const tbody = root.querySelector("#universo-table tbody");
+  const tbody = root.querySelector("#activos-table tbody");
   const rows = Array.from(tbody.rows);
-  const search = document.getElementById("universo-search");
-  const chips = Array.from(root.querySelectorAll("#universo-sectors [data-sector]"));
-  const emptyEl = document.getElementById("universo-empty");
+  const search = document.getElementById("activos-search");
+  const emptyEl = document.getElementById("activos-empty");
   const quoteUrl = root.dataset.quoteUrl;
   const MAX_PARALLEL = 8;
 
-  let sector = "";
-
-  // --- Filtros -------------------------------------------------------------
+  // --- Búsqueda ------------------------------------------------------------
   function applyFilters() {
     const q = search.value.trim().toLowerCase();
     let visible = 0;
     rows.forEach((row) => {
-      const show = (!sector || row.dataset.sector === sector) && (!q || row.dataset.search.includes(q));
+      const show = !q || row.dataset.search.includes(q);
       row.hidden = !show;
       if (show) visible += 1;
     });
     emptyEl.hidden = visible > 0;
   }
 
-  chips.forEach((chip) =>
-    chip.addEventListener("click", () => {
-      sector = chip.dataset.sector;
-      chips.forEach((c) => c.setAttribute("aria-pressed", String(c === chip)));
-      applyFilters();
-    })
-  );
   search.addEventListener("input", applyFilters);
 
   // --- Ordenación ----------------------------------------------------------

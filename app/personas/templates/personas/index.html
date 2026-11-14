@@ -1,0 +1,208 @@
+{% extends "moainvest/base.html" %}
+{% import "moainvest/_macros.html" as ui with context %}
+{% import "core/icons.html" as icons %}
+
+{% block title %}Personas · MOAINVEST{% endblock %}
+{% block description %}Quiénes somos, nuestro propósito, el camino por niveles y el crecimiento de la comunidad MOAINVEST.{% endblock %}
+
+{% block content %}
+{% call ui.page_intro("Personas · Comunidad", lead="Combinamos el interés por la tecnología, los mercados financieros, los negocios y la educación para construir una plataforma que haga el conocimiento financiero más accesible.") %}
+  Somos personas con una <span class="accent">visión clara</span>.
+{% endcall %}
+
+<div class="mx-auto w-full max-w-6xl px-5 sm:px-8">
+
+  <p class="mt-8 rounded-xl bg-mist px-4 py-3 text-sm text-muted">
+    <span class="font-mono text-xs tracking-[0.1em] uppercase text-brand">Datos de demostración</span>
+    Los nombres del equipo, el progreso y la cifra de la comunidad son de ejemplo. Aún no hay usuarios conectados a esta sección.
+  </p>
+
+  {# ── A. Quiénes somos ─────────────────────────────────────────── #}
+  <section id="quienes-somos" aria-labelledby="quienes-somos-title" class="scroll-mt-24 py-16 sm:py-20">
+    <p class="eyebrow mb-4">01 · Quiénes somos</p>
+    <h2 id="quienes-somos-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+      Un equipo de <span class="accent">distintas disciplinas</span>.
+    </h2>
+    <ul class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {% for member in team %}
+      <li data-reveal style="--i: {{ loop.index0 }}" class="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
+        <span class="grid size-14 place-items-center rounded-full bg-brand-soft font-mono text-sm font-medium text-brand" aria-hidden="true">
+          {{ loop.index }}
+        </span>
+        <p class="mt-5 text-lg font-semibold tracking-tight">{{ member.name }}</p>
+        <p class="mt-1 text-sm font-medium text-brand-deep">{{ member.career }}</p>
+        <p class="mt-3 text-sm leading-relaxed text-muted">{{ member.role }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# ── B. Nuestro propósito ─────────────────────────────────────── #}
+  <section aria-labelledby="proposito-title" class="scroll-mt-24 border-t border-line py-16 sm:py-20">
+    <p class="eyebrow mb-4">02 · Nuestro propósito</p>
+    <h2 id="proposito-title" class="sr-only">Nuestro propósito</h2>
+    <ul class="grid gap-4 md:grid-cols-3">
+      {% for title, text, icon in pillars %}
+      <li data-reveal style="--i: {{ loop.index0 }}" class="rounded-2xl border border-line bg-mist p-6 sm:p-8">
+        <span class="grid size-12 place-items-center rounded-xl bg-white text-brand">
+          {{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}
+        </span>
+        <p class="mt-6 text-xl font-semibold tracking-tight">{{ title }}</p>
+        <p class="mt-2 leading-relaxed text-muted">{{ text }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# ── C. Nuestro camino: sistema de personajes ─────────────────── #}
+  <section id="camino" aria-labelledby="camino-title" class="scroll-mt-24 border-t border-line py-16 sm:py-20">
+    <p class="eyebrow mb-4">03 · Nuestro camino</p>
+    <h2 id="camino-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+      Ocho niveles, <span class="accent">una misión a la vez</span>.
+    </h2>
+
+    <div class="mt-8 rounded-2xl border border-line bg-white p-5 sm:p-6">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <p class="text-sm text-muted">Tu XP total</p>
+        <p class="font-mono text-sm tabular-nums"><span class="text-ink">{{ progress.xp }}</span> XP · nivel {{ progress.current or levels|length }} de {{ levels|length }}</p>
+      </div>
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-mist" role="progressbar" aria-label="Avance total por niveles" aria-valuemin="0" aria-valuemax="{{ levels|length * xp_per_level }}" aria-valuenow="{{ progress.xp }}">
+        <div class="h-full rounded-full bg-brand transition-[width] duration-700 ease-out-soft" style="width: {{ (progress.xp * 100 / (levels|length * xp_per_level))|round(1) }}%"></div>
+      </div>
+    </div>
+
+    {# Línea de niveles: cada tarjeta enlaza a su detalle (?nivel=N). #}
+    {% set state_labels = {"desbloqueado": "Completado", "actual": "Actual", "bloqueado": "Bloqueado"} %}
+    {% set state_classes = {
+      "desbloqueado": "bg-up-soft text-up",
+      "actual": "bg-brand text-white",
+      "bloqueado": "bg-mist text-muted",
+    } %}
+    <ol class="mt-8 flex snap-x gap-3 overflow-x-auto pb-4 md:grid md:grid-cols-2 md:overflow-visible lg:grid-cols-4" aria-label="Niveles">
+      {% for item in levels %}
+      {% set level = item.level %}
+      {% set is_selected = level.number == selected.number %}
+      <li class="snap-start shrink-0 basis-64 md:basis-auto">
+        <a href="{{ url_for('personas.index', nivel=level.number) }}#detalle-nivel"
+           aria-current="{{ 'step' if is_selected else 'false' }}"
+           class="group flex h-full flex-col rounded-2xl border bg-white p-5 transition-[border-color,box-shadow,transform] duration-500 ease-out-soft hover:-translate-y-1 hover:shadow-[0_24px_48px_-30px_rgba(23,23,23,.4)] {{ 'border-brand shadow-[0_0_0_3px_rgba(200,16,46,.12)]' if is_selected else 'border-line' }} {{ 'opacity-70' if item.state == 'bloqueado' else '' }}">
+          <div class="flex items-start justify-between gap-3">
+            <span class="grid size-11 place-items-center rounded-xl bg-mist text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+              {{ icons.icon(level.icon, extra_class="size-5", stroke_width=1.6) }}
+            </span>
+            <span class="rounded-full px-2.5 py-1 font-mono text-[0.7rem] tracking-[0.08em] uppercase {{ state_classes[item.state] }}">
+              {{ state_labels[item.state] }}
+            </span>
+          </div>
+          <p class="mt-5 font-mono text-xs tracking-[0.1em] text-muted">NIVEL {{ '%02d' % level.number }}</p>
+          <p class="mt-1 text-lg font-semibold tracking-tight">{{ level.name }}</p>
+          <p class="mt-1 text-sm leading-snug text-muted">{{ level.profile }}</p>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+
+    {# Detalle del nivel seleccionado #}
+    {% set detail_mission_status = {"desbloqueado": "Completada", "actual": "Pendiente", "bloqueado": "Bloqueada"} %}
+    <article id="detalle-nivel" aria-labelledby="detalle-titulo" class="scroll-mt-24 mt-6 grid gap-6 rounded-2xl border border-line bg-mist p-6 sm:p-8 lg:grid-cols-5">
+      <div class="lg:col-span-2">
+        <p class="font-mono text-xs tracking-[0.1em] text-brand">NIVEL {{ '%02d' % selected.number }} · {{ state_labels[selected_state] }}</p>
+        <h3 id="detalle-titulo" class="mt-2 text-3xl font-semibold tracking-[-0.03em]">{{ selected.name }}</h3>
+        <p class="mt-2 font-medium text-brand-deep">{{ selected.profile }}</p>
+        <p class="mt-4 leading-relaxed text-muted">{{ selected.description }}</p>
+      </div>
+
+      <div class="grid gap-4 lg:col-span-3">
+        <div class="rounded-xl bg-white p-5">
+          <p class="font-mono text-xs tracking-[0.1em] uppercase text-muted">Misión</p>
+          <p class="mt-2 text-lg font-medium tracking-tight">{{ selected.mission }}</p>
+          <p class="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <span class="font-medium text-ink">Ejemplo:</span> {{ selected.mission_example }}
+            <span class="rounded-full bg-mist px-2.5 py-0.5 font-mono text-xs tabular-nums">+{{ xp_per_level }} XP</span>
+            <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {{ 'bg-up-soft text-up' if selected_state == 'desbloqueado' else 'bg-mist text-muted' }}">
+              {{ detail_mission_status[selected_state] }}
+            </span>
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-white p-5">
+          <p class="font-mono text-xs tracking-[0.1em] uppercase text-muted">Para desbloquearlo</p>
+          <p class="mt-2 leading-relaxed">{{ selected_requirement }}</p>
+          {% if selected_state == 'actual' %}
+          <div class="mt-4 h-2 overflow-hidden rounded-full bg-mist" role="progressbar" aria-label="XP del nivel actual" aria-valuemin="0" aria-valuemax="{{ xp_per_level }}" aria-valuenow="{{ progress.partial_xp }}">
+            <div class="h-full rounded-full bg-brand transition-[width] duration-700 ease-out-soft" style="width: {{ partial_percent }}%"></div>
+          </div>
+          <p class="mt-2 font-mono text-xs tabular-nums text-muted">{{ progress.partial_xp }} / {{ xp_per_level }} XP</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <p class="text-sm text-muted lg:col-span-5">
+        Los personajes son representaciones educativas. Completar niveles no garantiza riqueza ni éxito financiero.
+      </p>
+    </article>
+  </section>
+
+  {# ── D. Comunidad y desbloqueo colectivo ───────────────────────── #}
+  <section id="comunidad" aria-labelledby="comunidad-title" class="scroll-mt-24 border-t border-line py-16 sm:py-20">
+    <p class="eyebrow mb-4">04 · Comunidad</p>
+    <h2 id="comunidad-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+      Cada nueva persona nos acerca a <span class="accent">un mayor impacto</span>.
+    </h2>
+
+    <div class="mt-10 grid gap-6 lg:grid-cols-5">
+      <div class="rounded-2xl border border-line bg-white p-6 sm:p-8 lg:col-span-2">
+        <p class="font-mono text-xs tracking-[0.1em] uppercase text-muted">Integrantes</p>
+        <p class="mt-2 font-mono text-6xl font-medium tabular-nums tracking-tight" data-member-count>{{ member_count }}</p>
+        <p class="mt-2 text-xs text-muted">{{ 'Cifra de demostración' if count_source == 'demo' else 'Cifra en vivo' }}</p>
+
+        {% if next_target %}
+        <p class="mt-8 text-sm text-muted">Próxima meta: <span class="font-medium text-ink">{{ next_target }} personas</span></p>
+        <div class="mt-3 h-3 overflow-hidden rounded-full bg-mist" role="progressbar" aria-label="Avance hacia la próxima meta" aria-valuemin="0" aria-valuemax="{{ next_target }}" aria-valuenow="{{ member_count }}">
+          <div class="h-full rounded-full bg-brand transition-[width] duration-1000 ease-out-soft" style="width: {{ next_percent }}%"></div>
+        </div>
+        <p class="mt-2 font-mono text-xs tabular-nums text-muted">{{ next_percent }}%</p>
+        {% endif %}
+
+        <div class="mt-8 grid gap-3">
+          <button type="button" data-copy-invite class="{{ ui.btn('primary', 'md') }}">Invitar personas</button>
+          <label class="grid gap-1.5 text-xs text-muted">
+            Enlace de registro
+            <input id="invite-link" readonly value="{{ invite_url }}" class="h-10 w-full rounded-full border border-line bg-mist px-4 font-mono text-xs text-ink" onfocus="this.select()">
+          </label>
+          <p role="status" data-copy-status class="min-h-5 text-xs text-up"></p>
+        </div>
+      </div>
+
+      <ol class="grid content-start gap-3 lg:col-span-3" aria-label="Hitos de la comunidad">
+        {% set state_text = {"completado": "Completado", "proximo": "Próximo objetivo", "bloqueado": "Bloqueado"} %}
+        {% for m in milestones %}
+        <li data-reveal style="--i: {{ loop.index0 }}" class="flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-center sm:gap-5 {{ 'border-up/30 bg-up-soft' if m.state == 'completado' else ('border-brand/40 bg-brand-soft' if m.state == 'proximo' else 'border-line bg-mist opacity-75') }}">
+          <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-white font-mono text-sm font-medium tabular-nums {{ 'text-up' if m.state == 'completado' else ('text-brand' if m.state == 'proximo' else 'text-muted') }}">
+            {{ icons.icon('star' if m.state == 'completado' else ('trending-up' if m.state == 'proximo' else 'layers'), extra_class="size-5", stroke_width=1.6) }}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="flex flex-wrap items-center gap-2 font-semibold tracking-tight">
+              {{ m.target }} personas · {{ m.title }}
+              <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium {{ 'text-up' if m.state == 'completado' else ('text-brand-deep' if m.state == 'proximo' else 'text-muted') }}">
+                {{ state_text[m.state] }}
+              </span>
+            </p>
+            <p class="mt-1 text-sm text-muted">{{ m.unlocks }}</p>
+          </div>
+          {% if m.state == 'proximo' %}
+          <div class="h-2 w-full overflow-hidden rounded-full bg-white sm:w-32" aria-hidden="true">
+            <div class="h-full rounded-full bg-brand" style="width: {{ m.percent }}%"></div>
+          </div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('personas.static', filename='personas.js') }}"></script>
+{% endblock %}

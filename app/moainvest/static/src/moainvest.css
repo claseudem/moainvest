@@ -12,6 +12,7 @@
 @source "../../templates/moainvest";
 @source "../../../cuentas/templates/cuentas";
 @source "../../../core/templates/core/icons.html";
+@source "../../../personas/templates/personas";
 @source "../moainvest.js";
 
 /* Fuentes de Google Fonts (se cargan en moainvest/base.html). */

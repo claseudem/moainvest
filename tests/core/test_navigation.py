@@ -42,4 +42,5 @@ def test_sidebar_lists_reports_right_after_the_charts():
         "pyportfolio-opt",
         "favoritos",
         "universo",
+        "pronosticador",
     ]

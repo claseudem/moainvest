@@ -36,6 +36,7 @@ INSTALLED_APPS = (
     "informes",
     "graficador",
     "pyportfolio_opt",
+    "pronosticador",
 )
 
 

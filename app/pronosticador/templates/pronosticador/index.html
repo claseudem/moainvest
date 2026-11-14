@@ -1,0 +1,115 @@
+{% extends "core/base.html" %}
+
+{% block title %}Pronosticador · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('pronosticador.static', filename='pronosticador.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page pron-page" id="pron-page"
+     data-api-url="{{ url_for('pronosticador_api.dashboard_data') }}"
+     data-train-url="{{ url_for('pronosticador_api.train') }}">
+  <header class="page-head pron-head">
+    <div>
+      <p class="eyebrow">Econometría · S&amp;P 500 (SPY)</p>
+      <h1 class="page-title">Pronóstico de <span class="accent">riesgo</span>.</h1>
+      <p class="page-lead">
+        Previsión a un día del SPY con un modelo AR(p) para la media y GARCH(1,1) para la
+        volatilidad: VaR y CVaR, simulación de Monte Carlo y un semáforo de decisión.
+      </p>
+    </div>
+
+    <form class="pron-controls" id="pron-controls">
+      <label class="pron-field">
+        <span class="pron-field__label">Rezagos AR</span>
+        <select id="pron-lags" class="select" aria-label="Rezagos del modelo AR">
+          {% for n in allowed_lags %}
+          <option value="{{ n }}"{% if n == default_lags %} selected{% endif %}>AR({{ n }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn--primary" id="pron-retrain">
+        {{ icons.icon("refresh-cw") }}<span>Re-estimar modelo</span>
+      </button>
+      {% if mlflow_ui_url %}
+      <a class="btn btn--secondary" id="pron-mlflow-link" href="{{ mlflow_ui_url }}" target="_blank" rel="noopener">
+        {{ icons.icon("flask-conical") }}<span>MLflow</span>
+      </a>
+      {% endif %}
+      <a class="btn btn--secondary" href="https://app.motherduck.com" target="_blank" rel="noopener">
+        {{ icons.icon("database") }}<span>MotherDuck</span>
+      </a>
+    </form>
+  </header>
+
+  <p class="pron-status" id="pron-status" role="status">Cargando datos y estimando el modelo…</p>
+  <div class="pron-error" id="pron-error" role="alert" hidden>
+    <strong>No se pudieron cargar los datos.</strong>
+    <span id="pron-error-msg"></span>
+  </div>
+
+  <div class="pron-body" id="pron-body" hidden>
+    <section class="card pron-decision" id="pron-decision" aria-labelledby="pron-decision-text">
+      <div>
+        <p class="pron-label">Diagnóstico · SPY · <span id="pron-fuente">—</span></p>
+        <h2 class="pron-decision__text" id="pron-decision-text">—</h2>
+        <p class="pron-decision__desc" id="pron-decision-desc"></p>
+      </div>
+      <dl class="pron-decision__stats">
+        <div><dt>Acierto direccional</dt><dd id="pron-acierto">—</dd></div>
+        <div><dt>Prob. Monte Carlo (+)</dt><dd id="pron-prob">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="pron-kpis" aria-label="Indicadores clave">
+      <div class="card pron-kpi"><p class="pron-label">Último cierre</p><p class="pron-kpi__value" id="kpi-cierre">—</p><p class="pron-kpi__hint">SPY (USD)</p></div>
+      <div class="card pron-kpi"><p class="pron-label">Precio esperado t+1</p><p class="pron-kpi__value" id="kpi-precio">—</p><p class="pron-kpi__hint" id="kpi-retorno">μ(t+1): —</p></div>
+      <div class="card pron-kpi"><p class="pron-label">Volatilidad GARCH</p><p class="pron-kpi__value" id="kpi-vol">—</p><p class="pron-kpi__hint">Anualizada (252 días)</p></div>
+      <div class="card pron-kpi"><p class="pron-label">VaR 95% (1 día)</p><p class="pron-kpi__value is-down" id="kpi-var95">—</p><p class="pron-kpi__hint">Pérdida máxima normal</p></div>
+      <div class="card pron-kpi"><p class="pron-label">CVaR 95%</p><p class="pron-kpi__value is-down" id="kpi-cvar95">—</p><p class="pron-kpi__hint">Pérdida media en la cola</p></div>
+      <div class="card pron-kpi"><p class="pron-label">Cointegración p-val</p><p class="pron-kpi__value" id="kpi-coint">—</p><p class="pron-kpi__hint" id="kpi-adf">ADF p-val: —</p></div>
+    </section>
+
+    <div class="pron-charts">
+      <section class="card pron-chart">
+        <header class="pron-chart__head"><h3>Serie SPY y banda de confianza GARCH</h3><span class="pron-tag">Spot + banda 95%</span></header>
+        <div class="pron-chart__plot" id="chart-serie"></div>
+      </section>
+      <section class="card pron-chart">
+        <header class="pron-chart__head"><h3>Monte Carlo (15 días proyectados)</h3><span class="pron-tag">25 trayectorias</span></header>
+        <div class="pron-chart__plot" id="chart-montecarlo"></div>
+      </section>
+      <section class="card pron-chart">
+        <header class="pron-chart__head"><h3>Distribución de retornos y VaR</h3><span class="pron-tag">Riesgo de cola</span></header>
+        <div class="pron-chart__plot" id="chart-densidad"></div>
+      </section>
+      <section class="card pron-chart">
+        <header class="pron-chart__head"><h3>Volatilidad condicional GARCH(1,1)</h3><span class="pron-tag">Últimos 60 días</span></header>
+        <div class="pron-chart__plot" id="chart-garch"></div>
+      </section>
+    </div>
+
+    <section class="card pron-audit" aria-labelledby="pron-audit-title">
+      <header class="pron-chart__head">
+        <h3 id="pron-audit-title">Auditoría de corridas</h3>
+        <span class="pron-tag">MotherDuck · audit_pipeline_runs</span>
+      </header>
+      <p class="pron-kpi__hint pron-audit__note" id="pron-audit-note" hidden>Los datos vienen de Yahoo Finance: la auditoría solo existe en MotherDuck.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>Fecha (UTC)</th><th>Estado</th><th>R² AR(p)</th><th>VaR 95%</th><th>VaR 99%</th><th>Precio proyectado</th></tr>
+          </thead>
+          <tbody id="pron-audit-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{{ url_for('pronosticador.static', filename='pronosticador.js') }}"></script>
+{% endblock %}

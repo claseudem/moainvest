@@ -39,6 +39,19 @@ class Config:
     # Login con InsForge (https://insforge.dev): URL del proyecto y anon key
     # (``npx @insforge/cli secrets get ANON_KEY``). Con AUTH_REQUIRED activo,
     # todo /app/ exige iniciar sesión.
+    # Pronosticador: lee la serie diaria del SPY (tabla ``raw_spy_daily``) de
+    # MotherDuck (https://app.motherduck.com); sin token o sin tabla, de Yahoo Finance.
+    MOTHER_DUCK_TOKEN = os.environ.get("MOTHER_DUCK_TOKEN", "")
+    MOTHERDUCK_DATABASE = os.environ.get("MOTHERDUCK_DATABASE", "riesgo_olap")
+    # Si MotherDuck no tiene la tabla, el Pronosticador usa Yahoo Finance con este
+    # ticker y periodo (cierres diarios).
+    PRONOSTICADOR_TICKER = os.environ.get("PRONOSTICADOR_TICKER", "SPY")
+    PRONOSTICADOR_YAHOO_PERIOD = os.environ.get("PRONOSTICADOR_YAHOO_PERIOD", "10y")
+    # MLflow es opcional: sin URI no se registra nada. Con ``MLFLOW_UI_URL`` el
+    # Pronosticador muestra un enlace a la interfaz de MLflow.
+    MLFLOW_TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "")
+    MLFLOW_UI_URL = os.environ.get("MLFLOW_UI_URL", "")
+
     INSFORGE_URL = os.environ.get("INSFORGE_URL", "")
     INSFORGE_ANON_KEY = os.environ.get("INSFORGE_ANON_KEY", "")
     # API key del proyecto (full-access, solo servidor): la usa app/favoritos para la BD.
@@ -62,6 +75,9 @@ class TestingConfig(Config):
     ALPHAVANTAGE_API_KEY = ""
     ALPHAVANTAGE_CACHE_TTL = 0
     AUTH_REQUIRED = False
+    MOTHER_DUCK_TOKEN = ""
+    MLFLOW_TRACKING_URI = ""
+    MLFLOW_UI_URL = ""
     INSFORGE_URL = "https://insforge.test"
     INSFORGE_ANON_KEY = "anon-test"
     INSFORGE_API_KEY = "api-test"

@@ -67,6 +67,7 @@ APPS: tuple[App, ...] = (
     App(slug="analisis-varianza", name="Análisis de varianza", icon="🧮", endpoint="varianza.index", kind="blank"),
     App(slug="pyportfolio-opt", name="Pyportfolio opt", icon="📐", endpoint="pyportfolio_opt.index", kind="blank"),
     App(slug="favoritos", name="Mis activos", icon="⭐", endpoint="favoritos.index", kind="blank"),
+    App(slug="pronosticador", name="Pronosticador", icon="🔮", endpoint="pronosticador.index", kind="blank"),
 )
 
 

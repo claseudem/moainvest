@@ -38,6 +38,7 @@ LEGACY_REDIRECTS = {
     "/analisis-varianza": "/app/analisis-varianza",
     "/quant-stats": "/app/graficador/quant-stats",
     "/app/quant-stats": "/app/graficador/quant-stats",
+    "/pronosticador": "/app/pronosticador",
 }
 
 

@@ -1,0 +1,181 @@
+/* App "Pronosticador": solo lo propio de la página, con prefijo pron-. El resto
+   (cabecera, tarjetas, botones, select y tabla) son los componentes genéricos
+   de core/static/css/style.css. */
+
+.pron-page {
+  display: grid;
+  gap: 20px;
+}
+
+.pron-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pron-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.pron-field {
+  display: grid;
+  gap: 6px;
+}
+
+.pron-label,
+.pron-field__label,
+.pron-decision__stats dt {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pron-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.pron-status[hidden],
+.pron-body[hidden],
+.pron-error[hidden] {
+  display: none;
+}
+
+.pron-error {
+  display: grid;
+  gap: 4px;
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  border-left: 4px solid var(--brand);
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+}
+
+.pron-body {
+  display: grid;
+  gap: 20px;
+}
+
+/* Semáforo: la barra izquierda y el título toman el color del veredicto. */
+.pron-decision {
+  --signal: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.25rem;
+  border-left: 4px solid var(--signal);
+}
+
+.pron-decision.is-green { --signal: var(--up); }
+.pron-decision.is-yellow { --signal: #b7791f; }
+.pron-decision.is-red { --signal: var(--brand); }
+
+.pron-decision__text {
+  margin: 0.35rem 0 0;
+  font-size: 1.6rem;
+  color: var(--signal);
+}
+
+.pron-decision__desc {
+  margin: 0.4rem 0 0;
+  max-width: 60ch;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pron-decision__stats {
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+}
+
+.pron-decision__stats dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+
+.pron-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.pron-kpi {
+  padding: 1rem 1.1rem;
+}
+
+.pron-kpi__value {
+  margin: 0.4rem 0 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.pron-kpi__value.is-down { color: var(--down); }
+
+.pron-kpi__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.pron-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 20px;
+}
+
+.pron-chart {
+  min-width: 0;
+  padding: 1.1rem 1.25rem;
+}
+
+.pron-chart__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pron-chart__head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pron-tag {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.pron-chart__plot {
+  height: 320px;
+}
+
+.pron-audit .table td {
+  font-family: var(--font-mono);
+}
+
+.pron-audit__note {
+  margin: 0 0 0.75rem;
+}

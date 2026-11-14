@@ -38,7 +38,7 @@ def test_every_installed_app_with_pages_is_in_sidebar(app):
 
 def test_sidebar_order_without_reports_or_standalone_quant_stats():
     # Informes se eliminó y Quant stats ya no es una app del sidebar.
-    assert [entry.slug for entry in APPS] == ["graficador", "analisis-varianza", "pyportfolio-opt", "favoritos"]
+    assert [entry.slug for entry in APPS] == ["graficador", "analisis-varianza", "pyportfolio-opt", "favoritos", "pronosticador"]
 
 
 def test_quant_stats_lives_inside_the_graficador():

@@ -33,6 +33,7 @@ INSTALLED_APPS = (
     "quant_stats",
     "graficador",
     "pyportfolio_opt",
+    "pronosticador",
 )
 
 

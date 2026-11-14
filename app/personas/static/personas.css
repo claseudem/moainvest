@@ -1,0 +1,442 @@
+/* PERSONAS, la comunidad (app/personas/templates/personas/index.html).
+ *
+ * Usa los tokens de core/static/css/style.css (blanco, rojo, grises y sombras
+ * suaves de MOAINVEST). Las clases propias llevan el prefijo pe-.
+ */
+
+.pe [hidden] {
+  display: none !important;
+}
+
+.pe button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.pe-block {
+  margin-top: 40px;
+  scroll-margin-top: 80px;
+}
+
+.pe-block > h2 {
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+
+.pe-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.pe-notice {
+  margin-top: 20px;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.pe-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-right: 8px;
+}
+
+.pe-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.pe-hint {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
+.pe-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pe-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--mist);
+  color: var(--text-muted);
+}
+
+/* Buscador y filtros */
+.pe-search {
+  display: grid;
+  gap: 16px;
+}
+
+.pe-filters {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.pe-filters legend {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.pe-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pe-chip {
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--text);
+  font-size: 0.88rem;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.pe-chip:hover {
+  border-color: var(--brand);
+}
+
+.pe-chip[aria-pressed="true"] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.pe-chip:focus-visible,
+.pe-member button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.pe-count {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+/* Directorio */
+.pe-directory {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.pe-member {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pe-member__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pe-member__name {
+  font-weight: 600;
+  margin: 0;
+}
+
+.pe-member__profile {
+  color: var(--brand-deep);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.pe-member button {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.pe-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pe-empty {
+  margin: 16px 0 0;
+  padding: 28px;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+/* Perfil público */
+.pe-public {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.pe-public__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pe-public__head > div {
+  flex: 1 1 200px;
+}
+
+.pe-public h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.pe-public p {
+  margin: 0;
+}
+
+.pe-tags,
+.pe-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pe-tag-item {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  font-size: 0.85rem;
+}
+
+.pe-list {
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.92rem;
+}
+
+/* Indicadores */
+.pe-stats {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.pe-stat__num {
+  font-family: var(--font-mono);
+  font-size: 2.6rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.pe-bars {
+  margin-top: 14px;
+}
+
+.pe-bar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pe-bar-list li {
+  display: grid;
+  grid-template-columns: minmax(110px, 180px) 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.pe-bar {
+  display: block;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  overflow: hidden;
+}
+
+.pe-bar--thick {
+  height: 12px;
+  margin-top: 12px;
+}
+
+.pe-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transition: width 0.9s var(--ease-out-soft);
+}
+
+.pe-milestones-wrap {
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.pe-next {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.pe-next strong {
+  color: var(--text);
+}
+
+.pe-invite {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pe-invite__label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.pe-invite__label .input {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.pe-status {
+  min-height: 1.25rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--up);
+}
+
+.pe-milestones {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pe-milestone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pe-milestone__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--mist);
+  color: var(--text-muted);
+}
+
+.pe-milestone__title {
+  margin: 0;
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pe-milestone.is-completado .pe-milestone__icon,
+.pe-milestone.is-completado .pe-badge {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.pe-milestone.is-proximo .pe-milestone__icon {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.pe-milestone.is-proximo .pe-badge {
+  background: var(--brand);
+  color: #fff;
+}
+
+.pe-milestone.is-bloqueado {
+  opacity: 0.7;
+}
+
+/* Quiénes somos y propósito */
+.pe-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+.pe-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--mist);
+  color: var(--brand);
+}
+
+.pe-team__name {
+  font-weight: 600;
+  margin: 14px 0 2px;
+}
+
+.pe-team__area {
+  color: var(--brand-deep);
+  font-size: 0.88rem;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+@media (min-width: 760px) {
+  .pe-milestones-wrap {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+}

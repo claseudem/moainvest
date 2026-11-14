@@ -21,8 +21,11 @@ def test_sidebar_names_are_sentence_case():
 
 
 def test_every_installed_app_with_pages_is_in_sidebar(app):
-    """Toda subapp con páginas propias (salvo ``core``, ``moainvest`` y ``cuentas``) sale en el sidebar,
-    como app o como subsección de otra (Quant stats vive dentro del Graficador)."""
+    """Toda subapp con páginas propias sale en el sidebar, salvo las del sitio público.
+
+    ``moainvest`` y ``cuentas`` son páginas del sitio MOAINVEST, no del área App. Quant stats
+    vive dentro del Graficador, así que cuenta como subsección de otra app.
+    """
     entries = [*APPS, *(section for entry in APPS for section in entry.sections)]
     sidebar_blueprints = {entry.endpoint.split(".", 1)[0] for entry in entries}
     missing = []
@@ -50,6 +53,8 @@ def test_sidebar_order_without_reports_or_standalone_quant_stats():
         "noticias",
         "que-piensas-tu",
         "pronosticador",
+        "mi-perfil",
+        "personas",
     ]
 
 

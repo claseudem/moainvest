@@ -23,6 +23,13 @@ from typing import Literal
 
 AppKind = Literal["sections", "blank"]
 
+# Agrupación del sidebar: primero las herramientas financieras, luego las
+# secciones de comunidad y personales. El orden de los grupos es el de esta tupla.
+GROUPS: tuple[tuple[str, str], ...] = (
+    ("herramientas", "Herramientas"),
+    ("nuevas", "Nuevas secciones"),
+)
+
 
 @dataclass(frozen=True, slots=True)
 class AppSection:
@@ -42,6 +49,7 @@ class App:
     endpoint: str
     kind: AppKind = "blank"
     sections: tuple[AppSection, ...] = ()
+    group: str = "herramientas"
 
 
 # Orden del sidebar del área "App" (/app/): primero el graficador y después el
@@ -70,6 +78,8 @@ APPS: tuple[App, ...] = (
     App(slug="noticias", name="Noticias", icon="📰", endpoint="noticias.index", kind="blank"),
     App(slug="que-piensas-tu", name="¿Qué piensas tú?", icon="💬", endpoint="comunidad.index", kind="blank"),
     App(slug="pronosticador", name="Pronosticador", icon="🔮", endpoint="pronosticador.index", kind="blank"),
+    App(slug="mi-perfil", name="Mi perfil", icon="👤", endpoint="mi_perfil.index", kind="blank", group="nuevas"),
+    App(slug="personas", name="Personas", icon="👥", endpoint="personas.index", kind="blank", group="nuevas"),
 )
 
 

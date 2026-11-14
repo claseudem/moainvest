@@ -30,6 +30,8 @@ INSTALLED_APPS = (
     "alertas",
     "favoritos",
     "moainvest",
+    "mi_perfil",
+    "personas",
     "varianza",
     "quant_stats",
     "graficador",

@@ -39,6 +39,7 @@ LEGACY_REDIRECTS = {
     "/quant-stats": "/app/graficador/quant-stats",
     "/app/quant-stats": "/app/graficador/quant-stats",
     "/pronosticador": "/app/pronosticador",
+    "/personas": "/app/personas",
 }
 
 

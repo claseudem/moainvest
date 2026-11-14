@@ -18,7 +18,10 @@ def test_sidebar_names_are_sentence_case():
 
 
 def test_every_installed_app_with_pages_is_in_sidebar(app):
-    """Toda subapp con páginas propias (salvo ``core``, ``moainvest`` y ``cuentas``) sale en el sidebar."""
+    """Toda subapp con páginas propias sale en el sidebar, salvo las del sitio público.
+
+    ``moainvest`` y ``cuentas`` son páginas del sitio MOAINVEST, no del área App.
+    """
     sidebar_blueprints = {entry.endpoint.split(".", 1)[0] for entry in APPS}
     missing = []
     for name in INSTALLED_APPS:
@@ -42,4 +45,6 @@ def test_sidebar_lists_reports_right_after_the_charts():
         "pyportfolio-opt",
         "favoritos",
         "pronosticador",
+        "mi-perfil",
+        "personas",
     ]

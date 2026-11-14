@@ -13,6 +13,7 @@ from flask import Blueprint, abort, redirect, render_template, url_for
 
 from app.core.navigation import default_app
 from app.core.watchlists import WATCHLISTS, Watchlist, get_watchlist
+from app.personas.content import TEAMS
 
 bp = Blueprint(
     "moainvest",
@@ -53,7 +54,7 @@ def chart_url(watchlist: Watchlist, ticker: str | None = None) -> str:
 @bp.get("/")
 def resumen():
     overview = get_watchlist("overview") or WATCHLISTS[0]
-    return render_template("moainvest/resumen.html", watchlist=overview, chart_url=chart_url)
+    return render_template("moainvest/resumen.html", watchlist=overview, chart_url=chart_url, teams=TEAMS)
 
 
 @bp.get("/app/", strict_slashes=False)

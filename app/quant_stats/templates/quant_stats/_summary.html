@@ -1,0 +1,12 @@
+{# Resumen en lenguaje llano (``app.quant_stats.explain``) bajo cada gráfica o
+   tabla. ``key`` identifica el resumen (``data-summary``) para los tests.
+   Uso: {% import "quant_stats/_summary.html" as qs %} ... {{ qs.summary(text, "overview") }} #}
+{% import "core/icons.html" as icons %}
+{% macro summary(text, key) -%}
+{% if text %}
+<div class="qs-summary" data-summary="{{ key }}">
+  <p class="qs-summary__label">{{ icons.icon("lightbulb") }}En pocas palabras</p>
+  <p class="qs-summary__text">{{ text }}</p>
+</div>
+{% endif %}
+{%- endmacro %}

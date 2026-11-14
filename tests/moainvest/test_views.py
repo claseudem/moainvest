@@ -1,4 +1,4 @@
-"""Sitio MOAINVEST (Resumen, Gráficas e Informe), servido por Flask en la raíz."""
+"""Sitio MOAINVEST (Resumen y Gráficas), servido por Flask en la raíz."""
 import re
 from pathlib import Path
 
@@ -16,7 +16,7 @@ def test_resumen_lists_overview_symbols_with_chart_links(client):
     assert response.status_code == 200
     page = response.get_data(as_text=True)
     overview = get_watchlist("overview")
-    assert "<title>MOAINVEST | Resumen, gráficas e informes de mercado</title>" in page
+    assert "<title>MOAINVEST | Resumen y gráficas de mercado</title>" in page
     assert 'Resumen del <span class="accent">mercado</span>.' in page
     assert f'data-watchlist-quotes="{overview.slug}"' in page
     for s in overview.symbols:
@@ -61,16 +61,23 @@ def test_app_home_redirects_to_default_app(app, client, path):
 
 
 def test_home_content_links_still_work(client):
-    # Gráficas e Informe salen del navbar, pero los atajos del Resumen siguen funcionando.
+    # Gráficas sale del navbar, pero los atajos del Resumen siguen funcionando.
     page = client.get("/").get_data(as_text=True)
-    for href in ("/graficas", "/informe"):
+    for href in ("/graficas", "/app/graficador/quant-stats/fundamentales"):
         assert f'href="{href}"' in page
     assert client.get("/graficas").status_code == 302
-    assert client.get("/informe").status_code == 200
+
+
+def test_informe_page_was_removed(client):
+    # La app Informes se eliminó: ni el sitio rojo ni el Resumen la enlazan.
+    page = client.get("/").get_data(as_text=True)
+    assert 'href="/informe"' not in page
+    assert "Informe" not in page
+    assert client.get("/informe").status_code == 404
 
 
 def test_layout_has_assets(client):
-    page = client.get("/informe").get_data(as_text=True)
+    page = client.get("/").get_data(as_text=True)
     assert "/static/moainvest/moainvest.css" in page
     assert "/static/moainvest/moainvest.js" in page
     assert 'id="menu-movil" hidden' in page
@@ -121,15 +128,7 @@ def test_unknown_paths_show_moainvest_404(client, path):
     assert "Este camino todavía no" in response.get_data(as_text=True)
 
 
-def test_informe_lists_watchlists_and_api_urls(client):
-    page = client.get("/informe").get_data(as_text=True)
-    assert 'data-preview-url="/api/report/preview"' in page
-    assert 'data-send-url="/api/email/send-assets-report"' in page
-    for w in WATCHLISTS:
-        assert f'name="watchlists" value="{w.slug}" checked' in page
-
-
-@pytest.mark.parametrize("path", ["/app/analisis-varianza/", "/app/informes/"])
+@pytest.mark.parametrize("path", ["/app/analisis-varianza/", "/app/favoritos/"])
 def test_other_sections_link_to_graficador_from_sidebar(client, path):
     # La primera entrada del sidebar oscuro es ahora el Graficador.
     response = client.get(path)
@@ -146,7 +145,7 @@ def test_old_chart_urls_are_gone(client):
 def test_compiled_css_includes_classes_used_by_templates_and_js():
     css = (STATIC / "moainvest.css").read_text()
     # Clases que solo aparecen en moainvest.js (tonos que se ponen en tiempo de ejecución).
-    for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30"):
+    for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line"):
         assert cls in css, cls
     for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e"):
         assert cls in css, cls

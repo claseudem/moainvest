@@ -1,7 +1,9 @@
 """Controlador de la app "Graficador".
 
-Sirve una sola página con el gráfico de un ticker (``?ticker=AAPL``); los
-datos los pide el navegador a ``/api/candles/<ticker>`` de ``core``.
+Sirve la página con el gráfico de un ticker (``?ticker=AAPL``); los datos los
+pide el navegador a ``/api/candles/<ticker>`` de ``core``. Quant stats cuelga
+del Graficador como subsecciones "Quant stats" y "Comparar" (ver
+``app/core/navigation.py``) y recibe el mismo ``?ticker=``.
 """
 from __future__ import annotations
 
@@ -55,6 +57,9 @@ def index():
     html = render_template(
         "graficador/index.html",
         active_app=get_app("graficador"),
+        active_section="grafico",
+        # Las pestañas y el sidebar llevan el activo a Quant stats y Comparar.
+        section_args={"ticker": ticker} if not error else {},
         ticker="" if error else ticker,
         query=ticker,
         error=error,

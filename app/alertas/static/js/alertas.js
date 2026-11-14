@@ -1,6 +1,6 @@
 /**
  * Campana de notificaciones (core/base.html) y botones de alertas por
- * watchlist (paso 01 de Informes).
+ * watchlist (si una página los incluye con ``data-alert-watchlist``).
  *
  * - Pide /api/alertas al cargar y cada POLL_MS mientras la pestaña está
  *   visible; el servidor evalúa los movimientos y guarda las alertas nuevas.

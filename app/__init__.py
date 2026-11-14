@@ -32,11 +32,11 @@ INSTALLED_APPS = (
     "moainvest",
     "varianza",
     "quant_stats",
-    "informes",
     "graficador",
     "pyportfolio_opt",
     "noticias",
     "comunidad",
+    "pronosticador",
 )
 
 

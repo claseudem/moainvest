@@ -3,6 +3,8 @@
     fuera y nunca se insertan como HTML). Los iconos se clonan desde
     <template id="notif-icons">. -#}
 {% import "core/icons.html" as icons %}
+{#- Icono de cada watchlist en el diálogo de configuración (por slug); las demás usan "list". -#}
+{% set watchlist_icons = {"overview": "chart-column", "consumer-electronics": "smartphone", "gaming-multimedia": "gamepad"} %}
 <div class="notif" id="notif" data-notif>
   <button class="notif__bell" id="notif-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="notif-panel" aria-label="Notificaciones">
     {{ icons.icon("bell") }}
@@ -63,7 +65,7 @@
         <div class="notif-switches">
           {% for watchlist in watchlists_for_alerts %}
           <label class="notif-switch">
-            {{ icons.icon(icons.watchlist_icons.get(watchlist.slug, "list"), extra_class="notif-switch__icon") }}
+            {{ icons.icon(watchlist_icons.get(watchlist.slug, "list"), extra_class="notif-switch__icon") }}
             <span class="notif-switch__name">{{ watchlist.name }}</span>
             <input type="checkbox" role="switch" name="activas" value="{{ watchlist.slug }}" checked>
             <span class="notif-switch__track" aria-hidden="true"></span>

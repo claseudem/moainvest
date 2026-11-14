@@ -1,6 +1,6 @@
 /* ---- Alertas: campana, panel de notificaciones y diálogo de umbral ----
    Solo usa los tokens de core/static/css/style.css (--brand, --ink, --line,
-   --up/--down...). Mismos botones píldora que .informes-btn: un único
+   --up/--down...). Botones píldora como .btn de style.css: un único
    primario rojo por vista; el resto con contorno o solo texto. */
 
 .notif {
@@ -660,7 +660,7 @@
   gap: 0.6rem;
 }
 
-/* Mismos botones píldora que .informes-btn: un primario rojo, un secundario con contorno. */
+/* Botones píldora como .btn de style.css: un primario rojo, un secundario con contorno. */
 .notif-btn {
   display: inline-flex;
   align-items: center;

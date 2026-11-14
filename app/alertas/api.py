@@ -1,4 +1,4 @@
-"""API de las alertas (campana de la barra superior y paso 01 de Informes).
+"""API de las alertas (campana de la barra superior).
 
     GET  /api/alertas                 alertas recientes + no leídas + preferencias (evalúa si toca)
     POST /api/alertas/leidas          {"ids": [...]} o {} para marcar todas como leídas

@@ -1,4 +1,4 @@
--- Alertas de movimientos bruscos (campana de /app/ y paso 01 de Informes).
+-- Alertas de movimientos bruscos (campana de la barra superior de /app/).
 
 -- Preferencias de cada usuario: umbral (±3/5/10 %) y watchlists silenciadas.
 CREATE TABLE public.alertas_preferencias (

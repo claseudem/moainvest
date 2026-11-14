@@ -1,0 +1,26 @@
+{#- Pestañas de las subsecciones de la app activa (``App.sections`` de
+    app/core/navigation.py), sobre el contenido de la página. Repiten la
+    navegación anidada del sidebar donde se ve siempre (también en móvil) y
+    conservan ``section_args`` (p. ej. ``?ticker=``) al cambiar de pestaña.
+
+    Uso (con contexto, para leer active_app, active_section y section_args):
+      {% import "core/section_tabs.html" as tabs with context %}
+      {{ tabs.section_tabs() }}
+      {% call tabs.section_tabs() %}<a class="app-tabs__aside" ...>…</a>{% endcall %}
+-#}
+{% macro section_tabs() -%}
+{% if active_app and active_app.sections %}
+<nav class="app-tabs" aria-label="Secciones de {{ active_app.name }}">
+  <ul class="app-tabs__list">
+    {% for section in active_app.sections %}
+    {%- set current = active_section == section.slug %}
+    <li>
+      <a class="app-tabs__link{% if current %} is-active{% endif %}"
+         href="{{ url_for(section.endpoint, **(section_args or {})) }}"{% if current %} aria-current="page"{% endif %}>{{ section.name }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if caller %}<div class="app-tabs__extra">{{ caller() }}</div>{% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}

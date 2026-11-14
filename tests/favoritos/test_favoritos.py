@@ -113,3 +113,44 @@ def test_max_favorites(logged, db, monkeypatch):
     logged.post("/app/favoritos/agregar", data={"ticker": "AAPL"})
     logged.post("/app/favoritos/agregar", data={"ticker": "MSFT"})
     assert [r["ticker"] for r in db.rows] == ["AAPL"]
+
+
+def test_page_shows_only_saved_assets_with_universo_layout(logged, db):
+    db.rows += [
+        {"user_id": "u1", "ticker": "AAPL", "nombre": "Apple Inc.", "created_at": "2026-10-15T00:00:00Z"},
+        {"user_id": "otro", "ticker": "TSLA", "nombre": "Tesla", "created_at": "2026-10-15T00:00:00Z"},
+    ]
+    html = logged.get("/app/favoritos/").get_data(as_text=True)
+    assert "Mis activos · MoaiInvest" in html
+    assert 'data-quote-url="/api/quote/__T__"' in html
+    assert 'data-ticker="AAPL"' in html and "Apple Inc." in html
+    assert "/app/graficador/?ticker=AAPL" in html
+    assert "/app/graficador/quant-stats/fundamentales?ticker=AAPL" in html
+    assert "favoritos.js" in html and "favoritos.css" in html
+    assert "TSLA" not in html
+
+
+def test_empty_list_shows_no_sample_data(logged, db):
+    html = logged.get("/app/favoritos/").get_data(as_text=True)
+    assert "Aún no tienes activos guardados" in html
+    assert 'id="activos-table"' not in html and "data-ticker=" not in html
+
+
+def test_anonymous_sees_no_assets_and_no_network(db):
+    client = create_app(TestingConfig).test_client()
+    html = client.get("/app/favoritos/").get_data(as_text=True)
+    assert "Inicia sesión" in html and "data-ticker=" not in html
+    assert db.calls == []
+
+
+def test_old_universo_url_redirects_permanently(client):
+    response = client.get("/app/universo/")
+    assert response.status_code == 301
+    assert response.headers["Location"].endswith("/app/favoritos/")
+
+
+def test_sidebar_has_single_mis_activos_entry():
+    from app.core.navigation import APPS
+
+    assert [a.name for a in APPS].count("Mis activos") == 1
+    assert all("universo" not in a.slug for a in APPS)

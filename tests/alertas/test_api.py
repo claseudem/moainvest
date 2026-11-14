@@ -186,17 +186,17 @@ def test_database_down_returns_503_and_pages_still_render(logged, monkeypatch):
 
     monkeypatch.setattr(store.requests, "request", boom)
     assert logged.get("/api/alertas").status_code == 503
-    assert logged.get("/app/informes/").status_code == 200
+    assert logged.get("/app/noticias/").status_code == 200
 
 
-def test_bell_and_watchlist_toggles_render_only_with_a_session(logged, db):
-    page = logged.get("/app/informes/").get_data(as_text=True)
+def test_bell_renders_only_with_a_session(logged, db):
+    page = logged.get("/app/noticias/").get_data(as_text=True)
     topbar = page.split('<header class="topbar">', 1)[1].split("</header>", 1)[0]
     assert 'id="notif-btn"' in topbar and 'aria-controls="notif-panel"' in topbar
     assert 'role="tab"' in topbar and "Movimientos" in topbar and "Noticias" in topbar
-    assert 'id="notif-settings"' in topbar and 'value="10"' in topbar
-    assert page.count("data-alert-watchlist=") == 3
+    # Las watchlists se silencian desde el diálogo de la campana (Informes ya no existe).
+    assert 'id="notif-settings"' in topbar and 'value="10"' in topbar and topbar.count('name="activas"') == 3
     assert "/app/alertas/static/js/alertas.js" in page
 
-    anon = create_app(TestingConfig).test_client().get("/app/informes/").get_data(as_text=True)
-    assert 'id="notif-btn"' not in anon and "data-alert-watchlist" not in anon
+    anon = create_app(TestingConfig).test_client().get("/app/noticias/").get_data(as_text=True)
+    assert 'id="notif-btn"' not in anon

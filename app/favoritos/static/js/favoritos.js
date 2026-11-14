@@ -11,8 +11,8 @@
 (function () {
   "use strict";
 
-  const page = document.getElementById("fav-page");
-  if (!page) return;
+  const page = document.getElementById("fav-add-form");
+  if (!page) return; // sin sesión no hay formulario
 
   const API = "/api/favoritos";
   const $ = (id) => document.getElementById(id);

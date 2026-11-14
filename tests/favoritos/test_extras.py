@@ -119,10 +119,15 @@ def test_api_requires_a_session(db):
     assert client_for(None).get("/api/favoritos/buscar").status_code == 401
 
 
-def test_page_keeps_search_and_list_and_links_to_the_new_pages(logged, db):
+def test_page_keeps_the_universo_layout_and_adds_autocomplete_and_links(logged, db):
+    db.tables["activos_favoritos"].append({"user_id": "u1", "ticker": "AAPL", "nombre": "Apple Inc.", "created_at": "2026-11-01"})
     page = logged.get("/app/favoritos/").get_data(as_text=True)
-    assert page.index('id="fav-add-title"') < page.index('id="fav-list-title"')
-    assert 'role="combobox"' in page and 'aria-controls="fav-suggest"' in page
+    # La página de Mis activos (tabla con precio en vivo) sigue igual...
+    assert 'id="activos-table"' in page and 'data-ticker="AAPL"' in page
+    # ...y su formulario de agregar lleva el autocompletado.
+    form = page.split('class="activos__add"', 1)[1].split("</form>", 1)[0]
+    assert 'role="combobox"' in form and 'aria-controls="fav-suggest"' in form and 'name="nombre"' in form
+    assert 'data-tickers="AAPL"' in page
     assert 'href="/app/noticias/"' in page and 'href="/app/que-piensas-tu/"' in page
-    assert "fav-news" not in page and "fav-vote" not in page
-    assert "/app/favoritos/static/js/favoritos.js" in page and "/app/favoritos/static/css/favoritos.css" in page
+    for asset in ("favoritos.js", "favoritos.css", "js/favoritos.js", "css/favoritos.css"):
+        assert f"/app/favoritos/static/{asset}" in page

@@ -1,67 +1,7 @@
-/* ---- Mis activos: autocompletado, noticias y votación ----
-   Sobre las piezas comunes de core/static/css/style.css (.page, .card, .btn,
-   .input, .table) y sus tokens. Solo se añaden las variantes ▲ Sube (verde)
-   y ▼ Baja (rojo) del botón píldora. */
-
-.fav-stack {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.fav-card {
-  display: grid;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.fav-card__title {
-  margin: 0;
-  font-size: 1.2rem;
-  letter-spacing: -0.025em;
-  color: var(--ink);
-}
-
-.fav-count {
-  margin-left: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--muted);
-}
-
-.fav-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
-.fav-empty[hidden] {
-  display: none;
-}
-
-.fav-hint {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.fav-flash {
-  margin: 0;
-}
-
-.fav-flash--error {
-  border-color: color-mix(in srgb, var(--brand) 25%, transparent);
-  background: var(--brand-soft);
-  color: var(--brand-deep);
-}
-
-/* ---- 1 · Agregar con autocompletado ---- */
-.fav-add {
-  display: flex;
-  gap: 0.6rem;
-  align-items: flex-start;
-}
+/* ---- Mis activos: autocompletado del campo "Agregar" y accesos ----
+   Complementa static/favoritos.css (tabla de la página): aquí solo el
+   desplegable de sugerencias y las tarjetas que llevan a Noticias y a
+   ¿Qué piensas tú?. Usa los tokens de core/static/css/style.css. */
 
 .fav-search {
   position: relative;
@@ -69,29 +9,11 @@
   min-width: 0;
 }
 
-.fav-search__icon {
-  position: absolute;
-  left: 1rem;
-  top: 1.375rem;
-  transform: translateY(-50%);
-  width: 1rem;
-  height: 1rem;
-  color: var(--muted);
-  pointer-events: none;
-}
-
-.fav-search__input {
+/* El campo va dentro de este contenedor: ocupa todo su ancho (el estilo
+   visual lo pone .activos__add input en static/favoritos.css). */
+.fav-search input:not([type="hidden"]) {
   width: 100%;
-  padding-left: 2.6rem;
-  font-size: 1rem; /* 16px: evita el zoom de iOS al enfocar */
-}
-
-.fav-search__input[aria-expanded="true"] {
-  border-color: var(--ink);
-}
-
-.fav-add__btn {
-  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .fav-suggest {
@@ -221,6 +143,7 @@
 
 /* ---- Accesos a Noticias y ¿Qué piensas tú? ---- */
 .fav-links {
+  margin-top: 1.5rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
@@ -287,15 +210,6 @@
 
 /* ---- Responsive ---- */
 @media (max-width: 640px) {
-  .fav-add {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .fav-add__btn {
-    width: 100%;
-  }
-
   .fav-option {
     grid-template-columns: 5.5rem minmax(0, 1fr);
   }

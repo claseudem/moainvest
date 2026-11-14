@@ -1,6 +1,6 @@
 /*
  * MOAINVEST: comportamiento de las páginas de moainvest/templates/moainvest/ (precios en
- * vivo, sparklines, gráfico de velas, informe y menú móvil), sin framework.
+ * vivo, sparklines, gráfico de velas y menú móvil), sin framework.
  * Cada bloque se activa solo si su página contiene el elemento
  * correspondiente (data-*).
  *
@@ -238,85 +238,9 @@
     );
   }
 
-  // ───────────────────────── Informe ─────────────────────────
-  const OPTION_TONES = { on: "border-ink/30 bg-mist", off: "border-line hover:border-ink/30" };
-  const STATUS_TONES = { ok: "bg-mist text-ink", error: "bg-brand-soft text-brand-deep" };
-
-  function initReportBuilder() {
-    const root = document.querySelector("[data-report-builder]");
-    if (!root) return;
-    const checkboxes = Array.from(root.querySelectorAll('input[name="watchlists"]'));
-    const statusEl = root.querySelector("[data-status]");
-    const frame = root.querySelector("[data-preview-frame]");
-    const empty = root.querySelector("[data-preview-empty]");
-    const previewBtn = root.querySelector("[data-preview]");
-    const form = root.querySelector("[data-send-form]");
-    const sendBtn = form.querySelector('button[type="submit"]');
-    const email = form.querySelector('input[type="email"]');
-
-    const selected = () => checkboxes.filter((c) => c.checked).map((c) => c.value);
-
-    checkboxes.forEach((c) =>
-      c.addEventListener("change", () => setTone(c.closest("[data-watchlist-option]"), OPTION_TONES, c.checked ? "on" : "off")),
-    );
-
-    function setStatus(text, error) {
-      statusEl.hidden = !text;
-      statusEl.textContent = text || "";
-      statusEl.setAttribute("role", error ? "alert" : "status");
-      if (text) setTone(statusEl, STATUS_TONES, error ? "error" : "ok");
-    }
-
-    function setBusy(btn, busy, label) {
-      btn.disabled = busy;
-      btn.querySelector("[data-label]").textContent = label;
-    }
-
-    function requireSelection() {
-      if (selected().length) return true;
-      setStatus("Selecciona al menos una watchlist.", true);
-      return false;
-    }
-
-    previewBtn.addEventListener("click", () => {
-      if (!requireSelection()) return;
-      setStatus("");
-      setBusy(previewBtn, true, "Generando informe…");
-      frame.hidden = false;
-      empty.hidden = true;
-      frame.src = root.dataset.previewUrl + "?watchlists=" + encodeURIComponent(selected().join(",")) + "&t=" + Date.now();
-    });
-    frame.addEventListener("load", () => frame.src && setBusy(previewBtn, false, "Ver informe"));
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (!requireSelection()) return;
-      const to = email.value.trim();
-      setBusy(sendBtn, true, "Enviando…");
-      setStatus("Enviando informe a " + to + "…");
-      fetch(root.dataset.sendUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: to, watchlists: selected() }),
-      })
-        .then((res) =>
-          res
-            .json()
-            .catch(() => ({}))
-            .then((data) => {
-              if (!res.ok) throw new Error(data.error || "Error " + res.status);
-              setStatus("Informe enviado a " + to + ".");
-            }),
-        )
-        .catch((err) => setStatus("No se pudo enviar el informe: " + err.message, true))
-        .finally(() => setBusy(sendBtn, false, "Enviar por correo"));
-    });
-  }
-
   initReveal();
   initMobileNav();
   initWatchlistQuotes();
   initSparklines();
   initChartWorkspace();
-  initReportBuilder();
 })();

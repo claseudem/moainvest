@@ -1,7 +1,10 @@
 """Controlador de la app "Mis activos": activos favoritos de cada usuario.
 
-La página lista los favoritos en una tabla con su precio y permite agregar o
-quitar; además, ``inject_favorites`` los expone al sidebar de toda el área App.
+La página lista **solo** los activos guardados por el usuario en InsForge, en
+una tabla con su precio en vivo (el JS pide ``/api/quote/<ticker>``), búsqueda y
+ordenación, y permite agregar o quitar; además, ``inject_favorites`` los expone
+al sidebar de toda el área App. Absorbe a la antigua app "Mi universo de
+acciones": ``/app/universo/`` redirige aquí.
 """
 from __future__ import annotations
 
@@ -22,6 +25,18 @@ bp = Blueprint(
     template_folder="templates",
     static_folder="static",
 )
+
+
+
+@bp.record_once
+def _legacy_universo_redirect(state) -> None:
+    """``/app/universo/`` (app fusionada "Mi universo de acciones") redirige aquí."""
+    state.app.add_url_rule(
+        "/app/universo/",
+        endpoint="universo_redirect",
+        view_func=lambda: redirect(url_for("favoritos.index"), code=301),
+    )
+
 
 # Tickers de Yahoo: letras, números y ``^ = . -`` (igual que el Graficador).
 TICKER_RE = re.compile(r"^[A-Z0-9^=.\-]{1,20}$")

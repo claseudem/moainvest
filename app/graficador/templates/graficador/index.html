@@ -1,5 +1,6 @@
 {% extends "core/base.html" %}
 {% import "core/icons.html" as icons %}
+{% import "core/section_tabs.html" as tabs with context %}
 
 {% block title %}Graficador · {{ site_name }}{% endblock %}
 
@@ -27,6 +28,18 @@
      data-provider-candles-url="{{ url_for('graficador_api.candles', ticker='__T__') }}"
      data-providers-url="{{ url_for('graficador_api.provider_catalog') }}"
      data-compute-url="{{ url_for('graficador_api.compute_indicators', ticker='__T__') }}">
+  {#- Fila 1: pestañas del Graficador (Gráfico | Quant stats | Comparar) y buscador. -#}
+  <div class="graficador__top">
+    {{ tabs.section_tabs() }}
+    <form class="graficador__search" id="graficador-search" method="get" action="{{ url_for('graficador.index') }}" role="search">
+      <label class="graficador__sr" for="graficador-ticker">Ticker de Yahoo Finance</label>
+      <input type="text" id="graficador-ticker" name="ticker" class="graficador__input"
+             value="{{ query }}" placeholder="Buscar: AAPL, ^GSPC, BTC-USD…"
+             autocomplete="off" spellcheck="false" required maxlength="20">
+      <button type="submit" class="graficador__btn">{{ icons.icon("search") }}<span class="graficador__sr">Buscar</span></button>
+    </form>
+  </div>
+
   <header class="graficador__header">
     <div class="graficador__heading">
       <p class="graficador__eyebrow" id="graficador-eyebrow">{{ market }}</p>
@@ -43,42 +56,44 @@
     {% endif %}
   </header>
 
+  {% if not error %}
+  {#- Fila 3: controles agrupados con etiqueta (período y vista a la izquierda;
+      indicadores y proveedor, más avanzados, a la derecha). -#}
   <div class="graficador__toolbar">
-    {% if not error %}
-    <div class="graficador__group" role="group" aria-label="Rango" id="graficador-ranges">
-      {% for r in ranges %}
-      <button type="button" class="graficador__chip" data-range="{{ r.range }}" data-interval="{{ r.interval }}"
-              aria-pressed="{{ 'true' if r.label == default_range else 'false' }}">{{ r.label }}</button>
-      {% endfor %}
+    <div class="graficador__control">
+      <span class="graficador__label" id="graficador-ranges-label">Período</span>
+      <div class="graficador__group" role="group" aria-labelledby="graficador-ranges-label" id="graficador-ranges">
+        {% for r in ranges %}
+        <button type="button" class="graficador__chip" data-range="{{ r.range }}" data-interval="{{ r.interval }}"
+                aria-pressed="{{ 'true' if r.label == default_range else 'false' }}">{{ r.label }}</button>
+        {% endfor %}
+      </div>
     </div>
-    <div class="graficador__group graficador__group--ink" role="group" aria-label="Tipo de serie" id="graficador-types">
-      {% for t in series_types %}
-      <button type="button" class="graficador__chip" data-series-type="{{ t.value }}"
-              aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ t.label }}</button>
-      {% endfor %}
+    <div class="graficador__control">
+      <span class="graficador__label" id="graficador-types-label">Vista</span>
+      <div class="graficador__group graficador__group--ink" role="group" aria-labelledby="graficador-types-label" id="graficador-types">
+        {% for t in series_types %}
+        <button type="button" class="graficador__chip" data-series-type="{{ t.value }}"
+                aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ t.label }}</button>
+        {% endfor %}
+      </div>
     </div>
-    <div class="graficador__provider">
-      <label class="graficador__sr" for="graficador-provider">Proveedor de precios</label>
-      <select id="graficador-provider" class="graficador__select" aria-describedby="graficador-provider-hint">
-        <option value="yahoo">Yahoo Finance</option>
-      </select>
-      <span class="graficador__sr" id="graficador-provider-hint" role="status"></span>
+    <div class="graficador__control graficador__control--end">
+      <button type="button" class="graficador__btn graficador__btn--outline" id="graficador-indicators-btn"
+              aria-haspopup="dialog" aria-controls="gind-picker">
+        {{ icons.icon("activity") }}<span>Indicadores</span>
+        <span class="graficador__count" id="graficador-indicators-count" hidden>0</span>
+      </button>
+      <div class="graficador__provider">
+        <label class="graficador__sr" for="graficador-provider">Proveedor de precios</label>
+        <select id="graficador-provider" class="graficador__select" aria-describedby="graficador-provider-hint">
+          <option value="yahoo">Yahoo Finance</option>
+        </select>
+        <span class="graficador__sr" id="graficador-provider-hint" role="status"></span>
+      </div>
     </div>
-    <button type="button" class="graficador__btn graficador__btn--outline" id="graficador-indicators-btn"
-            aria-haspopup="dialog" aria-controls="gind-picker">
-      {{ icons.icon("activity") }}<span>Indicadores</span>
-      <span class="graficador__count" id="graficador-indicators-count" hidden>0</span>
-    </button>
-    {% endif %}
-
-    <form class="graficador__search" id="graficador-search" method="get" action="{{ url_for('graficador.index') }}" role="search">
-      <label class="graficador__sr" for="graficador-ticker">Ticker de Yahoo Finance</label>
-      <input type="text" id="graficador-ticker" name="ticker" class="graficador__input"
-             value="{{ query }}" placeholder="Ticker, p. ej. AAPL, ^GSPC"
-             autocomplete="off" spellcheck="false" required maxlength="20">
-      <button type="submit" class="graficador__btn">Buscar</button>
-    </form>
   </div>
+  {% endif %}
 
   {% if error %}
   <p class="graficador__status graficador__status--error" id="graficador-error" role="alert">{{ error }}</p>
@@ -96,6 +111,16 @@
     </div>
   </div>
   <p class="graficador__note"><span id="graficador-source">Datos de Yahoo Finance</span>. Horas en UTC. Indicadores calculados con TA-Lib.</p>
+
+  {#- Atajo a Quant stats con el mismo activo: rentabilidad, riesgo y caídas explicadas. -#}
+  <a class="graficador__quant" href="{{ url_for('quant_stats.fundamentales', ticker=ticker) }}">
+    <span class="graficador__quant-icon">{{ icons.icon("flask-conical") }}</span>
+    <span class="graficador__quant-text">
+      <strong>¿Qué tal se ha comportado {{ ticker }}?</strong>
+      <span>Rentabilidad, riesgo y peores caídas, explicados en lenguaje sencillo en Quant stats.</span>
+    </span>
+    {{ icons.icon("arrow-right", extra_class="graficador__quant-arrow") }}
+  </a>
 
   <dialog class="gind-dialog" id="gind-picker" aria-labelledby="gind-picker-title">
     <div class="gind-dialog__head">

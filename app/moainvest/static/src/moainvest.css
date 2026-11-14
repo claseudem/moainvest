@@ -10,6 +10,7 @@
  */
 @import "tailwindcss" source(none);
 @source "../../templates/moainvest";
+@source "../../../cuentas/templates/cuentas";
 @source "../../../core/templates/core/icons.html";
 @source "../moainvest.js";
 

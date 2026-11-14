@@ -26,11 +26,14 @@ from config import Config
 # los iconos y la API común que usan las demás.
 INSTALLED_APPS = (
     "core",
+    "cuentas",
+    "favoritos",
     "moainvest",
     "varianza",
     "quant_stats",
     "informes",
     "graficador",
+    "pyportfolio_opt",
     "universo",
 )
 

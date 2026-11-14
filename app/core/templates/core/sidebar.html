@@ -3,12 +3,14 @@
     que no estén aquí siguen usando el emoji de ``App.icon``. -#}
 {% set nav_icons = {
   "graficador": "candlestick-chart",
+  "favoritos": "star",
   "informes": "file-text",
   "analisis-varianza": "sigma",
   "quant-stats": "flask-conical",
   "universo": "briefcase",
   "fundamentales": "chart-column",
   "revision": "search",
+  "pyportfolio-opt": "trending-up",
 } %}
 {% macro nav_icon(entry) -%}
 <span class="sidebar__icon">
@@ -48,5 +50,22 @@
     {% endfor %}
   </nav>
 
+  {% if current_user and favorite_assets %}
+  <nav class="sidebar__favs" aria-label="Mis activos">
+    <p class="sidebar__favs-title">Mis activos</p>
+    <ul class="sidebar__favs-list">
+      {% for f in favorite_assets %}
+      <li><a class="sidebar__fav" href="{{ url_for('graficador.index', ticker=f.ticker) }}" title="{{ f.nombre or f.ticker }}">{{ f.ticker }}</a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  {% if current_user %}
+  <form class="sidebar__user" method="post" action="{{ url_for('cuentas.salir') }}">
+    <span class="sidebar__user-name" title="{{ current_user.email }}">{{ current_user.name }}</span>
+    <button class="sidebar__logout" type="submit">Salir</button>
+  </form>
+  {% endif %}
   <p class="sidebar__foot">Datos de Yahoo Finance</p>
 </aside>

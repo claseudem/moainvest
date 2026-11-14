@@ -41,6 +41,12 @@
         </ul>
       </nav>
       <div class="hidden items-center gap-2 md:flex">
+        {% if current_user %}
+        <span class="max-w-40 truncate text-sm text-muted" title="{{ current_user.email }}">{{ current_user.name }}</span>
+        <form method="post" action="{{ url_for('cuentas.salir') }}"><button type="submit" class="{{ ui.btn('secondary', 'sm') }}">Salir</button></form>
+        {% else %}
+        <a href="{{ url_for('cuentas.ingresar') }}" class="{{ ui.btn('secondary', 'sm') }}">Ingresar</a>
+        {% endif %}
         <a href="{{ url_for('moainvest.app_home') }}" class="{{ ui.btn('primary', 'sm') }}">Abrir app</a>
       </div>
       <div class="md:hidden">
@@ -62,6 +68,11 @@
       </ul>
     </nav>
     <div class="mt-8 grid gap-3">
+      {% if current_user %}
+      <form method="post" action="{{ url_for('cuentas.salir') }}" class="grid"><button type="submit" class="{{ ui.btn('secondary', 'lg') }}">Salir ({{ current_user.name }})</button></form>
+      {% else %}
+      <a href="{{ url_for('cuentas.ingresar') }}" class="{{ ui.btn('secondary', 'lg') }}">Ingresar</a>
+      {% endif %}
       <a href="{{ url_for('moainvest.app_home') }}" class="{{ ui.btn('primary', 'lg') }}">Abrir app</a>
     </div>
   </div>

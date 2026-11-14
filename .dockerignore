@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+.insforge
+.venv
+.env
+.pytest_cache
+__pycache__
+*.pyc
+tests
+migrations
+pipelines

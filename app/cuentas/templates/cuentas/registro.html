@@ -1,0 +1,15 @@
+{% extends "cuentas/_auth.html" %}
+{% from "cuentas/_auth.html" import field %}
+{% block title %}Crear cuenta | MOAINVEST{% endblock %}
+{% block eyebrow %}Crear cuenta{% endblock %}
+{% block heading %}Empieza a <span class="accent">invertir</span> con datos.{% endblock %}
+{% block fields %}
+{{ field("name", "Nombre", "text", name, "name") }}
+{{ field("email", "Correo", "email", email, "email", "required") }}
+{{ field("password", "Contraseña (mínimo 6 caracteres)", "password", "", "new-password", "required minlength=6") }}
+{{ field("password2", "Repite la contraseña", "password", "", "new-password", "required minlength=6") }}
+<button type="submit" class="{{ ui.btn('primary', 'lg') }}">Crear cuenta</button>
+{% endblock %}
+{% block footer %}
+<p>¿Ya tienes cuenta? <a href="{{ url_for('cuentas.ingresar', next=next) }}" class="text-brand hover:text-brand-deep">Ingresar</a></p>
+{% endblock %}

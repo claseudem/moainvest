@@ -10,3 +10,18 @@ __pycache__/
 # la configuración local de cada persona, no.
 .claude/worktrees/
 .claude/settings.local.json
+
+# InsForge & AI agent skills
+.insforge
+.agent
+.agents
+.augment
+.claude/skills/
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf

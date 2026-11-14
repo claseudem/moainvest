@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -40,8 +41,22 @@ class Config:
     ALPHAVANTAGE_CACHE_TTL = int(os.environ.get("ALPHAVANTAGE_CACHE_TTL", "300"))
 
 
+    # Login con InsForge (https://insforge.dev): URL del proyecto y anon key
+    # (``npx @insforge/cli secrets get ANON_KEY``). Con AUTH_REQUIRED activo,
+    # todo /app/ exige iniciar sesión.
+    INSFORGE_URL = os.environ.get("INSFORGE_URL", "")
+    INSFORGE_ANON_KEY = os.environ.get("INSFORGE_ANON_KEY", "")
+    # API key del proyecto (full-access, solo servidor): la usa app/favoritos para la BD.
+    INSFORGE_API_KEY = os.environ.get("INSFORGE_API_KEY", "")
+    AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "1") == "1"
+    PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ.get("SESSION_DAYS", "7")))
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+
 class ProductionConfig(Config):
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
 
 
 class TestingConfig(Config):
@@ -51,3 +66,7 @@ class TestingConfig(Config):
     CANDLE_CACHE_TTL = 0
     ALPHAVANTAGE_API_KEY = ""
     ALPHAVANTAGE_CACHE_TTL = 0
+    AUTH_REQUIRED = False
+    INSFORGE_URL = "https://insforge.test"
+    INSFORGE_ANON_KEY = "anon-test"
+    INSFORGE_API_KEY = "api-test"

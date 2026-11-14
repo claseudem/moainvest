@@ -18,11 +18,11 @@ def test_sidebar_names_are_sentence_case():
 
 
 def test_every_installed_app_with_pages_is_in_sidebar(app):
-    """Toda subapp con páginas propias (salvo ``core`` y ``moainvest``) sale en el sidebar."""
+    """Toda subapp con páginas propias (salvo ``core``, ``moainvest`` y ``cuentas``) sale en el sidebar."""
     sidebar_blueprints = {entry.endpoint.split(".", 1)[0] for entry in APPS}
     missing = []
     for name in INSTALLED_APPS:
-        if name in ("core", "moainvest") or find_spec(f"app.{name}.views") is None:
+        if name in ("core", "moainvest", "cuentas") or find_spec(f"app.{name}.views") is None:
             continue
         blueprint = import_module(f"app.{name}.views").bp.name
         has_pages = any(
@@ -35,4 +35,11 @@ def test_every_installed_app_with_pages_is_in_sidebar(app):
 
 
 def test_sidebar_lists_reports_right_after_the_charts():
-    assert [entry.slug for entry in APPS][1:] == ["informes", "analisis-varianza", "quant-stats", "universo"]
+    assert [entry.slug for entry in APPS][1:] == [
+        "informes",
+        "analisis-varianza",
+        "quant-stats",
+        "pyportfolio-opt",
+        "favoritos",
+        "universo",
+    ]

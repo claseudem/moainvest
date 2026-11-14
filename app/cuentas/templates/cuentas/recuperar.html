@@ -1,0 +1,11 @@
+{% extends "cuentas/_auth.html" %}
+{% from "cuentas/_auth.html" import field %}
+{% block title %}Recuperar contraseña | MOAINVEST{% endblock %}
+{% block eyebrow %}Recuperar{% endblock %}
+{% block heading %}Recupera tu <span class="accent">acceso</span>.{% endblock %}
+{% block lead %}<p class="mt-3 text-muted">Te enviaremos un código de 6 dígitos para crear una contraseña nueva.</p>{% endblock %}
+{% block fields %}
+{{ field("email", "Correo", "email", email, "email", "required autofocus") }}
+<button type="submit" class="{{ ui.btn('primary', 'lg') }}">Enviar código</button>
+{% endblock %}
+{% block footer %}<p><a href="{{ url_for('cuentas.ingresar') }}" class="text-brand hover:text-brand-deep">Volver a ingresar</a></p>{% endblock %}

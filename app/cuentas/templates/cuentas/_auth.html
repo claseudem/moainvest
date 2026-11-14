@@ -1,0 +1,33 @@
+{% extends "moainvest/base.html" %}
+{% import "moainvest/_macros.html" as ui with context %}
+
+{#- Tarjeta centrada para las pantallas de cuenta. Las clases van enteras
+    porque Tailwind solo compila las que encuentra literalmente (ver
+    moainvest/static/src/moainvest.css). -#}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<div class="mx-auto grid min-h-[70svh] w-full max-w-md place-content-center px-5 py-16 sm:px-0">
+  <p class="eyebrow mb-4 flex items-center gap-3"><span aria-hidden="true" class="h-px w-6 bg-brand"></span>{% block eyebrow %}Cuenta{% endblock %}</p>
+  <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{% block heading %}{% endblock %}</h1>
+  {% block lead %}{% endblock %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <p role="{{ 'alert' if category == 'error' else 'status' }}" class="mt-6 rounded-xl border px-4 py-3 text-sm {{ 'border-brand/30 bg-brand-soft text-brand-deep' if category == 'error' else 'border-line bg-mist text-ink' }}">{{ message }}</p>
+  {% endfor %}
+  {% endwith %}
+
+  <form method="post" class="mt-6 grid gap-4" novalidate>
+    {% block fields %}{% endblock %}
+  </form>
+  <div class="mt-6 text-sm text-muted">{% block footer %}{% endblock %}</div>
+</div>
+{% endblock %}
+
+{% macro field(name, label, type="text", value="", autocomplete="off", extra="") -%}
+<label class="grid gap-1.5 text-sm font-medium" for="{{ name }}">{{ label }}
+  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}" autocomplete="{{ autocomplete }}" {{ extra }}
+         class="h-11 w-full rounded-xl border border-line bg-white px-4 text-[0.95rem] font-normal text-ink outline-none transition-colors focus:border-brand">
+</label>
+{%- endmacro %}

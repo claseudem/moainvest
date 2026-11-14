@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+
+{% block title %}Mis activos · {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="page">
+  <header class="page-head">
+    <p class="eyebrow">Tus preferencias</p>
+    <h1 class="page-title">Mis <span class="accent">activos</span>.</h1>
+    <p class="page-lead">Guarda los activos que sigues: aparecen en el sidebar de toda la app para abrirlos con un clic en el Graficador.</p>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}<p role="{{ 'alert' if category == 'error' else 'status' }}" class="card card--mist">{{ message }}</p>{% endfor %}
+  {% endwith %}
+  {% if error %}<p role="alert" class="card card--mist">{{ error }}</p>{% endif %}
+
+  <section class="card" aria-labelledby="fav-add-title">
+    <h2 id="fav-add-title">Agregar un activo</h2>
+    <form method="post" action="{{ url_for('favoritos.agregar') }}">
+      <label>
+        <span class="sr-only">Ticker</span>
+        <input class="input" name="ticker" placeholder="AAPL, BTC-USD, ^GSPC…" autocomplete="off" maxlength="20" required>
+      </label>
+      <button class="btn btn--primary" type="submit">Agregar</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="fav-list-title">
+    <h2 id="fav-list-title">Tu lista ({{ favorites|length }}/{{ max_favorites }})</h2>
+    {% if favorites %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Ticker</th><th>Nombre</th><th>Agregado</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+        <tbody>
+          {% for f in favorites %}
+          <tr>
+            <td><a href="{{ url_for('graficador.index', ticker=f.ticker) }}"><strong>{{ f.ticker }}</strong></a></td>
+            <td>{{ f.nombre or "—" }}</td>
+            <td>{{ f.created_at[:10] }}</td>
+            <td>
+              <form method="post" action="{{ url_for('favoritos.quitar') }}">
+                <input type="hidden" name="ticker" value="{{ f.ticker }}">
+                <button class="btn btn--secondary btn--sm" type="submit" aria-label="Quitar {{ f.ticker }}">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p>Aún no tienes activos guardados. Agrega el primero arriba.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

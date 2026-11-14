@@ -34,6 +34,9 @@ app/
     api.py                     # /api/watchlists, /api/quote, /api/candles, /api/email/send...
     templates/core/            # base.html (layout con sidebar), sidebar.html, icons.html
     static/                    # css/style.css, js/app.js, js/vendor/lightweight-charts
+  cuentas/                   # Login con InsForge: "/ingresar", "/registro", "/verificar", "/recuperar", "/salir"
+    insforge.py                # Cliente REST de /api/auth (sign-up, sign-in, verificación, reset)
+    views.py                   # Sesión en la cookie de Flask + guarda de /app/ (AUTH_REQUIRED)
   moainvest/                 # Sitio principal (diseño rojo): "/", "/graficas/..." e "/informe"
     views.py
     commands.py                # flask build-css (Tailwind sin Node)
@@ -282,6 +285,7 @@ Todo lo que se ve con el layout oscuro de sidebar cuelga de `/app/`:
 | `/app/informes/` | Informes |
 | `/app/analisis-varianza/` | Análisis de varianza |
 | `/app/quant-stats/` (`fundamentales`, `revision`, `tearsheet`) | Quant stats |
+| `/app/pyportfolio-opt/` | Pyportfolio opt (retornos esperados) |
 | `/app/universo/` | Mi universo de acciones |
 
 Las APIs siguen en `/api/...`. Las rutas antiguas (`/analisis-varianza/...`,
@@ -399,6 +403,33 @@ cambio de rango o el cálculo de indicadores no gasta otra petición). Si el
 
 **Añadir un proveedor**: una subclase de `Provider` registrada en `PROVIDERS`.
 Aparece sola en el selector y en la API.
+
+### Pyportfolio opt
+
+App `app/pyportfolio_opt/` (layout de sidebar) en `/app/pyportfolio-opt/`:
+**retornos esperados anualizados** de 1 a 10 activos de Yahoo Finance con
+[PyPortfolioOpt](https://pyportfolioopt.readthedocs.io) (`pyportfolioopt` en
+`pyproject.toml`, módulo `pypfopt.expected_returns`), con dos metodologías:
+
+| Metodología | Función | Cálculo (frecuencia 252) |
+|---|---|---|
+| Media histórica | `mean_historical_return` | Con capitalización, CAGR `(∏(1 + r))^(252/N) − 1`; sin ella, `media(r) · 252` |
+| EMA | `ema_historical_return` | Media móvil exponencial de los retornos con ventana `span` (500 por defecto); con capitalización `(1 + EMA)^252 − 1` |
+
+La lógica, sin Flask, está en `app/pyportfolio_opt/expected.py`: toma los
+cierres diarios de `market_data.get_candles` (con su caché), cada activo usa
+su propia historia dentro del período y los tickers sin datos se devuelven en
+`missing`. La gráfica de barras se dibuja con `MPL_RC` y los colores de
+`app/core/charts.py` dentro de `rc_context`.
+
+| Ruta | Contenido |
+|---|---|
+| `GET /api/pyportfolio-opt/expected-returns?tickers=AAPL,MSFT&period=5y&method=both&span=500&compounding=1&log_returns=0` | JSON con `assets` (`ticker`, `start`, `end`, `observations` y el retorno de cada metodología en tanto por uno) y `missing` |
+| `GET /api/pyportfolio-opt/expected-returns.png?...` | Barras agrupadas por activo y metodología (mismos parámetros) |
+
+`method` es `historical`, `ema` o `both`; `period`, `1y`, `2y`, `5y`, `10y` o
+`max`; `span`, de 2 a 5000. Una entrada inválida responde 400 sin descargar
+nada y, si ningún ticker tiene precios, 404.
 
 ### Estética de Informes y Análisis de varianza
 
@@ -537,3 +568,15 @@ con el check **Tests / pytest** como obligatorio.
 - El servidor de desarrollo de Flask no es apto para producción; para
   desplegar, sirve `app` (la factory `create_app()`) con Gunicorn/uWSGI
   detrás de un proxy.
+
+## Login (InsForge)
+
+La autenticación usa [InsForge](https://insforge.dev) vía su API REST
+(`app/cuentas/`). Registro con verificación por código de correo, login,
+recuperación de contraseña y logout. Con `AUTH_REQUIRED=1` (por defecto) todo
+`/app/` exige sesión; el sitio público sigue abierto.
+
+```
+INSFORGE_URL=<oss_host de .insforge/project.json>
+INSFORGE_ANON_KEY=<npx @insforge/cli secrets get ANON_KEY>
+```

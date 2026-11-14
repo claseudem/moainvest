@@ -1,0 +1,13 @@
+{% extends "cuentas/_auth.html" %}
+{% from "cuentas/_auth.html" import field %}
+{% block title %}Verifica tu correo | MOAINVEST{% endblock %}
+{% block eyebrow %}Verificación{% endblock %}
+{% block heading %}Revisa tu <span class="accent">correo</span>.{% endblock %}
+{% block lead %}<p class="mt-3 text-muted">Escribe el código de 6 dígitos que enviamos a {{ email or "tu correo" }}.</p>{% endblock %}
+{% block fields %}
+<input type="hidden" name="email" value="{{ email }}">
+{{ field("code", "Código", "text", "", "one-time-code", 'required inputmode=numeric maxlength=6 pattern="[0-9]{6}" autofocus') }}
+<button type="submit" class="{{ ui.btn('primary', 'lg') }}">Verificar</button>
+<button type="submit" name="action" value="reenviar" formnovalidate class="{{ ui.btn('secondary', 'md') }}">Reenviar código</button>
+{% endblock %}
+{% block footer %}<p><a href="{{ url_for('cuentas.ingresar') }}" class="text-brand hover:text-brand-deep">Volver a ingresar</a></p>{% endblock %}

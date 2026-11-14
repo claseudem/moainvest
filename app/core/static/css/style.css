@@ -2665,3 +2665,18 @@ a {
   flex-shrink: 0;
   background: var(--brand);
 }
+
+/* Usuario en sesión (login con InsForge) al pie del sidebar. */
+.sidebar__user { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; font-size: 0.85rem; }
+.sidebar__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; opacity: 0.8; }
+.sidebar__logout { background: none; border: 1px solid currentColor; border-radius: 999px; padding: 2px 12px; color: inherit; font: inherit; cursor: pointer; opacity: 0.8; }
+.sidebar__logout:hover { opacity: 1; }
+
+/* Activos favoritos del usuario en el sidebar. */
+.sidebar__favs { padding: 8px 14px; }
+.sidebar__favs-title { margin: 0 0 6px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
+.sidebar__favs-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sidebar__fav { display: inline-block; padding: 2px 10px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.8rem; color: inherit; text-decoration: none; opacity: 0.85; }
+.sidebar__fav:hover { opacity: 1; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

@@ -1,0 +1,132 @@
+{% extends "core/base.html" %}
+
+{% block title %}Pyportfolio opt · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('pyportfolio_opt.static', filename='pyportfolio-opt.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page pypfopt-page" id="pypfopt-page">
+  <header class="page-head">
+    <p class="eyebrow">Optimización de portafolios · PyPortfolioOpt</p>
+    <h1 class="page-title">Retornos <span class="accent">esperados</span>.</h1>
+    <p class="page-lead">
+      Estima el retorno anual esperado de uno o varios activos a partir de su histórico de
+      precios diarios de Yahoo Finance, con la media histórica o con una media móvil
+      exponencial (EMA).
+    </p>
+  </header>
+
+  <section class="card pypfopt-card" aria-labelledby="pypfopt-form-title">
+    <h2 class="pypfopt-card__title" id="pypfopt-form-title">Parámetros</h2>
+
+    <form class="pypfopt-form" id="pypfopt-form" data-max-tickers="{{ max_tickers }}">
+      <label class="pypfopt-field pypfopt-field--wide">
+        <span class="pypfopt-field__label">Tickers (máx. {{ max_tickers }}, separados por coma)</span>
+        <input type="text" id="pypfopt-tickers" class="input" value="{{ default_tickers }}"
+               placeholder="AAPL, MSFT, NVDA" autocomplete="off" required>
+      </label>
+
+      <label class="pypfopt-field">
+        <span class="pypfopt-field__label">Metodología</span>
+        <select id="pypfopt-method" class="select">
+          <option value="both" selected>Comparar ambas</option>
+          {% for id, name in methods.items() %}
+          <option value="{{ id }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="pypfopt-field">
+        <span class="pypfopt-field__label">Período</span>
+        <select id="pypfopt-period" class="select">
+          {% for value, label in periods %}
+          <option value="{{ value }}"{% if value == default_period %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="pypfopt-field" id="pypfopt-span-field">
+        <span class="pypfopt-field__label">Span de la EMA (días)</span>
+        <input type="number" id="pypfopt-span" class="input" value="{{ default_span }}"
+               min="{{ span_min }}" max="{{ span_max }}" step="1" required>
+      </label>
+
+      <div class="pypfopt-field pypfopt-checks">
+        <label class="pypfopt-check">
+          <input type="checkbox" id="pypfopt-compounding" checked>
+          Capitalización compuesta
+        </label>
+        <label class="pypfopt-check">
+          <input type="checkbox" id="pypfopt-log-returns">
+          Retornos logarítmicos
+        </label>
+      </div>
+
+      <div class="pypfopt-actions">
+        <button type="submit" class="btn btn--primary" id="pypfopt-submit">Calcular retornos</button>
+      </div>
+    </form>
+
+    <div class="pypfopt-suggest" id="pypfopt-suggest">
+      <span class="pypfopt-field__label">Sugerencias</span>
+      {% for ticker in suggested_tickers %}
+      <button type="button" class="btn btn--secondary btn--sm" data-ticker="{{ ticker }}">+ {{ ticker }}</button>
+      {% endfor %}
+    </div>
+
+    <p class="pypfopt-status" id="pypfopt-status" role="status" hidden></p>
+  </section>
+
+  <section class="card pypfopt-card" id="pypfopt-result" aria-labelledby="pypfopt-result-title" hidden>
+    <h2 class="pypfopt-card__title" id="pypfopt-result-title">Resultados</h2>
+    <p class="pypfopt-summary" id="pypfopt-summary"></p>
+
+    <div class="table-wrap">
+      <table class="table" id="pypfopt-table">
+        <thead><tr id="pypfopt-table-head"></tr></thead>
+        <tbody id="pypfopt-table-body"></tbody>
+      </table>
+    </div>
+
+    <div class="pypfopt-chart">
+      <img id="pypfopt-chart-img" alt="Retorno esperado anualizado por activo y metodología" hidden>
+    </div>
+  </section>
+
+  <section class="card card--mist pypfopt-card" aria-labelledby="pypfopt-method-title">
+    <h2 class="pypfopt-card__title" id="pypfopt-method-title">Metodología</h2>
+    <div class="pypfopt-methods">
+      <article>
+        <h3>Media histórica</h3>
+        <p><code>expected_returns.mean_historical_return</code></p>
+        <p>
+          Con capitalización compuesta es la tasa de crecimiento anual compuesta (CAGR):
+          <code>(∏(1 + r<sub>t</sub>))<sup>{{ frequency }}/N</sup> − 1</code>. Sin ella, la media
+          aritmética de los retornos diarios por {{ frequency }}. Todos los días pesan igual.
+        </p>
+      </article>
+      <article>
+        <h3>EMA</h3>
+        <p><code>expected_returns.ema_historical_return</code></p>
+        <p>
+          Media móvil exponencial de los retornos diarios con ventana <em>span</em>: los datos
+          recientes pesan más (factor α = 2 / (span + 1)). Con capitalización
+          <code>(1 + EMA)<sup>{{ frequency }}</sup> − 1</code>; sin ella, <code>EMA · {{ frequency }}</code>.
+        </p>
+      </article>
+    </div>
+    <p class="pypfopt-note">
+      Cada activo usa toda su historia disponible en el período y se anualiza con
+      {{ frequency }} sesiones por año, así que los activos que cotizan todos los días (cripto)
+      no son directamente comparables. Los retornos pasados no garantizan rendimientos
+      futuros: la media histórica es sensible al período elegido.
+    </p>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('pyportfolio_opt.static', filename='pyportfolio-opt.js') }}"></script>
+{% endblock %}

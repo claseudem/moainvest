@@ -1,0 +1,132 @@
+/* App "Pyportfolio opt": solo lo propio de la página, con prefijo pypfopt-.
+   El resto (cabecera, tarjetas, botones, campos, tabla y pills) son los
+   componentes genéricos de core/static/css/style.css. */
+
+.pypfopt-page {
+  display: grid;
+  gap: 20px;
+}
+
+.pypfopt-card__title {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+}
+
+.pypfopt-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px 16px;
+  align-items: end;
+}
+
+.pypfopt-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pypfopt-field[hidden] {
+  display: none;
+}
+
+.pypfopt-field--wide {
+  grid-column: 1 / -1;
+}
+
+.pypfopt-field__label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pypfopt-field .input,
+.pypfopt-field .select {
+  width: 100%;
+}
+
+.pypfopt-checks {
+  gap: 8px;
+}
+
+.pypfopt-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pypfopt-check input {
+  accent-color: var(--brand);
+}
+
+.pypfopt-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pypfopt-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pypfopt-status {
+  margin: 16px 0 0;
+  color: var(--muted);
+}
+
+.pypfopt-status.is-error {
+  color: var(--down);
+}
+
+.pypfopt-summary {
+  margin: -8px 0 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pypfopt-chart {
+  margin-top: 20px;
+}
+
+.pypfopt-chart img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.pypfopt-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.pypfopt-methods h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.pypfopt-methods p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.pypfopt-methods code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--ink);
+}
+
+.pypfopt-note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}

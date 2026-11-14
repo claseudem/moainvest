@@ -67,6 +67,8 @@ APPS: tuple[App, ...] = (
             AppSection(slug="revision", name="Revisión analítica", icon="🔍", endpoint="quant_stats.revision"),
         ),
     ),
+    App(slug="pyportfolio-opt", name="Pyportfolio opt", icon="📐", endpoint="pyportfolio_opt.index", kind="blank"),
+    App(slug="favoritos", name="Mis activos", icon="⭐", endpoint="favoritos.index", kind="blank"),
     App(slug="universo", name="Mi universo de acciones", icon="🌐", endpoint="universo.index", kind="blank"),
 )
 

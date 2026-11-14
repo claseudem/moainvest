@@ -1,0 +1,14 @@
+{% extends "cuentas/_auth.html" %}
+{% from "cuentas/_auth.html" import field %}
+{% block title %}Ingresar | MOAINVEST{% endblock %}
+{% block eyebrow %}Ingresar{% endblock %}
+{% block heading %}Bienvenido de <span class="accent">vuelta</span>.{% endblock %}
+{% block fields %}
+{{ field("email", "Correo", "email", email, "email", "required autofocus") }}
+{{ field("password", "Contraseña", "password", "", "current-password", "required") }}
+<button type="submit" class="{{ ui.btn('primary', 'lg') }}">Ingresar</button>
+{% endblock %}
+{% block footer %}
+<p><a href="{{ url_for('cuentas.recuperar') }}" class="text-ink/80 hover:text-brand">¿Olvidaste tu contraseña?</a></p>
+<p class="mt-2">¿No tienes cuenta? <a href="{{ url_for('cuentas.registro', next=next) }}" class="text-brand hover:text-brand-deep">Crear cuenta</a></p>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+
+{% block title %}Mi universo de acciones · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('universo.static', filename='universo.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="universo" id="universo" data-quote-url="{{ url_for('core_api.quote', ticker='__T__') }}">
+  <header class="varianza-hero" aria-labelledby="universo-title">
+    <p class="varianza-eyebrow"><span class="varianza-eyebrow__rule" aria-hidden="true"></span>Portafolio · {{ stocks | length }} acciones</p>
+    <h1 class="varianza-hero__title" id="universo-title">Mi universo de <span class="varianza-accent">acciones</span>.</h1>
+    <p class="varianza-hero__lead">
+      Las acciones que sigo, con su precio en vivo y acceso rápido a su gráfica y a su análisis cuantitativo.
+    </p>
+  </header>
+
+  <div class="universo__toolbar">
+    <div class="universo__chips" role="group" aria-label="Filtrar por sector" id="universo-sectors">
+      <button type="button" class="universo__chip" data-sector="" aria-pressed="true">Todos <span>{{ stocks | length }}</span></button>
+      {% for sector, count in sectors %}
+      <button type="button" class="universo__chip" data-sector="{{ sector }}" aria-pressed="false">{{ sector }} <span>{{ count }}</span></button>
+      {% endfor %}
+    </div>
+    <input type="search" class="universo__search" id="universo-search" placeholder="Buscar ticker, empresa o industria"
+           aria-label="Buscar en el universo" autocomplete="off" spellcheck="false">
+  </div>
+
+  <div class="universo__table-wrap">
+    <table class="universo__table" id="universo-table">
+      <thead>
+        <tr>
+          <th><button type="button" data-sort="ticker" data-type="text">Ticker</button></th>
+          <th><button type="button" data-sort="name" data-type="text">Empresa</button></th>
+          <th class="universo__hide-sm"><button type="button" data-sort="industry" data-type="text">Sector · Industria</button></th>
+          <th class="universo__hide-sm"><button type="button" data-sort="country" data-type="text">País</button></th>
+          <th class="is-num"><button type="button" data-sort="cap" data-type="num">Cap.</button></th>
+          <th class="is-num universo__hide-sm"><button type="button" data-sort="pe" data-type="num">PER</button></th>
+          <th class="is-num"><button type="button" data-sort="price" data-type="num">Precio</button></th>
+          <th class="is-num"><button type="button" data-sort="change" data-type="num">Día</button></th>
+          <th><span class="universo__sr">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stocks %}
+        <tr data-ticker="{{ s.ticker }}" data-sector="{{ s.sector }}"
+            data-search="{{ (s.ticker ~ ' ' ~ s.name ~ ' ' ~ s.industry ~ ' ' ~ s.sector) | lower }}"
+            data-name="{{ s.name }}" data-industry="{{ s.sector }} {{ s.industry }}" data-country="{{ s.country }}"
+            data-cap="{{ s.market_cap }}" data-pe="{{ s.pe if s.pe is not none else '' }}">
+          <td><a class="universo__ticker" href="{{ url_for('graficador.index', ticker=s.ticker) }}">{{ s.ticker }}</a></td>
+          <td class="universo__name">{{ s.name }}</td>
+          <td class="universo__hide-sm universo__wrap"><span class="universo__sector">{{ s.sector }}</span><span class="universo__industry">{{ s.industry }}</span></td>
+          <td class="universo__hide-sm">{{ s.country }}</td>
+          <td class="is-num">{{ format_market_cap(s.market_cap) }}</td>
+          <td class="is-num universo__hide-sm">{{ "%.2f" | format(s.pe) if s.pe is not none else "—" }}</td>
+          <td class="is-num" data-field="price">…</td>
+          <td class="is-num"><span class="universo__pill" data-field="change" data-tone="none">…</span></td>
+          <td class="universo__actions">
+            <a href="{{ url_for('graficador.index', ticker=s.ticker) }}" title="Gráfica de {{ s.ticker }}">Gráfica</a>
+            <a href="{{ url_for('quant_stats.fundamentales', ticker=s.ticker) }}" title="Quant stats de {{ s.ticker }}">Quant</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="universo__empty" id="universo-empty" hidden>Ninguna acción coincide con el filtro.</p>
+  </div>
+  <p class="universo__note">Capitalización y PER de referencia (screener de Finviz). Precio y variación del día en vivo desde Yahoo Finance.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('universo.static', filename='universo.js') }}"></script>
+{% endblock %}

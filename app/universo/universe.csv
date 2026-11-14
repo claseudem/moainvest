@@ -1,0 +1,150 @@
+ticker,name,sector,industry,country,market_cap,pe
+CTVA,Corteva Inc,Basic Materials,Agricultural Inputs,USA,7.95B,7.88
+NU,Nu Holdings Ltd,Financial,Banks - Regional,Brazil,64.87B,18.28
+NOK,Nokia Corp ADR,Technology,Communication Equipment,Finland,59.35B,73.2
+AAL,American Airlines Group Inc,Industrials,Airlines,USA,8.57B,-
+SOFI,SoFi Technologies Inc,Financial,Credit Services,USA,20.37B,33.25
+F,Ford Motor Co,Consumer Cyclical,Auto Manufacturers,USA,48.25B,-
+VALE,Vale SA ADR,Basic Materials,Other Industrial Metals & Mining,Brazil,56.04B,29.02
+PCG,PG&E Corp,Utilities,Utilities - Regulated Electric,USA,27.13B,8.99
+RKT,Rocket Companies Inc,Financial,Mortgage Finance,USA,33.13B,77.84
+HL,Hecla Mining Co,Basic Materials,Other Precious Metals & Mining,USA,11.55B,22.05
+NCLH,Norwegian Cruise Line Holdings Ltd,Consumer Cyclical,Travel Services,USA,6.95B,9.57
+CDE,Coeur Mining Inc,Basic Materials,Gold,USA,18.15B,14.5
+TTD,Trade Desk Inc,Communication Services,Advertising Agencies,USA,5.62B,14.18
+HBAN,Huntington Bancshares Inc,Financial,Banks - Regional,USA,30.97B,11.82
+CAG,Conagra Brands Inc,Consumer Defensive,Packaged Foods,USA,6.38B,-
+PATH,UiPath Inc,Technology,Software - Infrastructure,USA,6.84B,19.52
+INFY,Infosys Ltd ADR,Technology,Information Technology Services,India,44.80B,13.53
+MAT,Mattel Inc,Consumer Cyclical,Leisure,USA,4.36B,11.25
+CPNG,Coupang Inc,Consumer Cyclical,Internet Retail,USA,24.77B,-
+DKNG,DraftKings Inc,Consumer Cyclical,Gambling,USA,16.54B,-
+CNH,CNH Industrial NV,Industrials,Farm & Heavy Construction Machinery,United Kingdom,16.67B,53.97
+NLY,Annaly Capital Management Inc,Real Estate,REIT - Mortgage,USA,13.94B,4.64
+PURR,Hyperliquid Strategies Inc,Financial,Capital Markets,USA,2.83B,18.3
+QXO,QXO Inc,Industrials,Industrial Distribution,USA,12.51B,-
+PL,Planet Labs PBC,Industrials,Aerospace & Defense,USA,6.37B,-
+CLF,Cleveland-Cliffs Inc,Basic Materials,Steel,USA,6.46B,-
+KVUE,Kenvue Inc,Consumer Defensive,Household & Personal Products,USA,33.04B,19.94
+VG,Venture Global Inc,Energy,Oil & Gas Midstream,USA,32.83B,9.98
+STWD,Starwood Property Trust Inc,Real Estate,REIT - Mortgage,USA,4.83B,21.92
+CORZ,Core Scientific Inc,Technology,Software - Infrastructure,USA,5.29B,-
+DX,Dynex Capital Inc,Real Estate,REIT - Mortgage,USA,2.73B,4.2
+VFC,VF Corp,Consumer Cyclical,Apparel Manufacturing,USA,5.63B,20.87
+AG,First Majestic Silver Corp,Basic Materials,Silver,Canada,8.71B,25.33
+EQX,Equinox Gold Corp,Basic Materials,Gold,Canada,12.97B,12.74
+PINS,Pinterest Inc,Communication Services,Internet Content & Information,USA,10.91B,56.14
+LYFT,Lyft Inc,Technology,Software - Application,USA,5.85B,2.16
+PBR-A,Petroleo Brasileiro SA Petrobras ADR,Energy,Oil & Gas Integrated,Brazil,53.38B,4.96
+CHWY,Chewy Inc,Consumer Cyclical,Internet Retail,USA,7.30B,27.78
+WY,Weyerhaeuser Co,Real Estate,REIT - Specialty,USA,13.31B,28.25
+VTRS,Viatris Inc,Healthcare,Drug Manufacturers - Specialty & Generic,USA,20.22B,-
+AES,AES Corp,Utilities,Utilities - Diversified,USA,10.64B,5.57
+BKD,Brookdale Senior Living Inc,Healthcare,Medical Care Facilities,USA,2.59B,-
+UUUU,Energy Fuels Inc,Energy,Uranium,USA,2.84B,-
+JBS,JBS NV,Consumer Defensive,Packaged Foods,Netherlands,12.50B,10.89
+SAN,Banco Santander SA ADR,Financial,Banks - Diversified,Spain,194.33B,10.53
+PTEN,Patterson-UTI Energy Inc,Energy,Oil & Gas Drilling,USA,4.28B,-
+CPB,Campbells Co,Consumer Defensive,Packaged Foods,USA,5.85B,14.85
+AVTR,Avantor Inc,Healthcare,Medical Instruments & Supplies,USA,10.38B,-
+ARR,ARMOUR Residential REIT Inc,Real Estate,REIT - Mortgage,USA,1.92B,3.65
+ALM,Almonty Industries Inc,Basic Materials,Other Industrial Metals & Mining,USA,3.87B,54.65
+LBRT,Liberty Energy Inc,Energy,Oil & Gas Equipment & Services,USA,3.15B,26.23
+BBWI,Bath & Body Works Inc,Consumer Cyclical,Specialty Retail,USA,3.24B,4.17
+VLY,Valley National Bancorp,Financial,Banks - Regional,USA,7.08B,10.82
+AEO,American Eagle Outfitters Inc,Consumer Cyclical,Apparel Retail,USA,2.97B,9.07
+BCE,BCE Inc,Communication Services,Telecom Services,Canada,18.40B,4.05
+KD,Kyndryl Holdings Inc,Technology,Information Technology Services,USA,2.52B,32.23
+IRT,Independence Realty Trust Inc,Real Estate,REIT - Residential,USA,3.51B,79.29
+NWG,NatWest Group Plc ADR,Financial,Banks - Regional,United Kingdom,70.08B,8.84
+ARCC,Ares Capital Corp,Financial,Asset Management,USA,13.54B,14.02
+KLAR,Klarna Group plc,Financial,Credit Services,United Kingdom,4.72B,-
+DOC,Healthpeak Properties Inc,Real Estate,REIT - Healthcare Facilities,USA,13.77B,55.72
+BZ,Kanzhun Ltd ADR,Communication Services,Internet Content & Information,China,5.89B,10.5
+NTSK,Netskope Inc,Technology,Software - Infrastructure,USA,7.25B,-
+OBDC,Blue Owl Capital Corp,Financial,Asset Management,USA,5.08B,18.1
+FLG,Flagstar Bank NA,Financial,Banks - Regional,USA,4.86B,579.21
+SECZ,Securitize Corp,Technology,Software - Application,USA,2.12B,-
+PENN,PENN Entertainment Inc,Consumer Cyclical,Resorts & Casinos,USA,1.98B,-
+VOD,Vodafone Group plc ADR,Communication Services,Telecom Services,United Kingdom,38.93B,-
+CRGY,Crescent Energy Co,Energy,Oil & Gas E&P,USA,4.42B,-
+CLBK,Columbia Financial Inc,Financial,Banks - Regional,USA,3.08B,43.92
+BEKE,KE Holdings Inc ADR,Real Estate,Real Estate Services,China,17.34B,27.1
+OLN,Olin Corp,Basic Materials,Chemicals,USA,1.81B,-
+FNB,F.N.B. Corp,Financial,Banks - Regional,USA,6.16B,10.39
+FSM,Fortuna Mining Corp,Basic Materials,Gold,Canada,3.33B,9.74
+RYN,Rayonier Inc,Real Estate,REIT - Specialty,USA,5.40B,40.09
+BGC,BGC Group Inc,Financial,Capital Markets,USA,5.60B,29.54
+RDY,Dr. Reddy's Laboratories Ltd ADR,Healthcare,Drug Manufacturers - Specialty & Generic,India,10.20B,27.53
+LFST,LifeStance Health Group Inc,Healthcare,Medical Care Facilities,USA,4.52B,91
+COLD,Americold Realty Trust Inc,Real Estate,REIT - Industrial,USA,3.99B,-
+IAG,Iamgold Corp,Basic Materials,Gold,Canada,10.57B,9.38
+LI,Li Auto Inc ADR,Consumer Cyclical,Auto Manufacturers,China,8.71B,-
+BXMT,Blackstone Mortgage Trust Inc,Real Estate,REIT - Mortgage,USA,1.84B,126.3
+HR,Healthcare Realty Trust Inc,Real Estate,REIT - Healthcare Facilities,USA,5.99B,-
+KSS,Kohl's Corp,Consumer Cyclical,Department Stores,USA,2.13B,8.2
+SGHC,Super Group (SGHC) Limited,Consumer Cyclical,Gambling,United Kingdom,5.72B,15.46
+EQPT,Equipmentshare.Com Inc,Industrials,Rental & Leasing Services,USA,4.70B,238.71
+MFG,Mizuho Financial Group Inc ADR,Financial,Banks - Regional,Japan,132.51B,14.97
+PK,Park Hotels & Resorts Inc,Real Estate,REIT - Hotel & Motel,USA,3.13B,-
+MIR,Mirion Technologies Inc,Industrials,Specialty Industrial Machinery,USA,3.64B,165.53
+KVYO,Klaviyo Inc,Technology,Software - Application,USA,4.47B,741.04
+CPRI,Capri Holdings Ltd,Consumer Cyclical,Luxury Goods,United Kingdom,1.64B,15.77
+WSC,WillScot Holdings Corp,Industrials,Rental & Leasing Services,USA,3.13B,-
+NOV,NOV Inc,Energy,Oil & Gas Equipment & Services,USA,6.70B,72.17
+LEVI,Levi Strauss & Co,Consumer Cyclical,Apparel Manufacturing,USA,7.65B,16.26
+SBRA,Sabra Healthcare REIT Inc,Real Estate,REIT - Healthcare Facilities,USA,4.89B,73.66
+HMY,Harmony Gold Mining Co Ltd ADR,Basic Materials,Gold,South Africa,10.90B,6.21
+FSK,FS KKR Capital Corp,Financial,Asset Management,USA,3.03B,-
+BILI,Bilibili Inc ADR,Communication Services,Internet Content & Information,China,4.90B,30.09
+NEOG,Neogen Corp,Healthcare,Medical Devices,USA,2.65B,-
+FRSH,Freshworks Inc,Technology,Software - Application,USA,3.33B,19.58
+APPS,Digital Turbine Inc,Technology,Software - Application,USA,1.35B,-
+DRH,Diamondrock Hospitality Co,Real Estate,REIT - Hotel & Motel,USA,2.58B,17.43
+ACVA,ACV Auctions Inc,Consumer Cyclical,Auto & Truck Dealerships,USA,1.77B,-
+PRMB,Primo Brands Corp,Consumer Defensive,Beverages - Non-Alcoholic,USA,7.06B,71.36
+LION,Lionsgate Studios Corp,Financial,Shell Companies,Canada,3.32B,-
+SRPT,Sarepta Therapeutics Inc,Healthcare,Biotechnology,USA,1.85B,-
+HAYW,Hayward Holdings Inc,Industrials,Electrical Equipment & Parts,USA,2.63B,17.05
+GO,Grocery Outlet Holding Corp,Consumer Defensive,Grocery Stores,USA,1.15B,-
+LEGN,Legend Biotech Corp ADR,Healthcare,Biotechnology,USA,3.60B,-
+PGY,Pagaya Technologies Ltd,Technology,Software - Infrastructure,USA,1.50B,13.9
+LPTH,Lightpath Technologies Inc,Technology,Electronic Components,USA,773.20M,-
+BANC,Banc of California Inc,Financial,Banks - Regional,USA,2.81B,-
+AMTM,Amentum Holdings Inc,Industrials,Specialty Business Services,USA,4.44B,21.73
+NEO,Neogenomics Inc,Healthcare,Diagnostics & Research,USA,2.37B,-
+VIPS,Vipshop Holdings Ltd ADR,Consumer Cyclical,Internet Retail,China,4.90B,4.11
+FIGS,Figs Inc,Consumer Cyclical,Apparel Manufacturing,USA,2.25B,41.83
+CC,Chemours Company,Basic Materials,Specialty Chemicals,USA,2.06B,-
+ATEC,Alphatec Holdings Inc,Healthcare,Medical Devices,USA,1.55B,-
+PRGO,Perrigo Company plc,Healthcare,Drug Manufacturers - Specialty & Generic,USA,1.98B,-
+TAK,Takeda Pharmaceutical Co ADR,Healthcare,Drug Manufacturers - Specialty & Generic,Japan,56.84B,-
+EYE,National Vision Holdings Inc,Consumer Cyclical,Specialty Retail,USA,1.30B,26.5
+CRK,Comstock Resources Inc,Energy,Oil & Gas E&P,USA,3.75B,7.42
+BNL,Broadstone Net Lease Inc,Real Estate,REIT - Diversified,USA,3.56B,24.76
+SHC,Sotera Health Co,Healthcare,Diagnostics & Research,USA,5.20B,32.04
+AVAH,Aveanna Healthcare Holdings Inc,Healthcare,Medical Care Facilities,USA,2.75B,10.24
+UTZ,Utz Brands Inc,Consumer Defensive,Packaged Foods,USA,2.05B,-
+DNOW,Dnow Inc,Industrials,Industrial Distribution,USA,2.85B,-
+DXC,DXC Technology Co,Technology,Information Technology Services,USA,1.77B,15.72
+CLBT,Cellebrite DI Ltd,Technology,Software - Infrastructure,Israel,2.78B,47.74
+ZTO,ZTO Express (Cayman) Inc ADR,Industrials,Integrated Freight & Logistics,China,10.68B,10.66
+AVPT,AvePoint Inc,Technology,Software - Infrastructure,USA,2.98B,44.55
+FA,First Advantage Corp,Industrials,Specialty Business Services,USA,3.11B,125.1
+OGN,Organon & Co,Healthcare,Drug Manufacturers - General,USA,3.60B,17.58
+SHO,Sunstone Hotel Investors Inc,Real Estate,REIT - Hotel & Motel,USA,2.12B,50.76
+APLE,Apple Hospitality REIT Inc,Real Estate,REIT - Hotel & Motel,USA,3.90B,22.27
+NCNO,Ncino Inc,Technology,Software - Application,USA,1.98B,61.92
+SRAD,Sportradar Group AG,Technology,Software - Application,Switzerland,3.67B,195.35
+WYFI,Whitefiber Inc,Technology,Information Technology Services,USA,696.55M,-
+SVM,Silvercorp Metals Inc,Basic Materials,Silver,Canada,2.34B,102.12
+ARX,Accelerant Holdings,Financial,Insurance Brokers,Cayman Islands,4.29B,-
+BRUN,Boost Run Inc,Technology,Software - Infrastructure,USA,1.38B,-
+OCTV,Octave Intelligence Plc,Technology,Software - Application,USA,5.11B,-
+DV,DoubleVerify Holdings Inc,Communication Services,Advertising Agencies,USA,2.09B,37.44
+REZI,Resideo Technologies Inc,Industrials,Industrial Distribution,USA,2.79B,8.12
+RPD,Rapid7 Inc,Technology,Software - Infrastructure,USA,821.61M,40.06
+SGRY,Surgery Partners Inc,Healthcare,Medical Care Facilities,USA,1.74B,-
+DLO,DLocal Limited,Technology,Software - Infrastructure,Uruguay,3.88B,20.11
+CSIQ,Canadian Solar Inc,Technology,Solar,Canada,759.43M,-
+BLZE,Backblaze Inc,Technology,Software - Infrastructure,USA,888.88M,-

@@ -58,10 +58,10 @@ app/
     media.py                   # Imágenes optimizadas vía Cloudinary
     templates/informes/        # index.html y emails/market_report.html
     static/                    # js/, img/informes/, video/
-  universo/                  # Mi universo de acciones: "/app/universo/"
-    views.py                   # Página con la tabla del universo
-    universe.py, universe.csv  # Las acciones (datos de referencia de Finviz)
-    templates/universo/, static/
+  favoritos/                 # Mis activos: "/app/favoritos/"
+    views.py                   # Página con la tabla de activos guardados, agregar/quitar
+    store.py                   # Lectura/escritura en InsForge (tabla activos_favoritos)
+    templates/favoritos/, static/
 tests/                       # pytest, una carpeta por app (tests/<app>/...)
 ```
 
@@ -185,18 +185,21 @@ La API sirve las gráficas para cualquier ticker:
 `GET /api/quant/<ticker>/earnings.png?count=4` y las versiones propias de
 `drawdown.png` y `monthly-heatmap.png`.
 
-### Mi universo de acciones
+### Mis activos
 
-App `app/universo/` en `/app/universo/`: el universo de acciones que sigo, a
-modo de portafolio de acceso rápido. Una tabla con ticker, empresa, sector e
-industria, país, capitalización y PER (datos de referencia de un screener de
-Finviz), más el precio y la variación del día en vivo (`/api/quote/<ticker>`,
-pedidos desde `app/universo/static/universo.js`, 8 en paralelo). Se puede
-filtrar por sector, buscar por texto y ordenar por cualquier columna; cada fila
-enlaza al **Graficador** y a **Quant stats** con su ticker.
+App `app/favoritos/` en `/app/favoritos/` (única entrada "Mis activos" del
+sidebar; absorbe a la antigua "Mi universo de acciones", y `/app/universo/`
+redirige aquí con 301). Muestra **solo** los activos que el usuario tiene
+guardados en InsForge, sin listas genéricas ni datos de ejemplo: una tabla con
+ticker, nombre, fecha de alta, precio y variación del día en vivo
+(`/api/quote/<ticker>`, pedidos desde `app/favoritos/static/favoritos.js`, 8 en
+paralelo), con búsqueda y ordenación, y enlaces al **Graficador** y a **Quant
+stats**. Desde la misma página se agregan y quitan activos (máx. 50).
 
-Para añadir o quitar acciones, edita `app/universo/universe.csv` (una fila por
-acción, con el ticker de Yahoo Finance).
+Los activos se leen en `app/favoritos/store.py` por la API REST de base de
+datos de InsForge (`GET {INSFORGE_URL}/api/database/records/activos_favoritos`
+con `user_id=eq.<id de la sesión>`), autenticada con `INSFORGE_API_KEY` (solo
+servidor, en `.env`). Sin sesión o sin credenciales no se muestra ningún activo.
 
 ### Nombres del sidebar
 
@@ -286,7 +289,7 @@ Todo lo que se ve con el layout oscuro de sidebar cuelga de `/app/`:
 | `/app/analisis-varianza/` | Análisis de varianza |
 | `/app/quant-stats/` (`fundamentales`, `revision`, `tearsheet`) | Quant stats |
 | `/app/pyportfolio-opt/` | Pyportfolio opt (retornos esperados) |
-| `/app/universo/` | Mi universo de acciones |
+| `/app/favoritos/` | Mis activos (`/app/universo/` redirige aquí) |
 
 Las APIs siguen en `/api/...`. Las rutas antiguas (`/analisis-varianza/...`,
 `/quant-stats/...`, `/informes/...`) redirigen con **301** a su equivalente

@@ -41,6 +41,7 @@
   {% set shortcuts = [
     ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico."),
     ("quant_stats.fundamentales", "flask-conical", "Quant stats", "Rentabilidad, riesgo y peores caídas de cualquier activo, explicados en lenguaje sencillo."),
+    ("personas.index", "layers", "Personas", "Quiénes somos, nuestro camino por niveles y el crecimiento de la comunidad."),
   ] %}
   <ul class="mt-16 grid gap-4 md:grid-cols-2">
     {% for endpoint, icon, title, body in shortcuts %}
@@ -61,4 +62,5 @@
     {% endfor %}
   </ul>
 </div>
+{% include "moainvest/_equipos.html" %}
 {% endblock %}

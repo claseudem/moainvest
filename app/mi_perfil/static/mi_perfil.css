@@ -1,0 +1,505 @@
+/* MI PERFIL (app/mi_perfil/templates/mi_perfil/index.html).
+ *
+ * Usa los tokens de core/static/css/style.css (blanco, rojo, grises y sombras
+ * suaves de MOAINVEST) y los componentes .page, .card, .btn de la app. Las
+ * clases propias llevan el prefijo mp-.
+ */
+
+.mp [hidden] {
+  display: none !important;
+}
+
+.mp button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.mp-block {
+  margin-top: 36px;
+  scroll-margin-top: 80px;
+}
+
+.mp-block > h2,
+.mp-subtitle {
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+}
+
+.mp-subtitle {
+  font-size: 1rem;
+  margin-top: 28px;
+}
+
+.mp-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.mp-hint {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+
+.mp-disclaimer {
+  margin-top: 36px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.mp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mp-status {
+  min-height: 1.25rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--up);
+}
+
+/* A. Identidad */
+.mp-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mp-avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-size: 1.3rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mp-identity__body {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.mp-identity__body h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+/* B. Perfiles */
+.mp-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.mp-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.4s var(--ease-out-soft);
+}
+
+.mp-profile:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+}
+
+.mp-profile.is-selected {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.12);
+}
+
+.mp-profile:focus-visible,
+.mp-row:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.mp-profile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mp-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--mist);
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.mp-profile__name {
+  font-weight: 600;
+  font-size: 1.02rem;
+}
+
+.mp-profile__desc {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.mp-profile__interest {
+  margin-top: auto;
+  color: var(--brand-deep);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Badges, chips y barras */
+.mp-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--mist);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mp-badge.is-next,
+.mp-badge.is-progreso {
+  background: var(--brand);
+  color: #fff;
+}
+
+.mp-badge.is-done {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.mp-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+
+.mp-bar {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.mp-bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transition: width 0.9s var(--ease-out-soft);
+}
+
+.mp-count {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* C. Nivel y trayectoria */
+.mp-level h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.mp-xp {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  margin: 8px 0 0;
+}
+
+.mp-path {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.mp-node {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.mp-node__num {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--mist);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.mp-node.is-done {
+  border-color: var(--up);
+  color: var(--up);
+}
+
+.mp-node.is-done .mp-node__num {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.mp-node.is-current {
+  border-color: var(--brand);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mp-node.is-current .mp-node__num {
+  background: var(--brand);
+  color: #fff;
+}
+
+.mp-node.is-locked {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* D. Misiones: resumen */
+.mp-stats {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+}
+
+.mp-stat .mp-label {
+  margin: 0;
+}
+
+.mp-stat__num {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tu siguiente misión */
+.mp-next {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+  border-left: 4px solid var(--brand);
+}
+
+.mp-next__head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.mp-next__body {
+  min-width: 0;
+}
+
+.mp-next__body h3 {
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  margin: 2px 0 4px;
+}
+
+.mp-next__body p {
+  margin: 0;
+}
+
+.mp-next__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Vista de la misión */
+.mp-panel {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.mp-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mp-panel__head h3 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.mp-panel p {
+  margin: 0;
+}
+
+.mp-steps {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+/* Listas compactas */
+.mp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.mp-row {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--mist);
+}
+
+.mp-row__main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mp-row__name {
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.mp-row__xp {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mp-row__req {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.mp-row.is-done .mp-row__name {
+  color: var(--text-muted);
+}
+
+.mp-empty {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  padding: 8px 2px;
+}
+
+/* Historial */
+.mp-history {
+  margin-top: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  background: var(--paper);
+}
+
+.mp-history summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mp-history summary::-webkit-details-marker {
+  display: none;
+}
+
+.mp-history summary::after {
+  content: "▾";
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.mp-history[open] summary::after {
+  content: "▴";
+}
+
+.mp-history .mp-list {
+  margin-top: 12px;
+}
+
+@media (max-width: 560px) {
+  .mp-stats {
+    gap: 8px;
+  }
+
+  .mp-stat__num {
+    font-size: 1.3rem;
+  }
+
+  .mp-row__main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-profile,
+  .mp-bar__fill {
+    transition: none;
+  }
+}

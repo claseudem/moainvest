@@ -104,12 +104,48 @@
 
 /* ───────────────────────── Controles ───────────────────────── */
 
-.graficador__toolbar {
+/* Fila superior: pestañas del Graficador a la izquierda y buscador a la derecha. */
+.graficador__top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  margin-top: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+/* Controles agrupados por función, cada uno con su etiqueta: Período | Vista |
+   (a la derecha) Indicadores y proveedor. */
+.graficador__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--mist);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.graficador__control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.graficador__control--end {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.graficador__label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* Segmented control pill: rangos en rojo de marca, tipo de serie en negro. */
@@ -145,8 +181,14 @@
 .graficador__search {
   display: flex;
   gap: 0.4rem;
-  flex: 0 1 340px;
+  flex: 0 1 320px;
   margin-left: auto;
+}
+
+.graficador__search .graficador__btn {
+  display: inline-grid;
+  place-items: center;
+  padding: 0.55rem 0.9rem;
 }
 
 .graficador__input {
@@ -339,7 +381,11 @@
   .graficador { padding: 1.25rem 1rem; gap: 0.85rem; }
   .graficador__quote { text-align: left; }
   .graficador__price { font-size: 1.6rem; }
-  .graficador__search { flex-basis: 100%; margin-left: 0; order: -1; }
+  .graficador__search { flex-basis: 100%; margin-left: 0; }
+  .graficador__top .app-tabs { width: 100%; }
+  .graficador__toolbar { padding: 0.75rem; gap: 0.75rem; }
+  .graficador__control { width: 100%; }
+  .graficador__control--end { margin-left: 0; }
   .graficador__group { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
   .graficador__chip { padding: 0.4rem 0.7rem; flex-shrink: 0; }
   .graficador__chart-wrap { min-height: 400px; }
@@ -698,3 +744,39 @@
 @media (prefers-reduced-motion: reduce) {
   .gind-row__actions { transition: none; }
 }
+
+/* ───────────────────────── Atajo a Quant stats ───────────────────────── */
+
+/* Tarjeta bajo el gráfico que abre Quant stats con el mismo activo. */
+.graficador__quant {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.15s var(--ease-out-soft), background-color 0.15s var(--ease-out-soft);
+}
+
+.graficador__quant:hover { border-color: rgba(200, 16, 46, 0.4); background: var(--brand-soft); }
+.graficador__quant:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.graficador__quant-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 1.15rem;
+}
+
+.graficador__quant-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.graficador__quant-text strong { font-weight: 600; }
+.graficador__quant-text span { font-size: 0.875rem; color: var(--muted); }
+.graficador__quant-arrow { margin-left: auto; flex-shrink: 0; color: var(--brand); }

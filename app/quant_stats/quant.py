@@ -9,6 +9,9 @@ También expone los 3 módulos principales de quantstats tal cual:
   ``render_qs_plot``), con benchmark y ventana móvil opcionales.
 - ``reports``: tearsheet HTML completo (``tearsheet_html``).
 
+``asset_facts`` resume las métricas en un ``explain.AssetFacts`` para los
+resúmenes en lenguaje llano de cada gráfica (``app.quant_stats.explain``).
+
 Además, la simulación Monte Carlo de ``quantstats.stats.montecarlo``
 (``montecarlo_summary`` / ``render_montecarlo_chart``) y la comparación de
 métricas entre un activo y su benchmark (``compare_stats``). Todo funciona
@@ -46,6 +49,7 @@ from quantstats._plotting import core as _qs_core
 from quantstats._plotting import wrappers as _qs_wrappers
 
 from app.core import market_data
+from app.quant_stats import explain
 from app.core.charts import BRAND, BRAND_BRIGHT, BRAND_DEEP, DOWN, INK, LINE, MPL_RC, MUTED, PALETTE, PAPER, UP
 
 UP_COLOR = UP
@@ -142,6 +146,129 @@ def performance_metrics(returns: pd.Series) -> PerformanceMetrics | None:
         sortino=float(qs.stats.sortino(returns)),
         max_drawdown=float(qs.stats.max_drawdown(returns)),
     )
+
+
+def asset_facts(
+    ticker: str, returns: pd.Series, window: int = 126
+) -> explain.AssetFacts | None:
+    """Métricas de ``returns`` para los resúmenes en lenguaje llano (``explain``).
+
+    ``window`` es la ventana (en sesiones) de las métricas móviles. ``None``
+    si no hay retornos.
+    """
+    if returns.empty:
+        return None
+    stat = lambda fn: _safe_stat(fn, returns)  # noqa: E731
+
+    drawdown = qs.stats.to_drawdown_series(returns)
+    periods: list[explain.DrawdownPeriod] = []
+    if (drawdown < 0).any():
+        details = qs.stats.drawdown_details(drawdown).sort_values("max drawdown").head(5)
+        last_day = returns.index[-1]
+        for _, row in details.iterrows():
+            ongoing = pd.Timestamp(row["end"]) >= last_day and drawdown.iloc[-1] < 0
+            periods.append(
+                explain.DrawdownPeriod(
+                    depth=float(row["max drawdown"]) / 100, days=int(row["days"]), recovered=not ongoing
+                )
+            )
+
+    monthly = (1 + returns).resample("ME").prod() - 1
+    yearly = (1 + returns).resample("YE").prod() - 1
+    best_month = monthly.idxmax() if not monthly.empty else None
+    worst_month = monthly.idxmin() if not monthly.empty else None
+
+    return explain.AssetFacts(
+        ticker=ticker,
+        trading_days=int(returns.size),
+        start=explain.month_label(returns.index[0].year, returns.index[0].month),
+        end=explain.month_label(returns.index[-1].year, returns.index[-1].month),
+        cumulative_return=stat(qs.stats.comp),
+        cagr=stat(qs.stats.cagr),
+        volatility=stat(qs.stats.volatility),
+        sharpe=stat(qs.stats.sharpe),
+        sortino=stat(qs.stats.sortino),
+        max_drawdown=stat(qs.stats.max_drawdown),
+        current_drawdown=float(drawdown.iloc[-1]),
+        drawdowns=tuple(periods),
+        best_day=stat(qs.stats.best),
+        worst_day=stat(qs.stats.worst),
+        typical_day=_finite(returns.std()),
+        typical_month=_finite(monthly.std()) if monthly.size > 1 else None,
+        win_rate_days=stat(qs.stats.win_rate),
+        win_rate_months=stat(lambda r: qs.stats.win_rate(r, aggregate="ME")),
+        months_total=int(monthly.size),
+        months_positive=int((monthly > 0).sum()),
+        average_month=_finite(monthly.mean()) if not monthly.empty else None,
+        best_month=(
+            (explain.month_label(best_month.year, best_month.month), float(monthly.max()))
+            if best_month is not None else None
+        ),
+        worst_month=(
+            (explain.month_label(worst_month.year, worst_month.month), float(monthly.min()))
+            if worst_month is not None else None
+        ),
+        yearly=tuple((int(day.year), float(value)) for day, value in yearly.items()),
+        value_at_risk=stat(qs.stats.value_at_risk),
+        expected_shortfall=stat(qs.stats.conditional_value_at_risk),
+        skew=stat(qs.stats.skew),
+        kurtosis=stat(qs.stats.kurtosis),
+        calmar=stat(qs.stats.calmar),
+        omega=stat(qs.stats.omega),
+        probabilistic_sharpe=stat(qs.stats.probabilistic_sharpe_ratio),
+        avg_win=stat(qs.stats.avg_win),
+        avg_loss=stat(qs.stats.avg_loss),
+        payoff_ratio=stat(qs.stats.payoff_ratio),
+        profit_factor=stat(qs.stats.profit_factor),
+        max_loss_streak=_int_or_none(stat(qs.stats.consecutive_losses)),
+        max_win_streak=_int_or_none(stat(qs.stats.consecutive_wins)),
+        rolling_window_label=ROLLING_WINDOWS.get(window, f"{window} sesiones"),
+        rolling_volatility=_rolling(qs.stats.rolling_volatility, returns, window),
+        rolling_sharpe=_rolling(qs.stats.rolling_sharpe, returns, window),
+        rolling_sortino=_rolling(qs.stats.rolling_sortino, returns, window),
+    )
+
+
+def benchmark_facts(
+    symbol: str, returns: pd.Series, benchmark: pd.Series, window: int = 126
+) -> explain.BenchmarkFacts | None:
+    """``asset_facts`` del benchmark y su relación (beta y correlación) con el activo."""
+    facts = asset_facts(symbol, benchmark, window)
+    if facts is None or returns.empty:
+        return None
+    beta = correlation = None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        variance = float(benchmark.var())
+        if variance > 0:
+            beta = _finite(returns.cov(benchmark) / variance)
+            correlation = _finite(returns.corr(benchmark))
+    return explain.BenchmarkFacts(facts=facts, beta=beta, correlation=correlation)
+
+
+def _rolling(fn: Callable[..., pd.Series], returns: pd.Series, window: int) -> explain.Rolling | None:
+    """Valor más reciente y media de una métrica móvil de quantstats."""
+    if returns.size <= window:
+        return None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        series = fn(returns, rolling_period=window)
+    series = pd.Series(series).replace([np.inf, -np.inf], np.nan).dropna()
+    if series.empty:
+        return None
+    return explain.Rolling(current=float(series.iloc[-1]), average=float(series.mean()))
+
+
+def _finite(value: Any) -> float | None:
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    return value if np.isfinite(value) else None
+
+
+def _int_or_none(value: float | None) -> int | None:
+    return None if value is None else int(value)
 
 
 def monthly_returns_table(returns: pd.Series) -> pd.DataFrame:

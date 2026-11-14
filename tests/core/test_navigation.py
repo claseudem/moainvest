@@ -18,8 +18,10 @@ def test_sidebar_names_are_sentence_case():
 
 
 def test_every_installed_app_with_pages_is_in_sidebar(app):
-    """Toda subapp con páginas propias (salvo ``core``, ``moainvest`` y ``cuentas``) sale en el sidebar."""
-    sidebar_blueprints = {entry.endpoint.split(".", 1)[0] for entry in APPS}
+    """Toda subapp con páginas propias (salvo ``core``, ``moainvest`` y ``cuentas``) sale en el sidebar,
+    como app o como subsección de otra (Quant stats vive dentro del Graficador)."""
+    entries = [*APPS, *(section for entry in APPS for section in entry.sections)]
+    sidebar_blueprints = {entry.endpoint.split(".", 1)[0] for entry in entries}
     missing = []
     for name in INSTALLED_APPS:
         if name in ("core", "moainvest", "cuentas") or find_spec(f"app.{name}.views") is None:
@@ -34,12 +36,16 @@ def test_every_installed_app_with_pages_is_in_sidebar(app):
     assert missing == []
 
 
-def test_sidebar_lists_reports_right_after_the_charts():
-    assert [entry.slug for entry in APPS][1:] == [
-        "informes",
-        "analisis-varianza",
-        "quant-stats",
-        "pyportfolio-opt",
-        "favoritos",
-        "pronosticador",
+def test_sidebar_order_without_reports_or_standalone_quant_stats():
+    # Informes se eliminó y Quant stats ya no es una app del sidebar.
+    assert [entry.slug for entry in APPS] == ["graficador", "analisis-varianza", "pyportfolio-opt", "favoritos", "pronosticador"]
+
+
+def test_quant_stats_lives_inside_the_graficador():
+    graficador = APPS[0]
+    assert graficador.kind == "sections"
+    assert [(s.name, s.endpoint) for s in graficador.sections] == [
+        ("Gráfico", "graficador.index"),
+        ("Quant stats", "quant_stats.fundamentales"),
+        ("Comparar", "quant_stats.revision"),
     ]

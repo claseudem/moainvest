@@ -29,29 +29,37 @@ def inject_globals() -> dict:
     }
 
 
-# Rutas de antes del área "App": las páginas de las subapps cuelgan ahora de
-# /app/. Se redirigen con 301 (conservando subruta y query string) para no
-# romper enlaces ni marcadores.
-LEGACY_APP_PREFIXES = ("analisis-varianza", "quant-stats", "informes", "pronosticador")
+# Rutas antiguas -> su ubicación actual. Se redirigen con 301 (conservando
+# subruta y query string) para no romper enlaces ni marcadores:
+# - las subapps colgaban de la raíz antes de existir el área /app/;
+# - Quant stats vivía en /app/quant-stats/ antes de integrarse en el Graficador.
+# La app Informes se eliminó y sus rutas (/informes, /app/informes) dan 404.
+LEGACY_REDIRECTS = {
+    "/analisis-varianza": "/app/analisis-varianza",
+    "/quant-stats": "/app/graficador/quant-stats",
+    "/app/quant-stats": "/app/graficador/quant-stats",
+    "/pronosticador": "/app/pronosticador",
+}
 
 
-def _legacy_app_redirect(prefix: str, rest: str = ""):
-    target = f"/app/{prefix}/{rest}"
+def _legacy_redirect(target_prefix: str, rest: str = ""):
+    target = f"{target_prefix}/{rest}"
     if request.query_string:
         target += "?" + request.query_string.decode()
     return redirect(target, code=301)
 
 
-for _prefix in LEGACY_APP_PREFIXES:
+for _old, _new in LEGACY_REDIRECTS.items():
+    _name = _old.strip("/").replace("/", "_")
     bp.add_url_rule(
-        f"/{_prefix}/",
-        endpoint=f"legacy_{_prefix}",
-        view_func=_legacy_app_redirect,
-        defaults={"prefix": _prefix},
+        f"{_old}/",
+        endpoint=f"legacy_{_name}",
+        view_func=_legacy_redirect,
+        defaults={"target_prefix": _new},
     )
     bp.add_url_rule(
-        f"/{_prefix}/<path:rest>",
-        endpoint=f"legacy_{_prefix}_rest",
-        view_func=_legacy_app_redirect,
-        defaults={"prefix": _prefix},
+        f"{_old}/<path:rest>",
+        endpoint=f"legacy_{_name}_rest",
+        view_func=_legacy_redirect,
+        defaults={"target_prefix": _new},
     )

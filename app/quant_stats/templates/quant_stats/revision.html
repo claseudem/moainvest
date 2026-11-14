@@ -1,6 +1,7 @@
 {% extends "quant_stats/_base.html" %}
+{% import "quant_stats/_summary.html" as qs %}
 
-{% block title %}Revisión analítica {{ ticker }} · Quant stats · {{ site_name }}{% endblock %}
+{% block title %}Comparar {{ ticker }} · Graficador · {{ site_name }}{% endblock %}
 
 {% macro plot_src(for_period) -%}
   {{ url_for('quant_stats_api.quant_plot', ticker=ticker, slug=plot.slug, period=for_period,
@@ -13,42 +14,55 @@
              compare=compare, benchmark=benchmark, window=window) }}
 {%- endmacro %}
 
-{% block hero_eyebrow %}Revisión analítica{% endblock %}
+{% macro compare_table(title, rows) -%}
+<table class="qs-table">
+  <thead><tr><th>{{ title }}</th><th>{{ ticker }}</th><th>{{ benchmark }}</th></tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td class="{{ row.asset.sign }}">{{ row.asset.display }}</td>
+      <td class="{{ row.benchmark.sign }}">{{ row.benchmark.display }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{%- endmacro %}
+
+{% block hero_eyebrow %}Quant stats · Comparar{% endblock %}
 
 {% block hero_lead %}
-  El activo en comparación: contra un benchmark, entre dos períodos o entre sus reportes de resultados. Las
-  gráficas y métricas del activo por sí solo están en
-  <a href="{{ url_for('quant_stats.fundamentales', ticker=ticker, period=period) }}">Gráficas y fundamentales estadísticos</a>.
+  Pon el activo en contexto: frente a un índice de referencia, entre dos períodos o en sus últimos resultados
+  trimestrales. Lo que hace el activo por sí solo está en
+  <a href="{{ url_for('quant_stats.fundamentales', ticker=ticker, period=period) }}">Quant stats</a>.
 {% endblock %}
 
-{% block hero_extra %}
+{% block asset_form %}
   {% with keep={"mode": mode, "chart": plot.slug if plot else None, "benchmark": benchmark, "compare": compare, "window": window} %}
   {% include "quant_stats/_asset_form.html" %}
   {% endwith %}
 {% endblock %}
 
 {% block page %}
-  <nav class="qs-tabs" aria-label="Modos de revisión">
+  <nav class="qs-modes" aria-label="Qué comparar">
     {% for value, label in modes.items() %}
-    <a class="qs-tabs__link{% if value == mode %} is-active{% endif %}" {% if value == mode %}aria-current="page"{% endif %}
+    <a class="qs-modes__link{% if value == mode %} is-active{% endif %}" {% if value == mode %}aria-current="page"{% endif %}
        href="{{ url_for('quant_stats.revision', ticker=ticker, mode=value, period=period) }}">{{ label }}</a>
     {% endfor %}
   </nav>
 
   {% if mode == "earnings" %}
-  <section class="qs-section">
+  <section class="qs-section" aria-labelledby="earnings-title">
     <div class="qs-section__head">
-      <h2 class="qs-section__title">Últimos {{ earnings_count }} earnings</h2>
+      <h2 class="qs-section__title" id="earnings-title">Últimos {{ earnings_count }} resultados trimestrales</h2>
+      <p class="qs-section__meta">Cada reporte frente al anterior: días entre ellos, cambio del beneficio por acción (EPS) y del precio.</p>
     </div>
     {% if earnings %}
-    <p class="qs-hint">
-      Cada reporte frente al anterior: distancia en días, variación del EPS reportado y variación del precio
-      de cierre (primera sesión tras cada reporte).
-    </p>
     <figure class="qs-chart">
       <img src="{{ url_for('quant_stats_api.quant_earnings', ticker=ticker, count=earnings_count) }}"
            alt="Comparación de los últimos reportes de resultados de {{ ticker }}" loading="lazy">
     </figure>
+    {{ qs.summary(summary, "earnings") }}
     <div class="qs-card qs-card--scroll">
       <table class="qs-table qs-table--wide">
         <thead>
@@ -82,29 +96,20 @@
       </table>
     </div>
     {% else %}
-    <p class="qs-status is-error">
-      No hay datos de earnings para {{ ticker }} (los índices, ETFs, divisas y criptos no publican resultados).
-    </p>
+    {{ qs.summary(summary, "earnings") }}
     {% endif %}
   </section>
 
   {% else %}
-  <section class="qs-section qs-section--flush">
+  <section class="qs-section" aria-labelledby="chart-title">
     <form class="qs-form qs-form--panel" method="get">
       <input type="hidden" name="ticker" value="{{ ticker }}">
       <input type="hidden" name="mode" value="{{ mode }}">
       <input type="hidden" name="period" value="{{ period }}">
-      <label class="qs-field">
-        <span class="qs-field__label">Gráfica</span>
-        <select name="chart" class="qs-select" onchange="this.form.submit()">
-          {% for p in plots %}
-          <option value="{{ p.slug }}" {% if p.slug == plot.slug %}selected{% endif %}>{{ p.label }}</option>
-          {% endfor %}
-        </select>
-      </label>
+      <input type="hidden" name="chart" value="{{ plot.slug }}">
       {% if mode == "benchmark" %}
       <label class="qs-field qs-field--ticker">
-        <span class="qs-field__label">Benchmark (cualquier ticker)</span>
+        <span class="qs-field__label">Comparar con (índice o cualquier ticker)</span>
         <input class="qs-input qs-input--ticker" name="benchmark" value="{{ benchmark }}" list="quant-benchmarks"
                autocomplete="off" spellcheck="false" required
                pattern="[A-Za-z0-9\^][A-Za-z0-9.\-=\^]{0,14}" onchange="this.form.submit()">
@@ -119,7 +124,7 @@
       </label>
       {% else %}
       <label class="qs-field">
-        <span class="qs-field__label">Comparar con</span>
+        <span class="qs-field__label">Comparar {{ periods[period] | lower }} con</span>
         <select name="compare" class="qs-select" onchange="this.form.submit()">
           {% for value, label in periods.items() if value != period %}
           <option value="{{ value }}" {% if value == compare %}selected{% endif %}>{{ label }}</option>
@@ -142,13 +147,19 @@
       <button type="submit" class="qs-btn">Aplicar</button>
     </form>
 
-    <div class="qs-stepper">
-      <a class="qs-btn qs-btn--ghost qs-stepper__prev" href="{{ revision_url(previous_plot.slug) }}"><span aria-hidden="true">←</span> {{ previous_plot.label }}</a>
-      <div class="qs-stepper__current">
-        <strong>{{ plot.label }}</strong>
-        <span>{{ plot.description }}</span>
+    <div class="qs-chart-picker">
+      <p class="qs-field__label" id="chart-picker-label">Gráfica</p>
+      <div class="qs-chips" role="list" aria-labelledby="chart-picker-label">
+        {% for p in plots %}
+        <a role="listitem" class="qs-chip {% if p.slug == plot.slug %}is-active{% endif %}" {% if p.slug == plot.slug %}aria-current="true"{% endif %}
+           href="{{ revision_url(p.slug) }}">{{ p.label }}</a>
+        {% endfor %}
       </div>
-      <a class="qs-btn qs-btn--ghost qs-stepper__next" href="{{ revision_url(next_plot.slug) }}">{{ next_plot.label }} <span aria-hidden="true">→</span></a>
+    </div>
+
+    <div class="qs-section__head">
+      <h2 class="qs-section__title" id="chart-title">{{ plot.label }}</h2>
+      <p class="qs-section__meta">{{ plot.description }}</p>
     </div>
 
     <div class="qs-charts {% if mode == 'periodos' %}is-compare{% endif %}">
@@ -156,52 +167,47 @@
         <figcaption>
           {% if mode == "benchmark" %}{{ ticker }} vs. {{ benchmark }} · {{ periods[period] }}{% else %}{{ periods[period] }}{% endif %}
         </figcaption>
-        <a href="{{ plot_src(period) }}" target="_blank" title="Abrir a tamaño completo">
+        <a href="{{ plot_src(period) }}" target="_blank" rel="noopener" title="Abrir a tamaño completo">
           <img src="{{ plot_src(period) }}" alt="{{ plot.label }} de {{ ticker }} · {{ periods[period] }}">
         </a>
+        {{ qs.summary(summary, "chart") }}
       </figure>
       {% if mode == "periodos" %}
       <figure class="qs-chart">
         <figcaption>{{ periods[compare] }}</figcaption>
-        <a href="{{ plot_src(compare) }}" target="_blank" title="Abrir a tamaño completo">
+        <a href="{{ plot_src(compare) }}" target="_blank" rel="noopener" title="Abrir a tamaño completo">
           <img src="{{ plot_src(compare) }}" alt="{{ plot.label }} de {{ ticker }} · {{ periods[compare] }}">
         </a>
+        {{ qs.summary(compare_summary, "chart-compare") }}
       </figure>
       {% endif %}
     </div>
-
-    <div class="qs-chips">
-      {% for p in plots %}
-      <a class="qs-chip {% if p.slug == plot.slug %}is-active{% endif %}" href="{{ revision_url(p.slug) }}">{{ p.label }}</a>
-      {% endfor %}
-    </div>
+    {% if mode == "periodos" %}{{ qs.summary(periods_summary, "periods") }}{% endif %}
   </section>
 
   {% if mode == "benchmark" %}
-  <section class="qs-section">
+  <section class="qs-section" aria-labelledby="metrics-title">
     <div class="qs-section__head">
-      <h2 class="qs-section__title">Métricas: {{ ticker }} vs. {{ benchmark }}</h2>
+      <h2 class="qs-section__title" id="metrics-title">Métricas: {{ ticker }} vs. {{ benchmark }}</h2>
+      <p class="qs-section__meta">{{ asset_name }} frente a {{ benchmark_name }}, sobre las mismas sesiones.</p>
     </div>
-    <p class="qs-hint">{{ asset_name }} frente a {{ benchmark_name }}, sobre las mismas sesiones.</p>
     {% if comparison %}
-    <div class="qs-tables qs-tables--compare">
-      {% for title, rows in comparison %}
-      <div class="qs-card">
-        <table class="qs-table">
-          <thead><tr><th>{{ title }}</th><th>{{ ticker }}</th><th>{{ benchmark }}</th></tr></thead>
-          <tbody>
-            {% for row in rows %}
-            <tr>
-              <td>{{ row.label }}</td>
-              <td class="{{ row.asset.sign }}">{{ row.asset.display }}</td>
-              <td class="{{ row.benchmark.sign }}">{{ row.benchmark.display }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endfor %}
+    {% set first_title, first_rows = comparison[0] %}
+    <div class="qs-card qs-card--lead">
+      {{ compare_table(first_title, first_rows) }}
+      {{ qs.summary(comparison_summaries[first_title], "compare-1") }}
     </div>
+    <details class="qs-more">
+      <summary class="qs-more__summary">Ver todas las métricas ({{ comparison | length - 1 }} tablas más)</summary>
+      <div class="qs-tables qs-tables--compare">
+        {% for title, rows in comparison[1:] %}
+        <div class="qs-card">
+          {{ compare_table(title, rows) }}
+          {{ qs.summary(comparison_summaries[title], "compare-" ~ (loop.index + 1)) }}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
     {% else %}
     <p class="qs-status is-error">No se pudieron descargar precios de {{ ticker }} o de {{ benchmark }}.</p>
     {% endif %}

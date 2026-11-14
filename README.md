@@ -3,7 +3,7 @@
 Panel de precios en vivo, estilo TradingView, construido solo con **Flask**
 (organizado en **apps con blueprints, al estilo Django**) y **UV** para la
 gestión del proyecto/dependencias (sin Node). El sitio principal,
-**MOAINVEST** (Resumen, Gráficas e Informe), se sirve en la raíz con su
+**MOAINVEST** (Resumen y Gráficas), se sirve en la raíz con su
 diseño rojo.
 Descarga los precios de **Yahoo Finance** (vía `yfinance`) y los dibuja con
 [lightweight-charts](https://github.com/tradingview/lightweight-charts), la
@@ -26,18 +26,18 @@ app/
   __init__.py                # create_app() + INSTALLED_APPS
   core/                      # Lo compartido por todas las apps
     market_data.py             # Descarga + caché de precios/velas (yfinance)
-    watchlists.py              # Registro de watchlists (Resumen, Gráficas, Informe)
+    watchlists.py              # Registro de watchlists (Resumen y Gráficas)
     email.py                   # Envío de emails vía Resend
     navigation.py              # Entradas del sidebar de las páginas oscuras
     charts.py                  # Paleta de las gráficas generadas en el servidor
     views.py                   # Blueprint sin páginas: layout, sidebar, iconos, estáticos
     api.py                     # /api/watchlists, /api/quote, /api/candles, /api/email/send...
-    templates/core/            # base.html (layout con sidebar), sidebar.html, icons.html
+    templates/core/            # base.html (layout con sidebar), sidebar.html, icons.html, section_tabs.html
     static/                    # css/style.css, js/app.js, js/vendor/lightweight-charts
   cuentas/                   # Login con InsForge: "/ingresar", "/registro", "/verificar", "/recuperar", "/salir"
     insforge.py                # Cliente REST de /api/auth (sign-up, sign-in, verificación, reset)
     views.py                   # Sesión en la cookie de Flask + guarda de /app/ (AUTH_REQUIRED)
-  moainvest/                 # Sitio principal (diseño rojo): "/", "/graficas/..." e "/informe"
+  moainvest/                 # Sitio principal (diseño rojo): "/" y "/graficas/..."
     views.py
     commands.py                # flask build-css (Tailwind sin Node)
     templates/moainvest/
@@ -46,18 +46,11 @@ app/
     views.py, api.py           # Página y /api/volatility-chart
     analysis.py                # Volatilidad mensual + histogramas (seaborn)
     templates/varianza/, static/
-  quant_stats/               # QUANT STATS: "/app/quant-stats/..."
+  quant_stats/               # QUANT STATS, dentro del Graficador: "/app/graficador/quant-stats/..."
     views.py, api.py           # Páginas y /api/quant/<ticker>/...
     quant.py                   # quantstats: stats, Monte Carlo, plots, reports y earnings
-    templates/quant_stats/
-  informes/                  # Informes por email: "/app/informes/"
-    views.py, api.py           # Página y /api/report/..., /api/email/send-assets-report
-    commands.py                # flask cloudinary-upload
-    report.py                  # Informe HTML de cotizaciones
-    report_charts.py           # Gráfico por watchlist del informe
-    media.py                   # Imágenes optimizadas vía Cloudinary
-    templates/informes/        # index.html y emails/market_report.html
-    static/                    # js/, img/informes/, video/
+    explain.py                 # Resúmenes en lenguaje llano de cada gráfica y tabla
+    templates/quant_stats/, static/quant_stats.css
   favoritos/                 # Mis activos: "/app/favoritos/"
     views.py                   # Página con la tabla de activos guardados, agregar/quitar
     store.py                   # Lectura/escritura en InsForge (tabla activos_favoritos)
@@ -89,7 +82,7 @@ El sidebar tiene dos niveles:
    aparece el enlace.
 
 2. **Watchlists** (`app/core/watchlists.py`): las listas de tickers que
-   usan las Gráficas y el Informe de MOAINVEST. Para añadir una nueva (por
+   usan las Gráficas de MOAINVEST. Para añadir una nueva (por
    ejemplo "Bancos"):
 
    ```python
@@ -106,8 +99,7 @@ El sidebar tiene dos niveles:
 
    No hace falta tocar plantillas, vistas ni JavaScript: la nueva
    watchlist aparece automáticamente en Gráficas, con su propia ruta
-   `/graficas/bancos` y su propio endpoint `/api/watchlist/bancos/quotes`,
-   y en el Informe.
+   `/graficas/bancos` y su propio endpoint `/api/watchlist/bancos/quotes`.
 
 ### Análisis de Varianza
 
@@ -119,71 +111,72 @@ volatilidades a lo largo del período elegido. El histograma se genera en
 el servidor con **seaborn/matplotlib** (`app/varianza/analysis.py`) y se
 sirve como PNG desde `GET /api/volatility-chart?tickers=AAPL,MSFT&period=5y`.
 
-### Informe de mercado por email
-
-`app/informes/report.py` obtiene las cotizaciones de las watchlists, construye
-un informe HTML (resumen de subidas/bajadas, mayores movimientos y una tabla
-por watchlist) con la plantilla `app/informes/templates/informes/emails/market_report.html` y lo
-envía vía Resend:
-
-```python
-from app.models.report import build_market_report, send_market_report
-
-report = build_market_report(["overview"])   # .subject y .html listos para enviar
-send_market_report("destino@ejemplo.com")      # todas las watchlists
-```
-
-También por HTTP: `GET /api/report/preview?watchlists=overview` para verlo
-en el navegador y `POST /api/email/send-assets-report` con
-`{"to": "destino@ejemplo.com", "watchlists": ["overview"]}` para enviarlo
-(`watchlists` es opcional).
-
-Desde la app, el apartado **📨 Informes** (`/app/informes/`) permite elegir las
-watchlists, ver el informe con "Ver informe" y enviarlo con "Enviar por correo".
-
-### Imágenes con Cloudinary
-
-Los fondos de la página de Informes llevan una imagen servida desde
-[Cloudinary](https://cloudinary.com) con `f_auto,q_auto` (AVIF/WebP/JPEG y
-calidad elegidos por Cloudinary para cada navegador) y un `srcset` de 640,
-1280 y 1920 px. La lógica vive en `app/informes/media.py`.
-
-1. Copia tu URL de API desde la [consola de Cloudinary](https://console.cloudinary.com/settings/api-keys)
-   y ponla en el `.env`: `CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>`.
-2. Sube las imágenes (una sola vez, o cada vez que cambies las de
-   `app/informes/static/img/informes/`): `uv run flask --app run cloudinary-upload`.
-
-Sin `CLOUDINARY_URL`, la página usa las copias locales de `app/informes/static/img/informes/`.
-
 ### QUANT STATS
 
 Análisis cuantitativo con [quantstats](https://github.com/ranaroussi/quantstats)
 de **cualquier activo de Yahoo Finance** (`?ticker=AAPL`, `^GSPC`, `BTC-USD`...;
-UEC por defecto) en `/app/quant-stats/`, sobre los retornos diarios del período
-elegido (1, 2 o 5 años, o todo). Tiene dos subsecciones en el sidebar que no
-se solapan:
+UEC por defecto), sobre los retornos diarios del período elegido (1, 2 o 5
+años, o todo). No es una app propia del sidebar: vive **dentro del
+Graficador** (`/app/graficador/quant-stats/`) como dos de sus subsecciones, y
+comparte con él el activo por la query string (`?ticker=`), así que desde el
+gráfico de un activo se abre su análisis sin volver a escribirlo:
 
-- **Gráficas y fundamentales estadísticos** (`/app/quant-stats/fundamentales`):
-  el activo por sí solo, según los 3 módulos principales de quantstats.
-  - **stats**: 5 métricas de resumen y 26 más agrupadas (rendimiento, riesgo,
-    ajustado por riesgo y operativa diaria), más la **simulación Monte Carlo**
-    (`qs.stats.montecarlo`) con número de simulaciones y umbrales de bust y
-    goal configurables. Al barajar retornos el resultado final no cambia, así
-    que goal siempre es 0% o 100%; bust y los drawdowns son lo informativo.
-  - **plots**: 14 gráficas nativas de `qs.plots`.
-  - **reports**: tearsheet HTML de `qs.reports.html` (abrir o descargar).
-- **Revisión analítica** (`/app/quant-stats/revision`): todo lo comparativo.
-  - **Activo vs. benchmark** (cualquier ticker): gráficas superpuestas, beta
-    móvil, todas las métricas lado a lado y tearsheet con benchmark.
-  - **Período vs. período**: la misma gráfica en dos períodos, lado a lado.
-  - **Reporte vs. reporte**: últimos 4 earnings (EPS estimado vs. reportado,
-    días, variación de EPS y de precio entre reportes).
+- **Quant stats** (`/app/graficador/quant-stats/fundamentales`): el activo por
+  sí solo. Resumen con las 5 métricas clave (retorno, volatilidad, Sharpe,
+  Sortino y máximo drawdown, cada una con una línea que explica qué es), las
+  gráficas de `qs.plots` (6 destacadas y 8 más plegadas en «Más gráficas»), la
+  **simulación Monte Carlo** (`qs.stats.montecarlo`, con simulaciones y umbrales
+  de bust y goal en «Ajustar la simulación»), 26 métricas detalladas en 4
+  tablas y el tearsheet HTML de `qs.reports.html` (abrir o descargar).
+- **Comparar** (`/app/graficador/quant-stats/revision`): todo lo comparativo.
+  - **Contra un índice** (cualquier ticker como benchmark): gráficas
+    superpuestas, beta móvil, métricas lado a lado y tearsheet con benchmark.
+  - **Entre períodos**: la misma gráfica en dos períodos, lado a lado.
+  - **Resultados trimestrales**: últimos 4 earnings (EPS estimado vs.
+    reportado, días, variación de EPS y de precio entre reportes).
+
+Las URLs antiguas (`/app/quant-stats/...` y `/quant-stats/...`) redirigen con
+**301** a `/app/graficador/quant-stats/...`, conservando subruta y query string
+(`LEGACY_REDIRECTS` en `app/core/views.py`).
 
 La API sirve las gráficas para cualquier ticker:
 `GET /api/quant/<ticker>/plot/<gráfica>.png?period=2y&benchmark=SPY&window=126`,
 `GET /api/quant/<ticker>/montecarlo.png?period=2y&sims=1000&bust=-20&goal=50`,
 `GET /api/quant/<ticker>/earnings.png?count=4` y las versiones propias de
 `drawdown.png` y `monthly-heatmap.png`.
+
+### Resúmenes en lenguaje llano (Quant stats)
+
+Cada gráfica y tabla de Quant stats lleva debajo un bloque **«En pocas
+palabras»** (2-4 frases) que explica qué muestra y qué significa para ESE
+activo con SUS números, sin jerga o explicándola (drawdown, Sharpe,
+volatilidad, Monte Carlo, beta...). Por ejemplo: «En el peor momento llegó a
+perder un 35 % desde su máximo (una caída fuerte) y tardó 8 meses en
+recuperarse» o «Por cada unidad de riesgo obtuvo un rendimiento bueno (Sharpe
+1,1; por encima de 1 se considera bueno)».
+
+- **Métricas** (`quant.asset_facts(ticker, returns, window)`): resume los
+  retornos en un `explain.AssetFacts` de números planos (retorno, CAGR,
+  volatilidad, Sharpe, peores baches con su duración y recuperación, mejor y
+  peor mes, años, VaR, métricas móviles...). `quant.benchmark_facts` añade el
+  benchmark con su beta y correlación.
+- **Redacción** (`app/quant_stats/explain.py`): funciones puras, sin Flask,
+  pandas ni llamadas a LLM: `overview`, `stat_group(título)`, `plot(slug,
+  facts, benchmark)`, `montecarlo`, `compare_periods`, `comparison_group` y
+  `earnings`. Los umbrales están arriba del módulo como constantes
+  (`SHARPE_TIERS`: <0 negativo, 0-0,5 pobre, 0,5-1 razonable, 1-2 bueno, ≥2
+  excelente; `VOLATILITY_TIERS`, `DRAWDOWN_TIERS`, `CALMAR_TIERS`,
+  `BUST_TIERS`, `BETA_TIERS`...). Con menos de `MIN_TRADING_DAYS` sesiones
+  devuelven `INSUFFICIENT`, un aviso de datos insuficientes.
+- **Plantillas**: el macro `summary(texto, clave)` de
+  `quant_stats/_summary.html` pinta el bloque con `data-summary="<clave>"`.
+- **Nueva gráfica**: al añadir un `PlotSpec` a `quant.PLOTS`, escribe su
+  función `_plot_<slug>(facts)` y regístrala en `explain._PLOT_WRITERS`
+  (`test_every_plot_has_its_own_summary` falla si falta). Una tabla nueva de
+  `STAT_GROUPS` necesita su entrada en `_GROUP_WRITERS` (y en
+  `_COMPARISON_WRITERS` para la comparación con benchmark).
+- Tests por tramos en `tests/quant_stats/test_explain.py` (bueno/regular/malo,
+  positivo/negativo y datos insuficientes).
 
 ### Mis activos
 
@@ -203,38 +196,34 @@ servidor, en `.env`). Sin sesión o sin credenciales no se muestra ningún activ
 
 ### Nombres del sidebar
 
-Los textos de los enlaces del sidebar (apps de `apps.py`, sus `sections` y las
-watchlists de `watchlists.py`) se escriben en formato frase: primera letra en
-mayúscula y el resto en minúscula ("Quant stats", "Análisis de varianza"). Se
-escriben así en su origen, sin `text-transform`; `tests/test_apps.py` lo
-comprueba.
+Los textos de los enlaces del sidebar (apps de `app/core/navigation.py`, sus
+`sections` y las watchlists de `watchlists.py`) se escriben en formato frase:
+primera letra en mayúscula y el resto en minúscula ("Quant stats", "Análisis de
+varianza"). Se escriben así en su origen, sin `text-transform`;
+`tests/core/test_navigation.py` lo comprueba.
 
-### Iconos de Informes
+### Iconos de línea
 
-La página de Informes usa iconos de línea (trazados de
+Las páginas del área App usan iconos de línea (trazados de
 [Lucide](https://lucide.dev), licencia ISC) como SVG inline desde el macro
 `app/core/templates/core/icons.html`, sin CDN ni dependencias:
 
 ```jinja
-{% import "partials/icons.html" as icons %}
+{% import "core/icons.html" as icons %}
 {{ icons.icon("send") }}                      {# decorativo: aria-hidden #}
 {{ icons.icon("eye", label="Ver") }}          {# con significado: role="img" #}
 ```
 
 Heredan el color del texto (`stroke="currentColor"`) y miden `1em` (clase
-`.ui-icon`). Para añadir uno, anexa su trazado al diccionario `_paths`; el
-icono de cada watchlist se elige por slug en `watchlist_icons` (las que no
-estén usan `list`).
+`.ui-icon`). Para añadir uno, anexa su trazado al diccionario `_paths`.
 
 ### Nombre de la marca
 
 El nombre visible de la app (**MoaiInvest**) vive en un único sitio:
 `Config.SITE_NAME` en `config.py`. Un context processor lo inyecta en todas
-las plantillas como `site_name` (títulos de página y sidebar) y
-`app/informes/report.py` lo usa en el asunto y la cabecera del informe por
-email. Para renombrar la app basta con cambiar esa línea. El `name` de
-`pyproject.toml` (`market-dashboard`) y el prefijo de Cloudinary son
-identificadores técnicos y no se muestran al usuario.
+las plantillas como `site_name` (títulos de página y sidebar). Para renombrar
+la app basta con cambiar esa línea. El `name` de `pyproject.toml`
+(`market-dashboard`) es un identificador técnico y no se muestra al usuario.
 
 ### Sitio MOAINVEST
 
@@ -245,15 +234,15 @@ El sitio principal, con el diseño rojo de MOAINVEST, se sirve en la raíz:
 | `/` | **Inicio** | **Resumen**: watchlist «Resumen» con precios en vivo y la línea del último mes |
 | `/app/` | **App** (y botón «Abrir app») | Redirige a la primera app del sidebar (`default_app()`) |
 | `/graficas/<watchlist>/<ticker>` | — (atajo del Resumen) | **Gráficas**: velas, rangos de 1D a Todo y precios del resto de la watchlist (`/graficas` y `/graficas/<watchlist>` redirigen al primer símbolo) |
-| `/informe` | — (atajo del Resumen) | **Informe**: elegir watchlists, vista previa y envío por correo |
 
 Cualquier ruta inexistente muestra el 404 con este mismo diseño. El
-Graficador, Informes, Análisis de varianza y Quant stats viven en el área App
+Graficador (con Quant stats dentro), Análisis de varianza, Pyportfolio opt y
+Mis activos viven en el área App
 (`/app/...`), con el layout de sidebar.
 
 - App `app/moainvest/`: `views.py` y plantillas en `templates/moainvest/`.
 - `app/moainvest/static/moainvest.js` (sin framework) refresca los precios
-  cada 15 s y dibuja sparklines, el gráfico de velas y el informe, usando la
+  cada 15 s y dibuja sparklines y el gráfico de velas, usando la
   API JSON `/api/...`.
 - El CSS es Tailwind v4, pero **sin Node**: el compilado
   `app/moainvest/static/moainvest.css` se commitea, y para regenerarlo tras
@@ -285,23 +274,30 @@ Todo lo que se ve con el layout oscuro de sidebar cuelga de `/app/`:
 
 | Ruta | Subapp |
 |---|---|
-| `/app/informes/` | Informes |
+| `/app/graficador/` | Graficador |
+| `/app/graficador/quant-stats/` (`fundamentales`, `revision`, `tearsheet`) | Quant stats, dentro del Graficador |
 | `/app/analisis-varianza/` | Análisis de varianza |
-| `/app/quant-stats/` (`fundamentales`, `revision`, `tearsheet`) | Quant stats |
 | `/app/pyportfolio-opt/` | Pyportfolio opt (retornos esperados) |
 | `/app/favoritos/` | Mis activos (`/app/universo/` redirige aquí) |
 
-Las APIs siguen en `/api/...`. Las rutas antiguas (`/analisis-varianza/...`,
-`/quant-stats/...`, `/informes/...`) redirigen con **301** a su equivalente
-bajo `/app/`, conservando subruta y query string (`LEGACY_APP_PREFIXES` en
-`app/core/views.py`).
+Las APIs siguen en `/api/...`. Las rutas antiguas redirigen con **301**,
+conservando subruta y query string (`LEGACY_REDIRECTS` en `app/core/views.py`):
+`/analisis-varianza/...` a `/app/analisis-varianza/...`, y `/quant-stats/...`
+y `/app/quant-stats/...` a `/app/graficador/quant-stats/...`.
+
+La app **Informes** (informe de mercado por email, con Cloudinary) se eliminó:
+`/informes/...`, `/app/informes/...`, `/informe` y sus APIs
+(`/api/report/...`, `/api/email/send-assets-report`) responden con el **404**
+del sitio, porque ya no hay una página equivalente a la que redirigir.
 
 - El orden del sidebar es el de `APPS` en `app/core/navigation.py`: primero
-  el graficador, luego Informes y después el resto de subapps.
+  el Graficador (con sus subsecciones Gráfico, Quant stats y Comparar) y
+  después el resto de subapps.
 - `tests/core/test_navigation.py` recorre `INSTALLED_APPS` y falla si una app
-  con páginas propias (salvo `core` y `moainvest`) no tiene su `App(...)` en
-  `APPS`: una subapp nueva no puede quedarse fuera del sidebar. Dale también
-  un `url_prefix="/app/<slug>"` a su blueprint de páginas.
+  con páginas propias (salvo `core`, `moainvest` y `cuentas`) no está en
+  `APPS`, como app o como subsección de otra: una subapp nueva no puede
+  quedarse fuera del sidebar. Dale también un `url_prefix="/app/<slug>"` a su
+  blueprint de páginas.
 - El logo de la barra superior enlaza a **Inicio** (`moainvest.resumen`, `/`)
   para volver al sitio rojo (ver «Estética del área App»).
 
@@ -311,7 +307,14 @@ App `app/graficador/` (layout oscuro con sidebar) en `/app/graficador/`: el
 gráfico de **cualquier ticker de Yahoo Finance** (`?ticker=AAPL`, `^GSPC`,
 `BTC-USD`, `EURUSD=X`...; por defecto, el primer símbolo de la watchlist por
 defecto). Es la primera entrada del sidebar y sustituye al antiguo enlace
-«Gráficas» a `/graficas`.
+«Gráficas» a `/graficas`. Sus pestañas **Gráfico | Quant stats | Comparar**
+(`core/section_tabs.html`, las mismas subsecciones que el sidebar) llevan el
+`?ticker=` actual a Quant stats, y bajo el gráfico una tarjeta abre el análisis
+de ese activo.
+
+- Controles agrupados con etiqueta: **Período** y **Vista** (velas, línea,
+  área) a la izquierda; **Indicadores** y proveedor de precios a la derecha.
+  En móvil cada grupo ocupa su fila y los chips se desplazan en horizontal.
 
 - Velas, línea o área en el pane principal y el **volumen** como histograma en
   un pane propio (panes de lightweight-charts v5).
@@ -434,27 +437,23 @@ su propia historia dentro del período y los tickers sin datos se devuelven en
 `max`; `span`, de 2 a 5000. Una entrada inválida responde 400 sin descargar
 nada y, si ningún ticker tiene precios, 404.
 
-### Estética de Informes y Análisis de varianza
+### Estética de Análisis de varianza
 
-`/app/informes/` y `/app/analisis-varianza/` siguen la marca del sitio rojo
+`/app/analisis-varianza/` sigue la marca del sitio rojo
 (blancos, rojos y negros, Geist): cabecera con eyebrow mono y título grande,
 tarjetas blancas con borde `line` y botones pill rojos. Sus estilos están solo
-en las secciones "Análisis de Varianza" e "Informes" de
-`app/core/static/css/style.css`, sobre los tokens del `:root`.
+en la sección "Análisis de Varianza" de `app/core/static/css/style.css`, sobre
+los tokens del `:root`.
 
 - Las clases base `.varianza-page`, `.varianza-form*`, `.varianza-table*`,
   `.varianza-status` y `.volatility-*` también las usa Quant stats: conserva
   su estructura. Lo propio de cada página lleva su prefijo (`.varianza-hero`,
-  `.varianza-chip`, `.informes-card`, `.informes-btn`...).
+  `.varianza-chip`...).
 - El campo de tickers de la volatilidad crea chips con Intro, coma o espacio
   (`varianza.js`); el máximo sale de `MAX_VOLATILITY_TICKERS` de `api.py`.
-- Los fondos de vídeo/imagen de Informes se pasan a blanco y negro y llevan
-  un overlay negro→rojo; el canvas de respaldo usa los mismos colores.
-- Las gráficas del servidor (`varianza/analysis.py` e
-  `informes/report_charts.py`) usan `PALETTE`, `MPL_RC`, `UP` y `DOWN` de
-  `app/core/charts.py` dentro de `rc_context`, sin cambiar el tema global de
-  matplotlib. El email (`informes/emails/market_report.html`) usa los mismos
-  colores con estilos en línea y tablas.
+- Las gráficas del servidor (`varianza/analysis.py`) usan `PALETTE`, `MPL_RC`,
+  `UP` y `DOWN` de `app/core/charts.py` dentro de `rc_context`, sin cambiar el
+  tema global de matplotlib.
 
 ### Estética del área App
 
@@ -513,16 +512,19 @@ Las páginas de `/app/...` usan el mismo lenguaje visual que el sitio rojo
 
 ### Estética de Quant stats
 
-Las páginas de `app/quant_stats/` (`/app/quant-stats/fundamentales`,
-`/revision` y el tearsheet) siguen la marca MOAINVEST del sitio rojo:
+Las páginas de `app/quant_stats/` (`/app/graficador/quant-stats/fundamentales`,
+`/revision` y el tearsheet) siguen la marca MOAINVEST del sitio rojo, con una
+jerarquía pensada para quien no es experto: pestañas del Graficador, cabecera
+del activo con su selector (ticker y período en chips) y secciones con
+tarjetas; lo avanzado (más gráficas, ajustes de Monte Carlo, todas las métricas
+comparadas) va plegado en `<details class="qs-more">`.
 
-- Plantillas: `quant_stats/_base.html` extiende `core/base.html`, carga Geist y
-  pinta la cabecera (eyebrow mono, ticker y nombre grandes); las páginas
-  rellenan los bloques `hero_eyebrow`, `hero_lead`, `hero_extra` y `page`.
-  Estilos propios con prefijo `qs-` (pestañas pill, tarjetas de métricas,
-  tablas, formularios y botones pill rojos) en las secciones «Análisis UEC» y
-  «QUANT STATS» de `app/core/static/css/style.css`; no usan las clases
-  `varianza-*`.
+- Plantillas: `quant_stats/_base.html` extiende `core/base.html`, pinta las
+  pestañas (`core/section_tabs.html`, con el enlace al tearsheet) y la cabecera;
+  las páginas rellenan los bloques `hero_eyebrow`, `hero_lead`, `asset_form` y
+  `page`. Estilos propios con prefijo `qs-` en
+  `app/quant_stats/static/quant_stats.css` (no en `style.css`, salvo
+  `.is-up`/`.is-down`, compartidos con el Graficador).
 - Gráficas del servidor (`quant.py`): todo se dibuja dentro de
   `_brand_theme()`, que bajo `_QS_PLOT_LOCK` aplica `MPL_RC` de
   `app/core/charts.py` con `matplotlib.rc_context`, cambia la paleta de

@@ -12,7 +12,7 @@ Para añadir una nueva app:
 2. Crea su paquete en ``app/<app>/`` (con su ``views.py``) y añádela a
    ``INSTALLED_APPS`` en ``app/__init__.py``.
 3. Si la app necesita su propia navegación anidada en el sidebar (como las
-   subsecciones de "Quant stats"), usa ``kind="sections"`` o añade un nuevo
+   subsecciones del Graficador: "Gráfico", "Quant stats" y "Comparar"), usa ``kind="sections"`` o añade un nuevo
    valor de ``kind`` y su bloque correspondiente en
    ``app/core/templates/core/sidebar.html``.
 """
@@ -44,29 +44,27 @@ class App:
     sections: tuple[AppSection, ...] = ()
 
 
-# Orden del sidebar del área "App" (/app/): primero el graficador, luego
-# Informes y después el resto de subapps. ``tests/core/test_navigation.py``
-# comprueba que toda app de ``INSTALLED_APPS`` con páginas tenga su entrada.
+# Orden del sidebar del área "App" (/app/): primero el graficador y después el
+# resto de subapps. ``tests/core/test_navigation.py`` comprueba que toda app de
+# ``INSTALLED_APPS`` con páginas tenga su entrada (como app o como subsección).
+#
+# Quant stats no es una app del sidebar: vive dentro del Graficador como sus
+# subsecciones "Quant stats" y "Comparar", y comparte con él el activo elegido
+# (las vistas pasan ``section_args={"ticker": ...}``).
 APPS: tuple[App, ...] = (
-    App(slug="graficador", name="Graficador", icon="📈", endpoint="graficador.index", kind="blank"),
-    App(slug="informes", name="Informes", icon="📨", endpoint="informes.index", kind="blank"),
-    App(slug="analisis-varianza", name="Análisis de varianza", icon="🧮", endpoint="varianza.index", kind="blank"),
     App(
-        slug="quant-stats",
-        name="Quant stats",
-        icon="🧪",
-        endpoint="quant_stats.index",
+        slug="graficador",
+        name="Graficador",
+        icon="📈",
+        endpoint="graficador.index",
         kind="sections",
         sections=(
-            AppSection(
-                slug="fundamentales",
-                name="Gráficas y fundamentales estadísticos",
-                icon="📊",
-                endpoint="quant_stats.fundamentales",
-            ),
-            AppSection(slug="revision", name="Revisión analítica", icon="🔍", endpoint="quant_stats.revision"),
+            AppSection(slug="grafico", name="Gráfico", icon="📈", endpoint="graficador.index"),
+            AppSection(slug="quant-stats", name="Quant stats", icon="🧪", endpoint="quant_stats.fundamentales"),
+            AppSection(slug="comparar", name="Comparar", icon="🔍", endpoint="quant_stats.revision"),
         ),
     ),
+    App(slug="analisis-varianza", name="Análisis de varianza", icon="🧮", endpoint="varianza.index", kind="blank"),
     App(slug="pyportfolio-opt", name="Pyportfolio opt", icon="📐", endpoint="pyportfolio_opt.index", kind="blank"),
     App(slug="favoritos", name="Mis activos", icon="⭐", endpoint="favoritos.index", kind="blank"),
     App(slug="pronosticador", name="Pronosticador", icon="🔮", endpoint="pronosticador.index", kind="blank"),

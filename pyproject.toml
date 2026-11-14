@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "arch>=9.0.0",
-    "cloudinary>=1.46.2",
     "duckdb>=1.5.6,<1.6",
     "dukascopy-python>=4.0.1",
     "flask>=3.1.3",

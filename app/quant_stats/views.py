@@ -1,27 +1,35 @@
-"""Controlador de la app "QUANT STATS": análisis cuantitativo con quantstats de
+"""Controlador de "QUANT STATS": análisis cuantitativo con quantstats de
 cualquier activo de Yahoo Finance (``?ticker=``, UEC por defecto).
 
-Sus dos subsecciones del sidebar no se solapan:
+No es una app propia del sidebar: vive dentro del Graficador
+(``/app/graficador/quant-stats/``) como dos de sus subsecciones, y comparte
+con él el activo elegido por la query string (``?ticker=``):
 
-- ``fundamentales``: "Gráficas y fundamentales estadísticos". El activo por
-  sí solo, en un período: los 3 módulos principales de quantstats (stats
-  con su simulación Monte Carlo, plots y reports).
-- ``revision``: "Revisión analítica". Todo lo comparativo: el activo frente a
-  un benchmark (gráficas superpuestas y métricas lado a lado), un período
-  frente a otro, y un reporte de resultados frente al anterior (earnings).
+- ``fundamentales`` ("Quant stats"): el activo por sí solo, en un período:
+  métricas clave, gráficas, simulación Monte Carlo, métricas detalladas y
+  tearsheet.
+- ``revision`` ("Comparar"): todo lo comparativo: el activo frente a un
+  benchmark, un período frente a otro y sus reportes de resultados.
 
-Las métricas se renderizan en el servidor; las gráficas son PNG que sirve la
-API (``/api/quant/<ticker>/...``).
+Cada gráfica y tabla lleva un resumen en lenguaje llano generado a partir de
+sus métricas (``app.quant_stats.explain``). Las métricas se renderizan en el
+servidor; las gráficas son PNG que sirve la API (``/api/quant/<ticker>/...``).
 """
 from __future__ import annotations
 
 from flask import Blueprint, Response, abort, redirect, render_template, request, url_for
 
-from app.quant_stats import quant
+from app.quant_stats import explain, quant
 from app.core.navigation import get_app
 from app.core.watchlists import WATCHLISTS
 
-bp = Blueprint("quant_stats", __name__, url_prefix="/app/quant-stats", template_folder="templates")
+bp = Blueprint(
+    "quant_stats",
+    __name__,
+    url_prefix="/app/graficador/quant-stats",
+    template_folder="templates",
+    static_folder="static",
+)
 
 DEFAULT_TICKER = "UEC"
 PERIODS = {"1y": "1 año", "2y": "2 años", "5y": "5 años", "max": "Todo"}
@@ -29,10 +37,13 @@ DEFAULT_PERIOD = "2y"
 EARNINGS_COUNT = 4
 
 REVISION_MODES = {
-    "benchmark": "Activo vs. benchmark",
-    "periodos": "Período vs. período",
-    "earnings": "Reporte vs. reporte (earnings)",
+    "benchmark": "Contra un índice",
+    "periodos": "Entre períodos",
+    "earnings": "Resultados trimestrales",
 }
+# Gráficas que se ven sin desplegar "Más gráficas" en Quant stats: las más
+# fáciles de leer para alguien que empieza. El resto, plegadas.
+FEATURED_PLOTS = ("snapshot", "returns", "drawdown", "monthly-heatmap", "yearly-returns", "rolling-volatility")
 DEFAULT_BENCHMARK = "SPY"
 
 
@@ -53,16 +64,41 @@ def fundamentales():
     bust = _percent_arg("bust", quant.DEFAULT_BUST, low=-0.99, high=-0.01)
     goal = _percent_arg("goal", quant.DEFAULT_GOAL, low=0.01, high=20.0)
 
+    facts = quant.asset_facts(ticker, returns)
+    stat_groups = quant.stats_groups(returns)
+    montecarlo = quant.montecarlo_summary(returns, sims, bust, goal)
+    plots = quant.ABSOLUTE_PLOTS
     return render_template(
         "quant_stats/fundamentales.html",
         **_common(ticker),
-        active_section="fundamentales",
+        active_section="quant-stats",
         period=period,
         metrics=quant.performance_metrics(returns),
-        stat_groups=quant.stats_groups(returns),
-        montecarlo=quant.montecarlo_summary(returns, sims, bust, goal),
+        stat_groups=stat_groups,
+        montecarlo=montecarlo,
         montecarlo_sims=quant.MONTECARLO_SIMS,
-        plots=quant.ABSOLUTE_PLOTS,
+        featured_plots=[p for p in plots if p.slug in FEATURED_PLOTS],
+        more_plots=[p for p in plots if p.slug not in FEATURED_PLOTS],
+        summaries={
+            "overview": explain.overview(facts),
+            "groups": {title: explain.stat_group(title, facts) for title, _ in stat_groups},
+            "plots": {p.slug: explain.plot(p.slug, facts) for p in plots},
+            "montecarlo": _montecarlo_summary(ticker, montecarlo),
+            "tearsheet": explain.tearsheet(facts),
+        },
+    )
+
+
+def _montecarlo_summary(ticker: str, montecarlo: quant.MonteCarloSummary | None) -> str:
+    if montecarlo is None:
+        return explain.INSUFFICIENT
+    return explain.montecarlo(
+        ticker,
+        sims=montecarlo.sims,
+        bust=montecarlo.bust,
+        bust_probability=montecarlo.bust_probability,
+        median_drawdown=montecarlo.max_drawdown.get("median"),
+        worst_drawdown=montecarlo.max_drawdown.get("percentile_5"),
     )
 
 
@@ -79,7 +115,7 @@ def revision():
 
     context = {
         **_common(ticker),
-        "active_section": "revision",
+        "active_section": "comparar",
         "mode": mode,
         "modes": REVISION_MODES,
         "period": period,
@@ -93,6 +129,7 @@ def revision():
     if mode == "earnings":
         context["earnings"] = quant.last_earnings(ticker, EARNINGS_COUNT)
         context["earnings_count"] = EARNINGS_COUNT
+        context["summary"] = explain.earnings(ticker, context["earnings"])
         return render_template("quant_stats/revision.html", **context)
 
     plots = quant.BENCHMARK_PLOTS if mode == "benchmark" else quant.ABSOLUTE_PLOTS
@@ -108,16 +145,29 @@ def revision():
             benchmark = DEFAULT_BENCHMARK if ticker != DEFAULT_BENCHMARK else "QQQ"
         returns = quant.daily_returns(ticker, period)
         bench = quant.benchmark_returns(benchmark, period, returns.index) if not returns.empty else returns
+        facts = quant.asset_facts(ticker, returns, window)
+        bench_facts = quant.benchmark_facts(benchmark, returns, bench, window)
+        comparison = quant.compare_stats(returns, bench)
+        bench_asset = bench_facts.facts if bench_facts else None
         context.update(
             benchmark=benchmark,
             benchmark_name=quant.asset_name(benchmark),
-            comparison=quant.compare_stats(returns, bench),
+            comparison=comparison,
+            summary=explain.plot(plot.slug, facts, bench_facts),
+            comparison_summaries={title: explain.comparison_group(title, facts, bench_asset) for title, _ in comparison},
         )
     else:
         compare = request.args.get("compare", "")
         if compare not in PERIODS or compare == period:
             compare = next(p for p in PERIODS if p != period)
-        context["compare"] = compare
+        facts = quant.asset_facts(ticker, quant.daily_returns(ticker, period), window)
+        other = quant.asset_facts(ticker, quant.daily_returns(ticker, compare), window)
+        context.update(
+            compare=compare,
+            summary=explain.plot(plot.slug, facts),
+            compare_summary=explain.plot(plot.slug, other),
+            periods_summary=explain.compare_periods(facts, PERIODS[period], other, PERIODS[compare]),
+        )
 
     return render_template("quant_stats/revision.html", **context)
 
@@ -144,8 +194,9 @@ def tearsheet():
 
 def _common(ticker: str) -> dict:
     return {
-        "active_app": get_app("quant-stats"),
-        # El sidebar conserva el activo al cambiar de subsección.
+        "active_app": get_app("graficador"),
+        # El sidebar y las pestañas conservan el activo al cambiar de subsección
+        # (también al volver al gráfico del Graficador).
         "section_args": {"ticker": ticker},
         "ticker": ticker,
         "asset_name": quant.asset_name(ticker),

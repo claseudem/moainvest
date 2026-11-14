@@ -1,21 +1,38 @@
-{# Base de las páginas de QUANT STATS: layout con sidebar (core/base.html) con
-   la estética del sitio rojo MOAINVEST (Geist, blancos, rojos y negros).
-   Las páginas rellenan ``hero_eyebrow``, ``hero_lead``, ``hero_extra`` y ``page``. #}
+{# Base de las páginas de QUANT STATS, dentro del Graficador: layout con sidebar
+   (core/base.html), pestañas del Graficador (Gráfico | Quant stats | Comparar)
+   con el enlace al tearsheet, cabecera del activo con su selector y contenido.
+   Las páginas rellenan ``hero_eyebrow``, ``hero_lead``, ``asset_form`` y ``page``. #}
 {% extends "core/base.html" %}
+{% import "core/icons.html" as icons %}
+{% import "core/section_tabs.html" as tabs with context %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('quant_stats.static', filename='quant_stats.css') }}">
+{% endblock %}
 
 {% block content %}
-<header class="qs-hero" aria-labelledby="qs-title">
-  <div class="qs-hero__inner">
-    <p class="qs-eyebrow"><span class="qs-eyebrow__rule" aria-hidden="true"></span>Quant stats · {% block hero_eyebrow %}{% endblock %}</p>
-    <h1 id="qs-title" class="qs-hero__title">
-      <span class="qs-hero__ticker">{{ ticker }}</span>
-      <span class="qs-hero__name">{{ asset_name }}</span>
-    </h1>
-    <p class="qs-hero__lead">{% block hero_lead %}{% endblock %}</p>
-    {% block hero_extra %}{% endblock %}
+<div class="qs-shell">
+  {% call tabs.section_tabs() %}
+    <a class="qs-btn qs-btn--ghost qs-btn--sm" href="{{ url_for('quant_stats.tearsheet', ticker=ticker, period=period) }}"
+       target="_blank" rel="noopener" title="Informe completo de quantstats en otra pestaña">
+      Tearsheet {{ icons.icon("external-link") }}
+    </a>
+  {% endcall %}
+
+  <header class="qs-head" aria-labelledby="qs-title">
+    <div class="qs-head__text">
+      <p class="qs-eyebrow"><span class="qs-eyebrow__rule" aria-hidden="true"></span>{% block hero_eyebrow %}{% endblock %}</p>
+      <h1 id="qs-title" class="qs-head__title">
+        <span class="qs-hero__ticker">{{ ticker }}</span>
+        <span class="qs-head__name">{{ asset_name }}</span>
+      </h1>
+      <p class="qs-head__lead">{% block hero_lead %}{% endblock %}</p>
+    </div>
+    {% block asset_form %}{% include "quant_stats/_asset_form.html" %}{% endblock %}
+  </header>
+
+  <div class="qs-body">
+    {% block page %}{% endblock %}
   </div>
-</header>
-<div class="qs-page">
-  {% block page %}{% endblock %}
 </div>
 {% endblock %}

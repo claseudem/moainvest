@@ -2,7 +2,7 @@
 
 La sesión vive en la cookie firmada de Flask (``session["user"]``: id, email y
 nombre). Si ``AUTH_REQUIRED`` está activo, todo ``/app/`` exige haber iniciado
-sesión; el sitio público (``/``, ``/graficas``, ``/informe``) sigue abierto.
+sesión; el sitio público (``/``, ``/graficas``) sigue abierto.
 """
 from __future__ import annotations
 

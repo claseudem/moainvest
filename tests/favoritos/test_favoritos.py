@@ -125,7 +125,7 @@ def test_page_shows_only_saved_assets_with_universo_layout(logged, db):
     assert 'data-quote-url="/api/quote/__T__"' in html
     assert 'data-ticker="AAPL"' in html and "Apple Inc." in html
     assert "/app/graficador/?ticker=AAPL" in html
-    assert "/app/quant-stats/fundamentales?ticker=AAPL" in html
+    assert "/app/graficador/quant-stats/fundamentales?ticker=AAPL" in html
     assert "favoritos.js" in html and "favoritos.css" in html
     assert "TSLA" not in html
 

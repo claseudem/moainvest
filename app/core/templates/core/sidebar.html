@@ -10,6 +10,8 @@
   "comparar": "search",
   "pyportfolio-opt": "trending-up",
   "pronosticador": "chart-spline",
+  "personas": "users",
+  "mi-perfil": "user",
 } %}
 {% macro nav_icon(entry) -%}
 <span class="sidebar__icon">
@@ -25,7 +27,13 @@
   </div>
 
   <nav class="sidebar__nav">
+    {% set group_labels = {"herramientas": "Herramientas", "nuevas": "Nuevas secciones"} %}
+    {% set ns = namespace(group=None) %}
     {% for app in apps %}
+    {% if app.group != ns.group %}
+    {% set ns.group = app.group %}
+    <p class="sidebar__group" role="presentation">{{ group_labels[app.group] }}</p>
+    {% endif %}
     <div class="sidebar__app {% if active_app and active_app.slug == app.slug %}is-active{% endif %}">
       <a class="sidebar__app-header" href="{{ url_for(app.endpoint) }}" title="{{ app.name }}"
          {%- if active_app and active_app.slug == app.slug %} aria-current="page"{% endif %}>

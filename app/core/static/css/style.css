@@ -1527,3 +1527,21 @@ a {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+/* Encabezados de grupo del sidebar (Herramientas / Nuevas secciones). */
+.sidebar__group {
+  margin: 14px 12px 4px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sidebar__group:first-child {
+  margin-top: 4px;
+}
+
+.layout.is-sidebar-collapsed .sidebar__group {
+  display: none;
+}

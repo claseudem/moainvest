@@ -2320,14 +2320,75 @@ a {
 .informes-watchlists__item {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.7rem 0.9rem;
+  gap: 0.35rem;
+  padding: 0 0.4rem 0 0.9rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--paper);
   font-size: 0.92rem;
-  cursor: pointer;
   transition: border-color 0.2s var(--ease-out-soft), background-color 0.2s var(--ease-out-soft);
+}
+
+.informes-watchlists__check {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0;
+  cursor: pointer;
+}
+
+/* Interruptor de alertas de la watchlist (lo controla alertas/static/js/alertas.js). */
+.informes-watchlists__alert {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-out-soft), color 0.2s var(--ease-out-soft);
+}
+
+.informes-watchlists__alert:hover {
+  background: var(--brand-soft);
+}
+
+.informes-watchlists__alert:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.informes-watchlists__alert .ui-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.informes-watchlists__alert-off,
+.informes-watchlists__alert[aria-pressed="false"] .informes-watchlists__alert-on {
+  display: none;
+}
+
+.informes-watchlists__alert[aria-pressed="false"] {
+  color: var(--muted);
+}
+
+.informes-watchlists__alert[aria-pressed="false"] .informes-watchlists__alert-off {
+  display: block;
+}
+
+.informes-watchlists__alert[aria-pressed="false"]:hover {
+  background: var(--mist);
+  color: var(--ink);
+}
+
+.informes-watchlists__alert.is-saving {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .informes-watchlists__item:hover {

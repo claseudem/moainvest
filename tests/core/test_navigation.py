@@ -7,7 +7,10 @@ from app.core.watchlists import WATCHLISTS
 
 
 def _is_sentence_case(name: str) -> bool:
-    return name == name[:1].upper() + name[1:].lower()
+    # Los signos de apertura del español (¿ ¡) no cuentan: «¿Qué piensas tú?».
+    opening = len(name) - len(name.lstrip("¿¡"))
+    prefix, rest = name[:opening], name[opening:]
+    return name == prefix + rest[:1].upper() + rest[1:].lower()
 
 
 def test_sidebar_names_are_sentence_case():
@@ -41,4 +44,12 @@ def test_sidebar_lists_reports_right_after_the_charts():
         "quant-stats",
         "pyportfolio-opt",
         "favoritos",
+        "noticias",
+        "que-piensas-tu",
     ]
+
+
+def test_sentence_case_ignores_spanish_opening_marks():
+    assert _is_sentence_case("¿Qué piensas tú?")
+    assert not _is_sentence_case("¿qué piensas tú?")
+    assert not _is_sentence_case("¿Qué Piensas Tú?")

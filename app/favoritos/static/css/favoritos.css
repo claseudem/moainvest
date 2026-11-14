@@ -1,0 +1,318 @@
+/* ---- Mis activos: autocompletado, noticias y votación ----
+   Sobre las piezas comunes de core/static/css/style.css (.page, .card, .btn,
+   .input, .table) y sus tokens. Solo se añaden las variantes ▲ Sube (verde)
+   y ▼ Baja (rojo) del botón píldora. */
+
+.fav-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.fav-card {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.fav-card__title {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.fav-count {
+  margin-left: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.fav-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.fav-empty[hidden] {
+  display: none;
+}
+
+.fav-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.fav-flash {
+  margin: 0;
+}
+
+.fav-flash--error {
+  border-color: color-mix(in srgb, var(--brand) 25%, transparent);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+}
+
+/* ---- 1 · Agregar con autocompletado ---- */
+.fav-add {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.fav-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.fav-search__icon {
+  position: absolute;
+  left: 1rem;
+  top: 1.375rem;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.fav-search__input {
+  width: 100%;
+  padding-left: 2.6rem;
+  font-size: 1rem; /* 16px: evita el zoom de iOS al enfocar */
+}
+
+.fav-search__input[aria-expanded="true"] {
+  border-color: var(--ink);
+}
+
+.fav-add__btn {
+  flex-shrink: 0;
+}
+
+.fav-suggest {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.06), 0 24px 48px -20px rgba(23, 23, 23, 0.3);
+  overflow: hidden;
+}
+
+.fav-suggest[hidden] {
+  display: none;
+}
+
+.fav-suggest__head {
+  margin: 0;
+  padding: 0.7rem 1rem 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fav-suggest__list {
+  max-height: 20rem;
+  margin: 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.fav-option {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.fav-option[aria-selected="true"],
+.fav-option:hover {
+  background: var(--mist);
+}
+
+.fav-option[aria-selected="true"] {
+  box-shadow: inset 2px 0 0 var(--brand);
+}
+
+.fav-option[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.fav-option__ticker {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fav-option__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fav-option mark {
+  background: none;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.fav-option__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.fav-type {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.fav-suggest__state {
+  padding: 0.9rem 1rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.fav-suggest__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--line);
+  background: var(--mist);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.fav-suggest__foot kbd {
+  padding: 0 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 0.3rem;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+/* ---- Accesos a Noticias y ¿Qué piensas tú? ---- */
+.fav-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.fav-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.1rem 1.25rem;
+  transition: border-color 0.2s var(--ease-out-soft), transform 0.2s var(--ease-out-soft);
+}
+
+.fav-link:hover {
+  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.fav-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.fav-link__icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.fav-link__icon .ui-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.fav-link strong {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.fav-link small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.fav-link__arrow {
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted);
+  transition: transform 0.2s var(--ease-out-soft), color 0.2s var(--ease-out-soft);
+}
+
+.fav-link:hover .fav-link__arrow {
+  transform: translateX(3px);
+  color: var(--brand);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+  .fav-add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fav-add__btn {
+    width: 100%;
+  }
+
+  .fav-option {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+
+  .fav-option__meta,
+  .fav-suggest__foot {
+    display: none;
+  }
+
+  .fav-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fav-link,
+  .fav-link__arrow {
+    transition: none;
+  }
+}

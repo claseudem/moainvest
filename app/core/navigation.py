@@ -69,6 +69,8 @@ APPS: tuple[App, ...] = (
     ),
     App(slug="pyportfolio-opt", name="Pyportfolio opt", icon="📐", endpoint="pyportfolio_opt.index", kind="blank"),
     App(slug="favoritos", name="Mis activos", icon="⭐", endpoint="favoritos.index", kind="blank"),
+    App(slug="noticias", name="Noticias", icon="📰", endpoint="noticias.index", kind="blank"),
+    App(slug="que-piensas-tu", name="¿Qué piensas tú?", icon="💬", endpoint="comunidad.index", kind="blank"),
 )
 
 

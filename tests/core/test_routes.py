@@ -6,6 +6,7 @@ import pytest
 from app.core.navigation import APPS
 from app.core.watchlists import WATCHLISTS
 from tests.factories import fake_quote
+from tests.core.test_navigation import _is_sentence_case
 
 
 def test_pages_show_site_name(client, app):
@@ -91,7 +92,7 @@ def test_sidebar_links_use_sentence_case(client, fake_uec, url):
     if url.startswith("/app/quant-stats"):
         assert {"Gráficas y fundamentales estadísticos", "Revisión analítica"} <= set(names)
     for name in names:
-        assert name == name[:1].upper() + name[1:].lower(), name
+        assert _is_sentence_case(name), name
 
 
 @pytest.mark.parametrize(

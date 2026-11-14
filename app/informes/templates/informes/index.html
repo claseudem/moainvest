@@ -45,12 +45,24 @@
         <legend class="informes-eyebrow">{{ icons.icon("layers") }}01 · Watchlists incluidas</legend>
         <div class="informes-watchlists__list">
           {% for watchlist in watchlists %}
-          <label class="informes-watchlists__item">
-            <input type="checkbox" name="watchlists" value="{{ watchlist.slug }}" checked>
-            {{ icons.icon(icons.watchlist_icons.get(watchlist.slug, "list"), extra_class="informes-watchlists__icon") }}
-            <span class="informes-watchlists__name">{{ watchlist.name }}</span>
-            <span class="informes-watchlists__count">{{ watchlist.symbols | length }}</span>
-          </label>
+          {#- La fila es un div (no un label) para poder llevar, junto al
+              checkbox, el botón de alertas de la watchlist: un <button> no
+              puede ir dentro de un <label>. -#}
+          <div class="informes-watchlists__item">
+            <label class="informes-watchlists__check">
+              <input type="checkbox" name="watchlists" value="{{ watchlist.slug }}" checked>
+              {{ icons.icon(icons.watchlist_icons.get(watchlist.slug, "list"), extra_class="informes-watchlists__icon") }}
+              <span class="informes-watchlists__name">{{ watchlist.name }}</span>
+              <span class="informes-watchlists__count">{{ watchlist.symbols | length }}</span>
+            </label>
+            {% if current_user %}
+            <button type="button" class="informes-watchlists__alert" data-alert-watchlist="{{ watchlist.slug }}"
+                    aria-pressed="true" aria-label="Alertas de {{ watchlist.name }}" title="Alertas de {{ watchlist.name }}: activadas">
+              {{ icons.icon("bell", extra_class="informes-watchlists__alert-on") }}
+              {{ icons.icon("bell-off", extra_class="informes-watchlists__alert-off") }}
+            </button>
+            {% endif %}
+          </div>
           {% endfor %}
         </div>
       </fieldset>

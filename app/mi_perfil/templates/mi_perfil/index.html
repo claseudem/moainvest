@@ -1,0 +1,136 @@
+{% extends "core/base.html" %}
+{% import "core/icons.html" as icons %}
+
+{% block title %}Mi perfil · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('mi_perfil.static', filename='mi_perfil.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page mp">
+  <header class="page-head">
+    <p class="eyebrow">Mi perfil</p>
+    <h1 class="page-title">Tu camino, <span class="accent">a tu ritmo</span>.</h1>
+    <p class="page-lead">Elige los temas que te interesan, completa misiones y mira cómo avanzas. Esta sección es privada.</p>
+  </header>
+
+  {# ── A. Mi información ───────────────────────────────────────── #}
+  <section class="card mp-identity" aria-labelledby="mp-identidad">
+    <span class="mp-avatar" aria-hidden="true">{{ user_initial }}</span>
+    <div class="mp-identity__body">
+      <h2 id="mp-identidad">{{ user_name or "Cuenta sin nombre" }}</h2>
+      <p class="mp-hint" data-chosen-line>Aún no has elegido un perfil.</p>
+      <p class="mp-hint">Fecha de ingreso: no disponible.</p>
+    </div>
+    <button type="button" class="btn btn--secondary btn--sm" data-action="editar">Editar perfil</button>
+  </section>
+
+  {# ── B. Perfil elegido ───────────────────────────────────────── #}
+  <section class="mp-block" id="mp-perfil" aria-labelledby="mp-perfil-title" tabindex="-1">
+    <h2 id="mp-perfil-title">Elige tu perfil</h2>
+    <p class="mp-hint">Representa tus intereses, no necesariamente tu carrera. Puedes cambiarlo cuando quieras.</p>
+    <ul class="mp-grid" data-profiles>
+      {% for profile in profiles %}
+      <li>
+        <button type="button" class="card mp-profile" data-profile="{{ profile.slug }}" aria-pressed="false">
+          <span class="mp-profile__top">
+            <span class="mp-icon">{{ icons.icon(profile.icon, extra_class="size-5", stroke_width=1.6) }}</span>
+            <span class="mp-badge is-next" data-selected-badge hidden>Elegido</span>
+          </span>
+          <span class="mp-profile__name">{{ profile.name }}</span>
+          <span class="mp-profile__desc">{{ profile.description }}</span>
+          <span class="mp-profile__interest">Área de interés: {{ profile.interest }}</span>
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {# ── Ruta del perfil elegido ─────────────────────────────────── #}
+  <div data-route hidden>
+
+    {# C. Mi nivel y trayectoria #}
+    <section class="card mp-level" aria-labelledby="mp-nivel-title">
+      <p class="mp-label">Mi nivel</p>
+      <h2 id="mp-nivel-title" data-level-title></h2>
+      <p class="mp-xp" data-xp-text></p>
+      <div class="mp-bar" role="progressbar" aria-label="Progreso hacia el siguiente nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-xp-bar>
+        <div class="mp-bar__fill" style="width: 0%"></div>
+      </div>
+      <p class="mp-hint" data-next-level></p>
+      <ol class="mp-path" aria-label="Trayectoria" data-path></ol>
+    </section>
+
+    {# D. Mis misiones #}
+    <section class="mp-block" id="mp-misiones" aria-labelledby="mp-misiones-title">
+      <h2 id="mp-misiones-title">Mis misiones</h2>
+
+      <ul class="mp-stats" aria-label="Resumen de misiones">
+        <li class="card mp-stat"><span class="mp-stat__num" data-stat="completadas">0</span><span class="mp-label">Completadas</span></li>
+        <li class="card mp-stat"><span class="mp-stat__num" data-stat="disponibles">0</span><span class="mp-label">Disponibles</span></li>
+        <li class="card mp-stat"><span class="mp-stat__num" data-stat="bloqueadas">0</span><span class="mp-label">Bloqueadas</span></li>
+      </ul>
+
+      {# Tu siguiente misión #}
+      <article class="card mp-next" aria-labelledby="mp-siguiente-title" data-next-card>
+        <div class="mp-next__head">
+          <span class="mp-icon" data-next-icon aria-hidden="true"></span>
+          <div class="mp-next__body">
+            <p class="mp-label">Tu siguiente misión</p>
+            <h3 id="mp-siguiente-title" data-next-name></h3>
+            <p class="mp-hint" data-next-desc></p>
+          </div>
+        </div>
+        <div class="mp-next__meta">
+          <span class="mp-badge" data-next-status></span>
+          <span class="mp-chip" data-next-xp></span>
+          <span class="mp-chip" data-next-difficulty></span>
+        </div>
+        <div class="mp-actions">
+          <button type="button" class="btn btn--primary" data-action="iniciar" data-next-action>Iniciar misión</button>
+        </div>
+        <p class="mp-hint" data-next-empty hidden>Completaste todas las misiones de esta ruta.</p>
+      </article>
+
+      {# Vista de la misión: se abre al pulsar "Iniciar misión" #}
+      <article class="card mp-panel" aria-labelledby="mp-panel-title" data-panel hidden>
+        <div class="mp-panel__head">
+          <div>
+            <p class="mp-label" data-panel-label></p>
+            <h3 id="mp-panel-title" data-panel-name></h3>
+          </div>
+          <button type="button" class="btn btn--secondary btn--sm" data-action="cerrar">Cerrar</button>
+        </div>
+        <p data-panel-objective></p>
+        <ol class="mp-steps" data-panel-steps></ol>
+        <div class="mp-actions">
+          <button type="button" class="btn btn--primary" data-action="completar">Completar misión</button>
+        </div>
+        <p role="status" class="mp-status" data-message></p>
+      </article>
+
+      {# Otras misiones: lista compacta #}
+      <h3 class="mp-subtitle">Otras misiones</h3>
+      <ul class="mp-list" data-others></ul>
+
+      {# Historial de misiones completadas #}
+      <details class="mp-history" data-history>
+        <summary>Historial de misiones completadas <span class="mp-count" data-history-count>0</span></summary>
+        <ul class="mp-list" data-history-list></ul>
+      </details>
+    </section>
+
+    <p class="mp-disclaimer">
+      Tu progreso se guarda en este navegador, por usuario y por perfil. Todavía no se sincroniza con tu cuenta.
+      Los XP son puntos educativos: no representan dinero ni rentabilidad.
+    </p>
+  </div>
+</div>
+
+<script id="mi-perfil-data" type="application/json">{{ payload|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('mi_perfil.static', filename='mi_perfil.js') }}"></script>
+{% endblock %}

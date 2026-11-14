@@ -1,101 +1,132 @@
-"""Sección PERSONAS (``/personas``): páginas, niveles, misiones y hitos de comunidad."""
+"""PERSONAS, la comunidad (``/app/personas/``): directorio, filtros, perfil público e indicadores."""
+import json
 import re
+from pathlib import Path
 
+from app.mi_perfil.content import PROFILES
 from app.personas import community
-from app.personas.content import (
-    DEMO_PROGRESS,
-    LEVELS,
-    Progress,
-    level_requirement,
-    level_state,
-)
+from app.personas.content import PILLARS, TEAMS
+
+JS = Path(__file__).resolve().parents[2] / "app" / "personas" / "static" / "personas.js"
 
 
-def test_personas_renders_all_blocks(client):
-    response = client.get("/personas/")
+def _payload(page: str) -> dict:
+    match = re.search(r'<script id="personas-data" type="application/json">(.*?)</script>', page, re.S)
+    assert match, "falta el JSON del directorio"
+    return json.loads(match.group(1))
+
+
+def test_page_renders_the_directory(client):
+    response = client.get("/app/personas/")
     assert response.status_code == 200
     page = response.get_data(as_text=True)
-    assert "<title>Personas · MOAINVEST</title>" in page
-    assert 'id="quienes-somos"' in page
-    assert 'id="camino"' in page
-    assert 'id="comunidad"' in page
-    assert "Datos de demostración" in page
+    assert "<title>Personas · MoaiInvest</title>" in page
+    assert "Conoce a las personas de nuestra" in page
+    assert 'id="directorio"' in page
+    assert "data-search" in page
+    assert 'id="comunidad-indicadores"' in page
 
 
-def test_levels_show_the_eight_stages_with_their_state(client):
-    page = client.get("/personas/").get_data(as_text=True)
-    for level in LEVELS:
-        assert level.name in page
-    # Estados del progreso de demostración: 1 completado, 2 actual, resto bloqueado.
-    track = page[page.index('aria-label="Niveles"') : page.index('id="detalle-nivel"')]
-    badges = re.findall(r">\s*(Completado|Actual|Bloqueado)\s*</span>", track)
-    assert badges.count("Completado") == 1
-    assert badges.count("Actual") == 1
-    assert badges.count("Bloqueado") == len(LEVELS) - 2
+def test_filters_cover_every_profile_and_levels_one_to_five(client):
+    page = client.get("/app/personas/").get_data(as_text=True)
+    for profile in PROFILES:
+        assert f'data-filter-profile="{profile.slug}"' in page
+    for level in range(1, 6):
+        assert f'data-filter-level="{level}"' in page
 
 
-def test_default_detail_is_the_current_level(client):
-    page = client.get("/personas/").get_data(as_text=True)
-    current = DEMO_PROGRESS.current
-    assert 'aria-labelledby="detalle-titulo"' in page
-    assert f'<h3 id="detalle-titulo" class="mt-2 text-3xl font-semibold tracking-[-0.03em]">{LEVELS[current - 1].name}</h3>' in page
+def test_directory_is_empty_without_a_user_database(client):
+    page = client.get("/app/personas/").get_data(as_text=True)
+    assert _payload(page)["members"] == []
+    assert "Aún no hay integrantes que mostrar" in page
+    assert "Sin base de datos" in page
 
 
-def test_nivel_query_selects_that_level(client):
-    page = client.get("/personas/?nivel=5").get_data(as_text=True)
-    assert f'<h3 id="detalle-titulo" class="mt-2 text-3xl font-semibold tracking-[-0.03em]">{LEVELS[4].name}</h3>' in page
+def test_members_carry_only_public_fields(client, monkeypatch):
+    monkeypatch.setattr(
+        community,
+        "members",
+        lambda: [{"name": "Ana", "initial": "A", "profile": "inversionista", "level": 2, "level_name": "Analista", "interests": ["Acciones"], "bio": "", "achievements": []}],
+    )
+    payload = _payload(client.get("/app/personas/").get_data(as_text=True))
+    assert set(payload["members"][0]) == {"name", "initial", "profile", "level", "level_name", "interests", "bio", "achievements"}
 
 
-def test_invalid_nivel_falls_back_to_current(client):
-    page = client.get("/personas/?nivel=99").get_data(as_text=True)
-    assert f">{LEVELS[DEMO_PROGRESS.current - 1].name}</h3>" in page
+def test_indicators_are_labelled_as_examples(client):
+    page = client.get("/app/personas/").get_data(as_text=True)
+    assert f"data-member-count>{community.DEMO_MEMBER_COUNT}<" in page
+    assert page.count("Cifra de ejemplo") >= 3
+    assert "Cifras demostrativas" in page
+
+
+def test_demo_distribution_adds_up_to_the_example_count():
+    assert sum(community.DEMO_BY_PROFILE.values()) == community.DEMO_MEMBER_COUNT
+
+
+def test_personas_shows_no_personal_progress(client):
+    page = client.get("/app/personas/").get_data(as_text=True)
+    for hook in ("data-next-card", "data-panel", "data-path", "Tu siguiente misión"):
+        assert hook not in page, hook
+
+
+def test_teams_are_not_here_anymore_and_have_no_individual_names():
+    assert len(TEAMS) == 5
+    assert [t.name for t in TEAMS] == [
+        "Equipo Ingeniería",
+        "Equipo Negocios Internacionales",
+        "Equipo Mercadeo",
+        "Equipo Finanzas",
+        "Equipo Análisis de Datos",
+    ]
+
+
+def test_teams_show_on_the_moainvest_landing(client):
+    page = client.get("/").get_data(as_text=True)
+    assert 'id="equipos-title"' in page
+    for team in TEAMS:
+        assert team.name in page
+    assert "Nombre por definir" not in page
+
+
+def test_purpose_is_kept(client):
+    page = client.get("/app/personas/").get_data(as_text=True)
+    assert "Nuestro propósito" in page
+    assert len(PILLARS) == 3
 
 
 def test_invite_link_points_to_registration(client):
-    page = client.get("/personas/").get_data(as_text=True)
+    page = client.get("/app/personas/").get_data(as_text=True)
     match = re.search(r'id="invite-link"[^>]*value="([^"]+)"', page)
-    assert match, "falta el campo con el enlace de invitación"
-    assert match.group(1).endswith("/registro")
-    assert "data-copy-invite" in page
+    assert match and match.group(1).endswith("/registro")
 
 
-def test_community_count_is_marked_as_demo(client):
-    page = client.get("/personas/").get_data(as_text=True)
-    assert f'data-member-count>{community.DEMO_MEMBER_COUNT}<' in page
-    assert "Cifra de demostración" in page
+def test_legacy_personas_url_redirects_into_the_app(client):
+    response = client.get("/personas/")
+    assert response.status_code == 301
+    assert response.headers["Location"].endswith("/app/personas/")
 
 
-def test_landing_links_to_personas(client):
-    page = client.get("/").get_data(as_text=True)
-    assert 'href="/personas/"' in page
+def test_sidebar_groups_tools_and_new_sections(client):
+    page = client.get("/app/personas/").get_data(as_text=True)
+    assert '<p class="sidebar__group" role="presentation">Herramientas</p>' in page
+    assert '<p class="sidebar__group" role="presentation">Nuevas secciones</p>' in page
+    assert page.index("Herramientas") < page.index("Nuevas secciones")
+    assert 'class="sidebar__app-name">Mi perfil</span>' in page
+    assert 'class="sidebar__app-name">Personas</span>' in page
 
 
-def test_level_state_follows_progress():
-    progress = Progress(completed=frozenset({1, 2}), partial_xp=0)
-    assert level_state(1, progress) == "desbloqueado"
-    assert level_state(2, progress) == "desbloqueado"
-    assert level_state(3, progress) == "actual"
-    assert level_state(4, progress) == "bloqueado"
+def test_js_never_writes_html_from_data():
+    source = JS.read_text(encoding="utf-8")
+    assert ".innerHTML" not in source
+    assert "localStorage" not in source, "Personas no debe guardar progreso personal"
 
 
-def test_all_levels_completed_has_no_current():
-    progress = Progress(completed=frozenset(level.number for level in LEVELS))
-    assert progress.current is None
-    assert progress.xp == len(LEVELS) * 100
+def test_milestones_keep_the_agreed_goals():
+    goals = [m.target for m in community.MILESTONES]
+    assert goals == [100, 250, 500, 1000, 2500]
 
 
-def test_requirement_refers_to_previous_level():
-    assert "Punto de partida" in level_requirement(1)
-    assert LEVELS[0].name in level_requirement(2)
-
-
-def test_milestone_states_for_demo_count():
+def test_milestone_states_for_example_count():
     states = community.milestone_states(137)
     assert [s["state"] for s in states] == ["completado", "proximo", "bloqueado", "bloqueado", "bloqueado"]
     assert states[1]["percent"] == 55
-
-
-def test_milestones_when_everything_is_reached():
-    states = community.milestone_states(3000)
-    assert {s["state"] for s in states} == {"completado"}
-    assert community.next_target(3000) is None

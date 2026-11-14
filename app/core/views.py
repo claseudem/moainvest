@@ -32,7 +32,7 @@ def inject_globals() -> dict:
 # Rutas de antes del área "App": las páginas de las subapps cuelgan ahora de
 # /app/. Se redirigen con 301 (conservando subruta y query string) para no
 # romper enlaces ni marcadores.
-LEGACY_APP_PREFIXES = ("analisis-varianza", "quant-stats", "informes")
+LEGACY_APP_PREFIXES = ("analisis-varianza", "quant-stats", "informes", "personas")
 
 
 def _legacy_app_redirect(prefix: str, rest: str = ""):

@@ -342,3 +342,33 @@ def test_quant_stats_has_no_old_tradingview_colors():
         text = path.read_text(encoding="utf-8").lower()
         for old in ("#2962ff", "#26a69a", "#ef5350"):
             assert old not in text, f"{old} en {path}"
+
+
+def test_asset_facts_summarise_the_returns(fake_market):
+    returns = quant.daily_returns("FAKE")
+    facts = quant.asset_facts("FAKE", returns, window=63)
+    metrics = quant.performance_metrics(returns)
+    assert facts.enough
+    assert facts.ticker == "FAKE" and facts.trading_days == returns.size
+    assert facts.cumulative_return == pytest.approx(metrics.cumulative_return)
+    assert facts.max_drawdown == pytest.approx(metrics.max_drawdown)
+    assert facts.drawdowns and facts.drawdowns[0].depth == pytest.approx(metrics.max_drawdown, abs=1e-3)
+    assert facts.start == "enero de 2025" and facts.end == "febrero de 2026"
+    assert facts.months_total == 14 and 0 <= facts.months_positive <= 14
+    assert [year for year, _ in facts.yearly] == [2025, 2026]
+    assert facts.rolling_window_label == "3 meses" and facts.rolling_sharpe is not None
+
+
+def test_asset_facts_none_without_data():
+    import pandas as pd
+
+    assert quant.asset_facts("FAKE", pd.Series(dtype=float)) is None
+
+
+def test_benchmark_facts_beta_and_correlation(fake_market):
+    returns = quant.daily_returns("FAKE")
+    bench = returns * 0.5
+    relation = quant.benchmark_facts("SPY", returns, bench)
+    assert relation.facts.ticker == "SPY"
+    assert relation.beta == pytest.approx(2.0)
+    assert relation.correlation == pytest.approx(1.0)

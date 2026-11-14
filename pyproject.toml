@@ -5,7 +5,6 @@ description = "Panel de precios en vivo (estilo TradingView) construido con Flas
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "cloudinary>=1.46.2",
     "duckdb>=1.5.6",
     "dukascopy-python>=4.0.1",
     "flask>=3.1.3",

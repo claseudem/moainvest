@@ -63,6 +63,33 @@ def test_graficador_replaces_graficas_in_sidebar():
     assert "moainvest.graficas" not in endpoints
 
 
+def test_graficador_tabs_share_the_ticker_with_quant_stats(client):
+    page = client.get("/app/graficador/?ticker=msft").get_data(as_text=True)
+    tabs = page.split('<nav class="app-tabs"', 1)[1].split("</nav>", 1)[0]
+    assert 'aria-current="page">Gráfico</a>' in tabs
+    assert 'href="/app/graficador/quant-stats/fundamentales?ticker=MSFT"' in tabs
+    assert 'href="/app/graficador/quant-stats/revision?ticker=MSFT"' in tabs
+    # Atajo bajo el gráfico al análisis del mismo activo.
+    assert 'class="graficador__quant" href="/app/graficador/quant-stats/fundamentales?ticker=MSFT"' in page
+    # El sidebar muestra las mismas subsecciones; Quant stats no es una app aparte.
+    sidebar = page.split('<aside class="sidebar"', 1)[1].split("</aside>", 1)[0]
+    assert '<span class="sidebar__section-name">Quant stats</span>' in sidebar
+    assert '<span class="sidebar__app-name">Quant stats</span>' not in sidebar
+
+
+def test_graficador_controls_are_grouped_with_labels(client):
+    page = client.get("/app/graficador/?ticker=AAPL").get_data(as_text=True)
+    toolbar = page.split('<div class="graficador__toolbar">', 1)[1].split('<div class="graficador__chart-wrap">', 1)[0]
+    assert ">Período</span>" in toolbar and ">Vista</span>" in toolbar
+    assert 'id="graficador-indicators-btn"' in toolbar and 'id="graficador-provider"' in toolbar
+
+
+def test_invalid_ticker_tabs_do_not_carry_it(client):
+    page = client.get("/app/graficador/", query_string={"ticker": "<script>"}).get_data(as_text=True)
+    assert 'href="/app/graficador/quant-stats/fundamentales"' in page
+    assert "graficador__quant" not in page
+
+
 def test_chart_ranges_are_accepted_by_candles_api():
     for r in CHART_RANGES:
         assert r["range"] in ALLOWED_RANGES and r["interval"] in ALLOWED_INTERVALS

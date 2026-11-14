@@ -1,10 +1,10 @@
-"""Controlador: sitio MOAINVEST (Resumen, Gráficas e Informe), en la raíz.
+"""Controlador: sitio MOAINVEST (Resumen y Gráficas), en la raíz.
 
 El navbar solo enlaza a «Inicio» (``/``) y «App» (``/app/``, que redirige a la
-primera app del sidebar); Gráficas e Informe siguen accesibles desde el contenido.
+primera app del sidebar); Gráficas sigue accesible desde el contenido.
 
 Plantillas Jinja2 en ``moainvest/templates/moainvest/``. Las páginas se renderizan con el
-registro de watchlists; los precios, velas e informes los pide el JavaScript
+registro de watchlists; los precios y las velas los pide el JavaScript
 (``moainvest/static/moainvest.js``) a la API JSON (``/api/...``).
 """
 from __future__ import annotations
@@ -90,11 +90,6 @@ def grafica(slug: str, ticker: str):
         default_range=DEFAULT_RANGE,
         chart_url=chart_url,
     )
-
-
-@bp.get("/informe")
-def informe():
-    return render_template("moainvest/informe.html", watchlists=WATCHLISTS)
 
 
 @bp.app_errorhandler(404)

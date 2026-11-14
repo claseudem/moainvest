@@ -1,28 +1,42 @@
 {% extends "quant_stats/_base.html" %}
+{% import "quant_stats/_summary.html" as qs %}
 
-{% block title %}Fundamentales {{ ticker }} · Quant stats · {{ site_name }}{% endblock %}
+{% block title %}Quant stats {{ ticker }} · Graficador · {{ site_name }}{% endblock %}
 
 {% macro pct(value) -%}
   {%- if value is none %}—{% else %}{{ "%+.1f"|format(value * 100) }}%{% endif -%}
 {%- endmacro %}
 
-{% macro metric(label, value, sign="") -%}
+{% macro metric(label, value, hint, sign="") -%}
 <div class="qs-metric">
   <span class="qs-metric__label">{{ label }}</span>
   <span class="qs-metric__value {{ sign }}">{{ value }}</span>
+  <span class="qs-metric__hint">{{ hint }}</span>
 </div>
 {%- endmacro %}
 
-{% block hero_eyebrow %}Gráficas y fundamentales estadísticos{% endblock %}
+{% macro plot_card(p) -%}
+{%- set src = url_for('quant_stats_api.quant_plot', ticker=ticker, slug=p.slug, period=period) -%}
+<figure class="qs-plot-card" id="grafica-{{ p.slug }}">
+  <figcaption class="qs-plot-card__head">
+    <h3 class="qs-plot-card__title">{{ p.label }}</h3>
+    <p class="qs-plot-card__desc">{{ p.description }}</p>
+  </figcaption>
+  <a class="qs-plot-card__img" href="{{ src }}" target="_blank" rel="noopener" title="Abrir a tamaño completo">
+    <img src="{{ src }}" alt="{{ p.label }} de {{ ticker }}" loading="lazy">
+  </a>
+  {{ qs.summary(summaries.plots[p.slug], p.slug) }}
+</figure>
+{%- endmacro %}
+
+{% block hero_eyebrow %}Quant stats · Rentabilidad y riesgo{% endblock %}
 
 {% block hero_lead %}
-  El activo por sí solo, analizado con los 3 módulos principales de <strong>quantstats</strong>:
-  <strong>stats</strong> (métricas y simulación Monte Carlo), <strong>plots</strong> (visualizaciones) y
-  <strong>reports</strong> (tearsheet completo). Las comparaciones (contra un benchmark, entre períodos o entre
-  earnings) están en <a href="{{ url_for('quant_stats.revision', ticker=ticker, period=period) }}">Revisión analítica</a>.
+  Cómo se ha comportado el activo en el período elegido: cuánto ha ganado, cuánto se mueve y cuáles han sido sus
+  peores caídas. Cada gráfica trae su explicación en lenguaje sencillo.
 {% endblock %}
 
-{% block hero_extra %}
+{% block asset_form %}
   {% with keep={"sims": request.args.get("sims"), "bust": request.args.get("bust"), "goal": request.args.get("goal")} %}
   {% include "quant_stats/_asset_form.html" %}
   {% endwith %}
@@ -30,30 +44,108 @@
 
 {% block page %}
   {% if metrics %}
-  <nav class="qs-tabs" aria-label="Módulos de quantstats" data-qs-tabs>
-    <a href="#stats" class="qs-tabs__link is-active" aria-current="true"><span class="qs-tabs__num">1</span>Stats</a>
-    <a class="qs-tabs__link" href="#montecarlo"><span class="qs-tabs__num">1.1</span>Monte Carlo</a>
-    <a class="qs-tabs__link" href="#plots"><span class="qs-tabs__num">2</span>Plots</a>
-    <a class="qs-tabs__link" href="#reports"><span class="qs-tabs__num">3</span>Reports</a>
+  <nav class="qs-jump" aria-label="En esta página">
+    <a href="#resumen">Resumen</a>
+    <a href="#graficas">Gráficas</a>
+    <a href="#montecarlo">Escenarios</a>
+    <a href="#metricas">Métricas detalladas</a>
   </nav>
 
-  <section class="qs-section" id="stats">
+  <section class="qs-section" id="resumen" aria-labelledby="resumen-title">
     <div class="qs-section__head">
-      <h2 class="qs-section__title">Stats</h2>
-      <span class="qs-tag">quantstats.stats</span>
+      <h2 class="qs-section__title" id="resumen-title">Resumen</h2>
+      <p class="qs-section__meta">
+        Del <span class="qs-mono">{{ metrics.start }}</span> al <span class="qs-mono">{{ metrics.end }}</span> ·
+        {{ metrics.trading_days }} sesiones
+      </p>
     </div>
-    <p class="qs-hint">
-      Del <span class="qs-mono">{{ metrics.start }}</span> al <span class="qs-mono">{{ metrics.end }}</span> ·
-      {{ metrics.trading_days }} sesiones. Sharpe y Sortino usan tasa libre de riesgo 0 y se anualizan con 252 sesiones.
-    </p>
     <div class="qs-metrics">
-      {{ metric("Retorno acumulado", pct(metrics.cumulative_return), "is-up" if metrics.cumulative_return >= 0 else "is-down") }}
-      {{ metric("Volatilidad anualizada", "%.1f"|format(metrics.annual_volatility * 100) ~ "%") }}
-      {{ metric("Sharpe", "%.2f"|format(metrics.sharpe)) }}
-      {{ metric("Sortino", "%.2f"|format(metrics.sortino)) }}
-      {{ metric("Máximo drawdown", pct(metrics.max_drawdown), "is-down") }}
+      {{ metric("Retorno acumulado", pct(metrics.cumulative_return), "Cuánto ganó o perdió en todo el período.", "is-up" if metrics.cumulative_return >= 0 else "is-down") }}
+      {{ metric("Volatilidad anualizada", "%.1f"|format(metrics.annual_volatility * 100) ~ "%", "Cuánto sube y baja el precio en un año típico.") }}
+      {{ metric("Sharpe", "%.2f"|format(metrics.sharpe), "Rentabilidad por unidad de riesgo. Más de 1 es bueno.") }}
+      {{ metric("Sortino", "%.2f"|format(metrics.sortino), "Como el Sharpe, pero solo penaliza las caídas.") }}
+      {{ metric("Máximo drawdown", pct(metrics.max_drawdown), "La peor caída desde un máximo.", "is-down") }}
     </div>
+    {{ qs.summary(summaries.overview, "overview") }}
+  </section>
 
+  <section class="qs-section" id="graficas" aria-labelledby="graficas-title">
+    <div class="qs-section__head">
+      <h2 class="qs-section__title" id="graficas-title">Gráficas</h2>
+      <p class="qs-section__meta">
+        Pulsa una gráfica para verla a tamaño completo. Para compararla con un índice o con otro período, ve a
+        <a href="{{ url_for('quant_stats.revision', ticker=ticker, period=period) }}">Comparar</a>.
+      </p>
+    </div>
+    <div class="qs-plot-grid">
+      {% for p in featured_plots %}{{ plot_card(p) }}{% endfor %}
+    </div>
+    {% if more_plots %}
+    <details class="qs-more">
+      <summary class="qs-more__summary">Más gráficas ({{ more_plots | length }})</summary>
+      <div class="qs-plot-grid">
+        {% for p in more_plots %}{{ plot_card(p) }}{% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </section>
+
+  {% if montecarlo %}
+  <section class="qs-section" id="montecarlo" aria-labelledby="montecarlo-title">
+    <div class="qs-section__head">
+      <h2 class="qs-section__title" id="montecarlo-title">Escenarios: simulación Monte Carlo</h2>
+      <p class="qs-section__meta">¿Y si los mismos días se hubieran dado en otro orden?</p>
+    </div>
+    <div class="qs-metrics qs-metrics--3">
+      {{ metric("Prob. de bust (DD ≤ " ~ "%.0f"|format(montecarlo.bust * 100) ~ "%)", "%.1f"|format(montecarlo.bust_probability * 100) ~ "%", "Probabilidad de una caída tan grave como el umbral.", "is-down") }}
+      {{ metric("Máx. drawdown mediano", pct(montecarlo.max_drawdown.median), "La peor caída en un camino típico.") }}
+      {{ metric("Máx. drawdown · peor 5%", pct(montecarlo.max_drawdown.percentile_5), "La peor caída en los caminos más desfavorables.") }}
+    </div>
+    <figure class="qs-chart">
+      <img src="{{ url_for('quant_stats_api.quant_montecarlo', ticker=ticker, period=period, sims=montecarlo.sims,
+                           bust='%.0f'|format(montecarlo.bust * 100), goal='%.0f'|format(montecarlo.goal * 100)) }}"
+           alt="Simulación Monte Carlo de {{ ticker }}" loading="lazy">
+    </figure>
+    {{ qs.summary(summaries.montecarlo, "montecarlo") }}
+    <details class="qs-more">
+      <summary class="qs-more__summary">Ajustar la simulación</summary>
+      <form class="qs-form qs-form--panel" method="get" action="#montecarlo">
+        <input type="hidden" name="ticker" value="{{ ticker }}">
+        <input type="hidden" name="period" value="{{ period }}">
+        <label class="qs-field">
+          <span class="qs-field__label">Simulaciones</span>
+          <select name="sims" class="qs-select">
+            {% for n in montecarlo_sims %}
+            <option value="{{ n }}" {% if n == montecarlo.sims %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="qs-field">
+          <span class="qs-field__label">Caída a vigilar («bust», %)</span>
+          <input class="qs-input qs-input--number" type="number" name="bust" min="-99" max="-1" step="1"
+                 value="{{ '%.0f'|format(montecarlo.bust * 100) }}">
+        </label>
+        <label class="qs-field">
+          <span class="qs-field__label">Objetivo («goal», %)</span>
+          <input class="qs-input qs-input--number" type="number" name="goal" min="1" max="2000" step="1"
+                 value="{{ '%.0f'|format(montecarlo.goal * 100) }}">
+        </label>
+        <button type="submit" class="qs-btn">Simular</button>
+      </form>
+      <p class="qs-hint">
+        Al barajar los días solo cambia el <em>camino</em>: el resultado final es el mismo en todas las simulaciones
+        ({{ pct(montecarlo.terminal.median) }}), así que la probabilidad de alcanzar el objetivo (retorno ≥ +{{ "%.0f"|format(montecarlo.goal * 100) }}%)
+        siempre es 0 % o 100 % ({{ "%.0f"|format(montecarlo.goal_probability * 100) }} % ahora). Lo útil es el riesgo del recorrido.
+      </p>
+    </details>
+  </section>
+  {% endif %}
+
+  <section class="qs-section" id="metricas" aria-labelledby="metricas-title">
+    <div class="qs-section__head">
+      <h2 class="qs-section__title" id="metricas-title">Métricas detalladas</h2>
+      <p class="qs-section__meta">Para quien quiera profundizar. Cada tabla lleva su explicación.</p>
+    </div>
     <div class="qs-tables">
       {% for title, group in stat_groups %}
       <div class="qs-card">
@@ -65,133 +157,25 @@
             {% endfor %}
           </tbody>
         </table>
+        {{ qs.summary(summaries.groups[title], "group-" ~ loop.index) }}
       </div>
       {% endfor %}
     </div>
   </section>
 
-  {% if montecarlo %}
-  <section class="qs-section" id="montecarlo">
-    <div class="qs-section__head">
-      <h2 class="qs-section__title">Simulación Monte Carlo</h2>
-      <span class="qs-tag">qs.stats.montecarlo</span>
+  <section class="qs-section qs-report" id="tearsheet" aria-labelledby="tearsheet-title">
+    <div class="qs-report__text">
+      <h2 class="qs-section__title" id="tearsheet-title">Tearsheet completo</h2>
+      <p class="qs-hint">{{ summaries.tearsheet }} Tarda unos segundos en generarse.</p>
     </div>
-    <p class="qs-hint">
-      Baraja {{ montecarlo.sims }} veces el orden de los retornos diarios históricos. <strong>Bust</strong>:
-      probabilidad de sufrir un drawdown igual o peor que el umbral. <strong>Goal</strong>: probabilidad de
-      terminar con un retorno acumulado igual o mayor que el objetivo.
-    </p>
-    <form class="qs-form qs-form--panel" method="get" action="#montecarlo">
+    <form class="qs-actions" method="get" action="{{ url_for('quant_stats.tearsheet') }}" target="_blank">
       <input type="hidden" name="ticker" value="{{ ticker }}">
       <input type="hidden" name="period" value="{{ period }}">
-      <label class="qs-field">
-        <span class="qs-field__label">Simulaciones</span>
-        <select name="sims" class="qs-select">
-          {% for n in montecarlo_sims %}
-          <option value="{{ n }}" {% if n == montecarlo.sims %}selected{% endif %}>{{ n }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label class="qs-field">
-        <span class="qs-field__label">Bust: drawdown (%)</span>
-        <input class="qs-input qs-input--number" type="number" name="bust" min="-99" max="-1" step="1"
-               value="{{ '%.0f'|format(montecarlo.bust * 100) }}">
-      </label>
-      <label class="qs-field">
-        <span class="qs-field__label">Goal: retorno (%)</span>
-        <input class="qs-input qs-input--number" type="number" name="goal" min="1" max="2000" step="1"
-               value="{{ '%.0f'|format(montecarlo.goal * 100) }}">
-      </label>
-      <button type="submit" class="qs-btn">Simular</button>
+      <button type="submit" class="qs-btn">Abrir tearsheet</button>
+      <button type="submit" name="download" value="1" class="qs-btn qs-btn--ghost">Descargar HTML</button>
     </form>
-
-    <div class="qs-metrics">
-      {{ metric("Prob. de bust (DD ≤ " ~ "%.0f"|format(montecarlo.bust * 100) ~ "%)", "%.1f"|format(montecarlo.bust_probability * 100) ~ "%", "is-down") }}
-      {{ metric("Prob. de goal (retorno ≥ +" ~ "%.0f"|format(montecarlo.goal * 100) ~ "%)", "%.1f"|format(montecarlo.goal_probability * 100) ~ "%", "is-up") }}
-      {{ metric("Máx. drawdown mediano", pct(montecarlo.max_drawdown.median)) }}
-      {{ metric("Máx. drawdown · peor 5%", pct(montecarlo.max_drawdown.percentile_5)) }}
-      {{ metric("Máx. drawdown · mejor 5%", pct(montecarlo.max_drawdown.percentile_95)) }}
-    </div>
-    <p class="qs-hint qs-note">
-      Al barajar solo cambia el <em>camino</em>: el retorno final es el mismo en todas las simulaciones
-      ({{ pct(montecarlo.terminal.median) }}), así que la probabilidad de goal siempre es 0% o 100%. La
-      información útil está en el riesgo del recorrido (bust y drawdowns).
-    </p>
-    <figure class="qs-chart">
-      <img src="{{ url_for('quant_stats_api.quant_montecarlo', ticker=ticker, period=period, sims=montecarlo.sims,
-                           bust='%.0f'|format(montecarlo.bust * 100), goal='%.0f'|format(montecarlo.goal * 100)) }}"
-           alt="Simulación Monte Carlo de {{ ticker }}" loading="lazy">
-    </figure>
-  </section>
-  {% endif %}
-
-  <section class="qs-section" id="plots">
-    <div class="qs-section__head">
-      <h2 class="qs-section__title">Plots</h2>
-      <span class="qs-tag">quantstats.plots</span>
-    </div>
-    <p class="qs-hint">
-      Gráficas nativas de quantstats del activo por sí solo. Para verlas contra un benchmark o comparar
-      dos períodos, usa <a href="{{ url_for('quant_stats.revision', ticker=ticker, period=period) }}">Revisión analítica</a>.
-    </p>
-    <div class="qs-gallery">
-      {% for p in plots %}
-      <figure class="qs-plot">
-        <a class="qs-plot__link" href="{{ url_for('quant_stats_api.quant_plot', ticker=ticker, slug=p.slug, period=period) }}" target="_blank" title="Abrir a tamaño completo">
-          <figcaption>
-            <span class="qs-plot__title">{{ p.label }}</span>
-            <span class="qs-plot__desc">{{ p.description }}</span>
-          </figcaption>
-          <img src="{{ url_for('quant_stats_api.quant_plot', ticker=ticker, slug=p.slug, period=period) }}"
-               alt="{{ p.label }} de {{ ticker }}" loading="lazy">
-        </a>
-      </figure>
-      {% endfor %}
-    </div>
-  </section>
-
-  <section class="qs-section" id="reports">
-    <div class="qs-section__head">
-      <h2 class="qs-section__title">Reports</h2>
-      <span class="qs-tag">quantstats.reports</span>
-    </div>
-    <div class="qs-report">
-      <p class="qs-hint">
-        Tearsheet HTML completo generado por <code>qs.reports.html</code>: todas las métricas y gráficas
-        en un solo informe. Tarda unos segundos en generarse.
-      </p>
-      <form class="qs-actions" method="get" action="{{ url_for('quant_stats.tearsheet') }}" target="_blank">
-        <input type="hidden" name="ticker" value="{{ ticker }}">
-        <input type="hidden" name="period" value="{{ period }}">
-        <button type="submit" class="qs-btn">Abrir tearsheet</button>
-        <button type="submit" name="download" value="1" class="qs-btn qs-btn--ghost">Descargar HTML</button>
-      </form>
-    </div>
   </section>
   {% else %}
   <p class="qs-status is-error">No se pudieron descargar precios de {{ ticker }}. Revisa que el ticker exista en Yahoo Finance.</p>
   {% endif %}
-{% endblock %}
-
-{% block scripts %}
-<script>
-  // Marca la pestaña del módulo visible al hacer scroll (sin framework).
-  (function () {
-    const tabs = document.querySelector("[data-qs-tabs]");
-    if (!tabs || !("IntersectionObserver" in window)) return;
-    const links = Array.from(tabs.querySelectorAll("a"));
-    const activate = (id) => links.forEach((a) => {
-      const on = a.getAttribute("href") === "#" + id;
-      a.classList.toggle("is-active", on);
-      if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
-    });
-    const observer = new IntersectionObserver((entries) => {
-      entries.filter((e) => e.isIntersecting).forEach((e) => activate(e.target.id));
-    }, { rootMargin: "-20% 0px -70% 0px" });
-    links.forEach((a) => {
-      const section = document.querySelector(a.getAttribute("href"));
-      if (section) observer.observe(section);
-    });
-  })();
-</script>
 {% endblock %}

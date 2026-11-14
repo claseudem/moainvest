@@ -41,4 +41,5 @@ def test_sidebar_lists_reports_right_after_the_charts():
         "quant-stats",
         "pyportfolio-opt",
         "favoritos",
+        "pronosticador",
     ]

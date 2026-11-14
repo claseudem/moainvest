@@ -27,6 +27,7 @@ from config import Config
 INSTALLED_APPS = (
     "core",
     "cuentas",
+    "alertas",
     "favoritos",
     "moainvest",
     "mi_perfil",
@@ -35,6 +36,8 @@ INSTALLED_APPS = (
     "quant_stats",
     "graficador",
     "pyportfolio_opt",
+    "noticias",
+    "comunidad",
     "pronosticador",
 )
 

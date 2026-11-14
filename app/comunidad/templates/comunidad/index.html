@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+{% import "core/icons.html" as icons %}
+
+{% block title %}¿Qué piensas tú? · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('comunidad.static', filename='css/comunidad.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page vote-page" id="vote-page">
+  <header class="page-head">
+    <p class="eyebrow">Comunidad</p>
+    <h1 class="page-title">¿Qué piensas <span class="accent">tú</span>?</h1>
+    <p class="page-lead">Vota sobre la tendencia de los activos y descubre el sentimiento de la comunidad de MOAINVEST.</p>
+  </header>
+
+  <section class="card vote-toolbar" aria-label="Buscar y filtrar activos">
+    <div class="vote-search">
+      <label class="sr-only" for="vote-q">Buscar un activo por ticker o nombre</label>
+      {{ icons.icon("search", extra_class="vote-search__icon") }}
+      <input class="input vote-search__input" id="vote-q" type="search" placeholder="Busca un activo: NVDA, Bitcoin, S&amp;P 500…"
+             autocomplete="off" spellcheck="false" maxlength="40">
+    </div>
+    <div class="vote-filters" role="group" aria-label="Filtrar por categoría" id="vote-filters">
+      <button type="button" class="vote-chip" data-cat="todos" aria-pressed="true">Todos</button>
+      <button type="button" class="vote-chip" data-cat="mis-activos" aria-pressed="false">Mis activos</button>
+      {% for c in categories %}
+      <button type="button" class="vote-chip" data-cat="{{ c.slug }}" aria-pressed="false">{{ c.name }}</button>
+      {% endfor %}
+    </div>
+    <p class="vote-round" id="vote-round" hidden></p>
+  </section>
+
+  <p class="vote-notice" id="vote-notice" hidden>La votación todavía no está conectada a la base de datos. Puedes votar igualmente: tus votos se guardan en este navegador y se enviarán solos en cuanto esté lista.</p>
+  <p class="vote-status" id="vote-status" role="status" aria-live="polite">Cargando activos…</p>
+  <div class="vote-grid" id="vote-grid" aria-busy="true"></div>
+
+  <template id="vote-icons">
+    <span data-icon="up">{{ icons.icon("trending-up") }}</span>
+    <span data-icon="down">{{ icons.icon("trending-down") }}</span>
+  </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('comunidad.static', filename='js/comunidad.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,360 @@
+/* ---- ¿Qué piensas tú?: buscador, filtros y tarjetas de votación ----
+   Sobre .page, .card, .btn, .input y los tokens de core/static/css/style.css.
+   Solo añade las variantes ▲ Sube (verde) y ▼ Baja (rojo) del botón píldora. */
+
+.vote-toolbar {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem 1.25rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.vote-search {
+  position: relative;
+}
+
+.vote-search__icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.vote-search__input {
+  width: 100%;
+  padding-left: 2.6rem;
+  font-size: 1rem; /* 16px: sin zoom en iOS */
+}
+
+.vote-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.vote-chip {
+  height: 2rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-out-soft), background-color 0.2s var(--ease-out-soft), color 0.2s var(--ease-out-soft);
+}
+
+.vote-chip:hover {
+  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  color: var(--ink);
+}
+
+.vote-chip[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.vote-chip:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.vote-round {
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.vote-round[hidden] {
+  display: none;
+}
+
+/* Aviso neutro (no es un error): votación sin tabla, votos en el navegador. */
+.vote-notice {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--mist);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.vote-notice[hidden] {
+  display: none;
+}
+
+.vote-status {
+  margin: 0 0 1rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.vote-status:empty {
+  display: none;
+}
+
+.vote-status.is-error {
+  color: var(--brand-deep);
+}
+
+/* ---- Cuadrícula ---- */
+.vote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr));
+  gap: 0.9rem;
+}
+
+.vote-card {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+
+.vote-card[hidden] {
+  display: none;
+}
+
+.vote-card.is-searched {
+  border-style: dashed;
+}
+
+.vote-card__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.15rem 0.75rem;
+}
+
+.vote-card__ticker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.vote-tag {
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.vote-tag--mine {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.vote-card__name {
+  grid-column: 1;
+  font-size: 0.84rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vote-card__price {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vote-card__last {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.vote-card__change {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.vote-card__change.is-up { color: var(--up); }
+.vote-card__change.is-down { color: var(--down); }
+
+.vote-card__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+/* Variantes del .btn píldora: contorno de color; relleno al pasar o al elegirlas. */
+.btn--up,
+.btn--down {
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn--up .ui-icon,
+.btn--down .ui-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.btn--up .ui-icon { color: var(--up); }
+.btn--down .ui-icon { color: var(--down); }
+
+.btn--up:hover,
+.btn--up[aria-pressed="true"] {
+  border-color: var(--up);
+  background: var(--up);
+  color: #fff;
+}
+
+.btn--down:hover,
+.btn--down[aria-pressed="true"] {
+  border-color: var(--down);
+  background: var(--down);
+  color: #fff;
+}
+
+.btn--up:hover .ui-icon,
+.btn--up[aria-pressed="true"] .ui-icon,
+.btn--down:hover .ui-icon,
+.btn--down[aria-pressed="true"] .ui-icon {
+  color: #fff;
+}
+
+.btn--up:focus-visible,
+.btn--down:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.vote-card.is-busy .btn--up,
+.vote-card.is-busy .btn--down {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Consenso de la comunidad: barra dividida. */
+.vote-split {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.vote-split__bar {
+  display: flex;
+  height: 0.6rem;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--line);
+}
+
+.vote-split__up,
+.vote-split__down {
+  height: 100%;
+  transition: width 0.6s var(--ease-out-soft);
+}
+
+.vote-split__up { background: var(--up); }
+.vote-split__down { background: var(--down); }
+
+.vote-split__up + .vote-split__down {
+  border-left: 2px solid var(--paper);
+}
+
+.vote-split__legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vote-split__legend .is-up { color: var(--up); font-weight: 600; }
+.vote-split__legend .is-down { color: var(--down); font-weight: 600; }
+
+.vote-card__foot {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.vote-card__msg {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--brand-deep);
+}
+
+.vote-card__msg[hidden] {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .vote-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .vote-filters {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .vote-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vote-round {
+    justify-self: start;
+  }
+
+  .vote-filters {
+    grid-row: auto;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.3rem;
+    scrollbar-width: none;
+  }
+
+  .vote-chip {
+    flex-shrink: 0;
+  }
+
+  .vote-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vote-split__up,
+  .vote-split__down {
+    transition: none;
+  }
+}

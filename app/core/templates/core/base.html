@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Instrument+Serif:ital@0;1&display=swap">
   <link rel="stylesheet" href="{{ url_for('core.static', filename='css/style.css') }}">
+  {% if current_user %}<link rel="stylesheet" href="{{ url_for('alertas.static', filename='css/alertas.css') }}">{% endif %}
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -34,6 +35,7 @@
         {% endfor %}
       </ul>
     </nav>
+    {% if current_user %}{% include "alertas/_bell.html" %}{% endif %}
     <button class="topbar__menu" id="sidebar-open" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú de la app">
       {{ icons.icon("menu") }}
     </button>
@@ -49,6 +51,7 @@
 
   <script src="{{ url_for('core.static', filename='js/vendor/lightweight-charts.standalone.production.js') }}"></script>
   <script src="{{ url_for('core.static', filename='js/app.js') }}"></script>
+  {% if current_user %}<script src="{{ url_for('alertas.static', filename='js/alertas.js') }}"></script>{% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

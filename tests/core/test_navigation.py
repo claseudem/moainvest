@@ -7,7 +7,10 @@ from app.core.watchlists import WATCHLISTS
 
 
 def _is_sentence_case(name: str) -> bool:
-    return name == name[:1].upper() + name[1:].lower()
+    # Los signos de apertura del español (¿ ¡) no cuentan: «¿Qué piensas tú?».
+    opening = len(name) - len(name.lstrip("¿¡"))
+    prefix, rest = name[:opening], name[opening:]
+    return name == prefix + rest[:1].upper() + rest[1:].lower()
 
 
 def test_sidebar_names_are_sentence_case():
@@ -40,12 +43,15 @@ def test_every_installed_app_with_pages_is_in_sidebar(app):
 
 
 def test_sidebar_order_without_reports_or_standalone_quant_stats():
-    # Informes se eliminó y Quant stats ya no es una app del sidebar.
+    # Informes se eliminó y Quant stats ya no es una app del sidebar. Noticias y
+    # ¿Qué piensas tú? van justo debajo de Mis activos.
     assert [entry.slug for entry in APPS] == [
         "graficador",
         "analisis-varianza",
         "pyportfolio-opt",
         "favoritos",
+        "noticias",
+        "que-piensas-tu",
         "pronosticador",
         "mi-perfil",
         "personas",
@@ -60,3 +66,9 @@ def test_quant_stats_lives_inside_the_graficador():
         ("Quant stats", "quant_stats.fundamentales"),
         ("Comparar", "quant_stats.revision"),
     ]
+
+
+def test_sentence_case_ignores_spanish_opening_marks():
+    assert _is_sentence_case("¿Qué piensas tú?")
+    assert not _is_sentence_case("¿qué piensas tú?")
+    assert not _is_sentence_case("¿Qué Piensas Tú?")

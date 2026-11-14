@@ -1,9 +1,11 @@
 {% extends "core/base.html" %}
+{% import "core/icons.html" as icons %}
 
 {% block title %}Mis activos · {{ site_name }}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('favoritos.static', filename='favoritos.css') }}">
+<link rel="stylesheet" href="{{ url_for('favoritos.static', filename='css/favoritos.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -25,9 +27,23 @@
   <p class="activos__flash">Inicia sesión para ver y guardar tus activos. <a href="{{ url_for('cuentas.ingresar', next=url_for('favoritos.index')) }}">Ingresar</a></p>
   {% else %}
   <div class="activos__toolbar">
-    <form class="activos__add" method="post" action="{{ url_for('favoritos.agregar') }}">
-      <input name="ticker" placeholder="Agregar: AAPL, BTC-USD, ^GSPC…" aria-label="Ticker a agregar" autocomplete="off" maxlength="20" required>
+    {#- Autocompletado (combobox ARIA, static/js/favoritos.js): populares al enfocar y
+        búsqueda en Yahoo por ticker o nombre. Sin JS es un formulario normal. -#}
+    <form class="activos__add" id="fav-add-form" method="post" action="{{ url_for('favoritos.agregar') }}"
+          data-tickers="{{ favorites | map(attribute='ticker') | join(',') }}">
+      <div class="fav-search">
+        <input id="fav-ticker" name="ticker" placeholder="Agregar: Apple, BTC-USD, S&amp;P 500…" aria-label="Ticker o nombre del activo a agregar"
+               autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" required
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="fav-suggest">
+        <input type="hidden" name="nombre" id="fav-nombre">
+        <div class="fav-suggest" id="fav-suggest-panel" hidden>
+          <p class="fav-suggest__head" id="fav-suggest-head">Activos populares</p>
+          <ul class="fav-suggest__list" id="fav-suggest" role="listbox" aria-labelledby="fav-suggest-head"></ul>
+          <p class="fav-suggest__foot" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> moverte · <kbd>Enter</kbd> agregar · <kbd>Esc</kbd> cerrar</p>
+        </div>
+      </div>
       <button type="submit">Agregar</button>
+      <p class="sr-only" id="fav-suggest-status" role="status" aria-live="polite"></p>
     </form>
     {% if favorites %}
     <input type="search" class="activos__search" id="activos-search" placeholder="Buscar ticker o nombre"
@@ -75,10 +91,25 @@
   {% elif not error %}
   <p class="activos__note">Aún no tienes activos guardados. Agrega el primero arriba.</p>
   {% endif %}
+
+  {# Las noticias y la votación de tus activos tienen sus propias páginas. #}
+  <nav class="fav-links" aria-label="Más sobre tus activos">
+    <a class="fav-link card" href="{{ url_for('noticias.index') }}">
+      <span class="fav-link__icon">{{ icons.icon("newspaper") }}</span>
+      <span><strong>Noticias de tus activos</strong><small>Titulares con sentimiento y alertas por campana o correo.</small></span>
+      {{ icons.icon("arrow-right", extra_class="fav-link__arrow") }}
+    </a>
+    <a class="fav-link card" href="{{ url_for('comunidad.index') }}">
+      <span class="fav-link__icon">{{ icons.icon("message-circle") }}</span>
+      <span><strong>¿Qué piensas tú?</strong><small>Vota si tus activos suben o bajan esta semana.</small></span>
+      {{ icons.icon("arrow-right", extra_class="fav-link__arrow") }}
+    </a>
+  </nav>
   {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 {% if favorites %}<script src="{{ url_for('favoritos.static', filename='favoritos.js') }}"></script>{% endif %}
+{% if current_user %}<script src="{{ url_for('favoritos.static', filename='js/favoritos.js') }}"></script>{% endif %}
 {% endblock %}

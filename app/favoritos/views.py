@@ -40,6 +40,29 @@ def _legacy_universo_redirect(state) -> None:
 
 # Tickers de Yahoo: letras, números y ``^ = . -`` (igual que el Graficador).
 TICKER_RE = re.compile(r"^[A-Z0-9^=.\-]{1,20}$")
+MAX_NAME = 120
+
+
+def _resolve_name(ticker: str, proposed: str) -> tuple[str | None, str | None]:
+    """Nombre del activo y, si el ticker no existe, una sugerencia.
+
+    Devuelve ``(nombre, None)`` si el ticker es válido o ``(None, sugerencia)``
+    si Yahoo no lo conoce (p. ej. "APPL" → sugiere "AAPL"). El nombre que llega
+    del autocompletado se usa tal cual para ahorrar una consulta.
+    """
+    from app.favoritos import search
+
+    if proposed:
+        return proposed[:MAX_NAME], None
+    name = market_data.get_display_name(ticker)
+    if name != ticker:
+        return name, None
+    # Yahoo no tiene nombre: puede ser un ticker sin "info" (índices, divisas)
+    # o una errata. La búsqueda lo distingue.
+    matches = search.search(ticker)
+    if any(m.ticker == ticker for m in matches):
+        return next(m.nombre for m in matches if m.ticker == ticker), None
+    return None, (matches[0].ticker if matches else None)
 
 
 @bp.app_context_processor
@@ -83,8 +106,11 @@ def agregar():
         flash(f"«{ticker}» no es un ticker válido de Yahoo Finance.", "error")
     else:
         try:
-            name = market_data.get_display_name(ticker)
-            if store.add_favorite(user["id"], ticker, name if name != ticker else None):
+            name, suggestion = _resolve_name(ticker, (request.form.get("nombre") or "").strip())
+            if name is None:
+                hint = f" ¿Quisiste decir {suggestion}?" if suggestion else " Prueba a buscarlo por nombre."
+                flash(f"No encontramos «{ticker}» en Yahoo Finance.{hint}", "error")
+            elif store.add_favorite(user["id"], ticker, name):
                 flash(f"{ticker} agregado a tus activos.", "info")
             else:
                 flash(f"{ticker} ya está en tus activos (o llegaste al máximo de {store.MAX_FAVORITES}).", "info")

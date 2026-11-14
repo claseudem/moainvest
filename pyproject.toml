@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib>=3.11.2",
     "mlflow>=3.18.0",
     "pandas>=3.0.5",
+    "pillow>=12.3",
     "prefect>=3.8.8",
     "pyportfolioopt>=1.6.0",
     "python-dotenv>=1.2.3",

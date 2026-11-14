@@ -1,0 +1,92 @@
+{% extends "core/base.html" %}
+{% import "core/icons.html" as icons %}
+
+{% block title %}Noticias · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('noticias.static', filename='css/noticias.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page news-page" id="news-page">
+  <div class="news-top">
+    <header class="page-head news-top__head">
+      <p class="eyebrow">Mercado</p>
+      <h1 class="page-title">Noticias del <span class="accent">mercado</span>.</h1>
+      <p class="page-lead">Titulares recientes de Yahoo Finance sobre tus activos y los principales del mercado, con una estimación de su sentimiento.</p>
+    </header>
+
+    {# Suscripción: se guarda sola en cada cambio (ver noticias.js). #}
+    <form class="card news-sub" id="news-sub-form" aria-labelledby="news-sub-title" novalidate>
+      <div class="news-sub__head">
+        <div>
+          <h2 class="news-sub__title" id="news-sub-title">{{ icons.icon("bell") }}Suscribirse a alertas de noticias</h2>
+          <p class="news-sub__state" id="news-sub-state">Cargando…</p>
+        </div>
+        <label class="news-switch">
+          <span class="sr-only">Activar alertas de noticias</span>
+          <input type="checkbox" role="switch" id="sub-activa" name="activa" disabled>
+          <span class="news-switch__track" aria-hidden="true"></span>
+        </label>
+      </div>
+
+      <fieldset class="news-sub__body" id="news-sub-body" disabled>
+        <legend class="sr-only">Preferencias de las alertas</legend>
+
+        <div class="news-sub__group">
+          <span class="news-sub__label" id="sub-via-label">Recíbelas en</span>
+          <div class="news-checks" role="group" aria-labelledby="sub-via-label">
+            <label class="news-check">
+              <input type="checkbox" id="sub-via-app" name="via_app" checked>
+              {{ icons.icon("bell") }}<span>Campana de la app</span>
+            </label>
+            <label class="news-check">
+              <input type="checkbox" id="sub-via-email" name="via_email">
+              {{ icons.icon("mail") }}<span>Correo electrónico</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="news-sub__group" id="sub-email-row" hidden>
+          <label class="news-sub__label" for="sub-email">Correo</label>
+          <input class="input news-sub__email" type="email" id="sub-email" name="email" autocomplete="email"
+                 value="{{ current_user.email if current_user else '' }}" placeholder="nombre@dominio.com">
+          <p class="news-sub__hint" id="sub-email-hint">Te enviamos un resumen con los titulares nuevos.</p>
+        </div>
+
+        <div class="news-sub__group">
+          <span class="news-sub__label" id="sub-scope-label">Sobre</span>
+          <div class="news-seg" role="radiogroup" aria-labelledby="sub-scope-label">
+            <input type="radio" name="alcance" id="sub-scope-todos" value="todos"><label for="sub-scope-todos">Todos los activos</label>
+            <input type="radio" name="alcance" id="sub-scope-favoritos" value="favoritos" checked><label for="sub-scope-favoritos">Solo mis favoritos</label>
+          </div>
+        </div>
+      </fieldset>
+      <p class="news-sub__notice" id="news-sub-notice" hidden>Tu suscripción se guarda en este navegador mientras se termina de configurar la base de datos. Se pasará a tu cuenta automáticamente.</p>
+      <p class="news-sub__status" id="news-sub-status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+
+  <section class="card news-feed" aria-labelledby="news-feed-title" aria-busy="true" id="news-feed">
+    <div class="news-feed__head">
+      <h2 class="news-feed__title" id="news-feed-title">Titulares</h2>
+      <div class="news-filters" role="group" aria-label="Filtrar noticias" id="news-filters">
+        {% for slug, name in filters %}
+        <button type="button" class="news-chip" data-filter="{{ slug }}" aria-pressed="{{ 'true' if slug == 'todos' else 'false' }}">{{ name }}</button>
+        {% endfor %}
+      </div>
+    </div>
+    <ul class="news-list" id="news-list"></ul>
+    <p class="news-empty" id="news-empty">Cargando titulares…</p>
+    <p class="news-note">El sentimiento se estima a partir de las palabras del titular; no es una recomendación de inversión.</p>
+  </section>
+
+  <template id="news-icons">
+    <span data-icon="news">{{ icons.icon("newspaper") }}</span>
+  </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('noticias.static', filename='js/noticias.js') }}"></script>
+{% endblock %}

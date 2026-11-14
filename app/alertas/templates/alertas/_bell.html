@@ -1,0 +1,93 @@
+{#- Campana de notificaciones de la barra superior (solo con sesión iniciada).
+    Las filas las pinta alertas.js con textContent (los titulares vienen de
+    fuera y nunca se insertan como HTML). Los iconos se clonan desde
+    <template id="notif-icons">. -#}
+{% import "core/icons.html" as icons %}
+{#- Icono de cada watchlist en el diálogo de configuración (por slug); las demás usan "list". -#}
+{% set watchlist_icons = {"overview": "chart-column", "consumer-electronics": "smartphone", "gaming-multimedia": "gamepad"} %}
+<div class="notif" id="notif" data-notif>
+  <button class="notif__bell" id="notif-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="notif-panel" aria-label="Notificaciones">
+    {{ icons.icon("bell") }}
+    <span class="notif__badge" id="notif-badge" hidden></span>
+  </button>
+
+  <section class="notif-panel" id="notif-panel" role="dialog" aria-labelledby="notif-title" hidden>
+    <div class="notif-panel__head">
+      <h2 class="notif-panel__title" id="notif-title">Notificaciones</h2>
+      <div class="notif-panel__actions">
+        <button class="notif-icon-btn" type="button" id="notif-read-all" title="Marcar todo como leído" aria-label="Marcar todo como leído">{{ icons.icon("check-check") }}</button>
+        <button class="notif-icon-btn" type="button" id="notif-open-settings" title="Configurar alertas" aria-label="Configurar alertas">{{ icons.icon("sliders") }}</button>
+      </div>
+    </div>
+
+    <div class="notif-tabs" role="tablist" aria-label="Tipo de notificación">
+      <button class="notif-tab" type="button" role="tab" id="notif-tab-mov" aria-controls="notif-pane-mov" aria-selected="true">
+        Movimientos <span class="notif-tab__count" id="notif-count" hidden></span>
+      </button>
+      <button class="notif-tab" type="button" role="tab" id="notif-tab-news" aria-controls="notif-pane-news" aria-selected="false" tabindex="-1">Noticias <span class="notif-tab__count" id="notif-news-count" hidden></span></button>
+    </div>
+
+    <div class="notif-pane" id="notif-pane-mov" role="tabpanel" aria-labelledby="notif-tab-mov" tabindex="0">
+      <ul class="notif-list" id="notif-list-mov" aria-live="polite"></ul>
+      <p class="notif-empty" id="notif-empty-mov">Cargando alertas…</p>
+    </div>
+    <div class="notif-pane" id="notif-pane-news" role="tabpanel" aria-labelledby="notif-tab-news" tabindex="0" hidden>
+      <ul class="notif-list" id="notif-list-news"></ul>
+      <p class="notif-empty" id="notif-empty-news">Cargando titulares…</p>
+    </div>
+
+    <footer class="notif-panel__foot">
+      <span id="notif-summary">Umbral ±5 %</span>
+      <button class="notif-link" type="button" data-open-settings>Configurar</button>
+    </footer>
+  </section>
+
+  <dialog class="notif-settings" id="notif-settings" aria-labelledby="notif-settings-title">
+    <form method="dialog" class="notif-settings__form" id="notif-settings-form">
+      <div class="notif-settings__head">
+        <p class="notif-settings__eyebrow">{{ icons.icon("bell") }}Alertas de movimientos</p>
+        <h2 class="notif-settings__title" id="notif-settings-title">¿Cuándo te avisamos?</h2>
+        <p class="notif-settings__lead">Solo cuando un activo de tus watchlists se mueva más que el umbral en la sesión. Si el movimiento llega al doble o al triple, te avisamos una vez más.</p>
+      </div>
+
+      <fieldset class="notif-settings__group">
+        <legend>Umbral de sensibilidad</legend>
+        <div class="notif-seg" id="notif-thresholds">
+          {% for value, hint in ((3, "Más avisos"), (5, "Equilibrado"), (10, "Solo lo extremo")) %}
+          <input type="radio" name="umbral" id="umbral-{{ value }}" value="{{ value }}"{% if value == 5 %} checked{% endif %}>
+          <label for="umbral-{{ value }}"><strong>±{{ value }} %</strong><small>{{ hint }}</small></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <fieldset class="notif-settings__group">
+        <legend>Watchlists con alertas</legend>
+        <div class="notif-switches">
+          {% for watchlist in watchlists_for_alerts %}
+          <label class="notif-switch">
+            {{ icons.icon(watchlist_icons.get(watchlist.slug, "list"), extra_class="notif-switch__icon") }}
+            <span class="notif-switch__name">{{ watchlist.name }}</span>
+            <input type="checkbox" role="switch" name="activas" value="{{ watchlist.slug }}" checked>
+            <span class="notif-switch__track" aria-hidden="true"></span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <p class="notif-settings__error" id="notif-settings-error" role="alert" hidden></p>
+
+      <footer class="notif-settings__foot">
+        <button class="notif-btn notif-btn--secondary" type="button" value="cancel" id="notif-settings-cancel">Cancelar</button>
+        <button class="notif-btn notif-btn--primary" type="submit" value="save" id="notif-settings-save">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <template id="notif-icons">
+    <span data-icon="up">{{ icons.icon("trending-up") }}</span>
+    <span data-icon="down">{{ icons.icon("trending-down") }}</span>
+    <span data-icon="news">{{ icons.icon("newspaper") }}</span>
+    <span data-icon="bell">{{ icons.icon("bell") }}</span>
+    <span data-icon="bell-off">{{ icons.icon("bell-off") }}</span>
+  </template>
+</div>

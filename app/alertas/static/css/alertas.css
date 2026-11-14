@@ -1,0 +1,761 @@
+/* ---- Alertas: campana, panel de notificaciones y diálogo de umbral ----
+   Solo usa los tokens de core/static/css/style.css (--brand, --ink, --line,
+   --up/--down...). Botones píldora como .btn de style.css: un único
+   primario rojo por vista; el resto con contorno o solo texto. */
+
+.notif {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.notif__bell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease-out-soft), background-color 0.2s var(--ease-out-soft);
+}
+
+.notif__bell:hover,
+.notif__bell[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.notif__bell:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.notif__bell .ui-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.notif__bell.has-unread .ui-icon {
+  animation: notif-ring 0.9s var(--ease-out-soft) 1;
+  transform-origin: 50% 10%;
+}
+
+/* Contador de no leídas: píldora roja con borde blanco para separarla del icono. */
+.notif__badge {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.3rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border: 2px solid var(--paper);
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: calc(1.15rem - 4px);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+@keyframes notif-ring {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-10deg); }
+  60% { transform: rotate(6deg); }
+  80% { transform: rotate(-3deg); }
+}
+
+/* ---- Panel (popover) ---- */
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  width: min(25rem, calc(100vw - 2rem));
+  max-height: min(34rem, calc(100vh - var(--topbar-height) - 2rem));
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.06), 0 24px 48px -20px rgba(23, 23, 23, 0.35);
+  overflow: hidden;
+}
+
+.notif-panel[hidden] {
+  display: none;
+}
+
+.notif-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 0.9rem 0.6rem 1.1rem;
+}
+
+.notif-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.notif-panel__actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.notif-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.notif-icon-btn:hover {
+  background: var(--mist);
+  color: var(--ink);
+}
+
+.notif-icon-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.notif-icon-btn .ui-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Pestañas subrayadas, como el enlace activo de la barra superior. */
+.notif-tabs {
+  display: flex;
+  gap: 1.25rem;
+  padding: 0 1.1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.notif-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0 0.7rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.notif-tab[aria-selected="true"] {
+  color: var(--ink);
+}
+
+.notif-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand);
+}
+
+.notif-tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.notif-tab__count {
+  min-width: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
+.notif-pane {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notif-pane:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.notif-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notif-empty {
+  margin: 0;
+  padding: 2rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.notif-empty[hidden] {
+  display: none;
+}
+
+/* ---- Alerta híbrida: dato + contexto ---- */
+.alert-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.1rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  cursor: default;
+}
+
+.alert-item:last-child {
+  border-bottom: 0;
+}
+
+/* No leída: punto rojo a la izquierda y fondo levemente marcado. */
+.alert-item.is-unread {
+  background: color-mix(in srgb, var(--brand-soft) 45%, var(--paper));
+}
+
+.alert-item.is-unread::before {
+  content: "";
+  position: absolute;
+  left: 0.45rem;
+  top: 1.35rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+.alert-item__icon {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.65rem;
+}
+
+.alert-item__icon .ui-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.alert-item--up .alert-item__icon {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.alert-item--down .alert-item__icon {
+  background: var(--down-soft);
+  color: var(--down);
+}
+
+.alert-item__body {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.alert-item__title {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.alert-item__title strong {
+  font-weight: 600;
+}
+
+.alert-item__pct {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.alert-item--up .alert-item__pct {
+  color: var(--up);
+}
+
+.alert-item--down .alert-item__pct {
+  color: var(--down);
+}
+
+.alert-item__ctx {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.alert-item__ctx a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 2px;
+}
+
+.alert-item__ctx a:hover {
+  text-decoration-color: var(--brand);
+}
+
+.alert-item__ctx--none {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.alert-item__label {
+  margin-right: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.alert-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.alert-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.alert-tag--up {
+  background: var(--up-soft);
+  color: var(--up);
+}
+
+.alert-tag--down {
+  background: var(--down-soft);
+  color: var(--down);
+}
+
+.alert-tag--level {
+  background: var(--ink);
+  color: #fff;
+}
+
+.alert-item__ticker {
+  font-family: var(--font-mono);
+}
+
+/* ---- Pestaña Noticias ---- */
+.news-item {
+  display: grid;
+  grid-template-columns: 2.1rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.news-item:last-child {
+  border-bottom: 0;
+}
+
+.news-item .alert-item__icon {
+  background: var(--mist);
+  color: var(--muted);
+}
+
+.news-item__title {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.news-item__title a {
+  color: var(--ink);
+}
+
+.news-item__title a:hover {
+  color: var(--brand-deep);
+}
+
+/* ---- Pie del panel ---- */
+.notif-panel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid var(--line);
+  background: var(--mist);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.notif-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand-deep);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.notif-link:hover {
+  text-decoration: underline;
+}
+
+.notif-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---- Diálogo de configuración ---- */
+.notif-settings {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 30px 80px -24px rgba(23, 23, 23, 0.45);
+}
+
+.notif-settings::backdrop {
+  background: rgba(23, 23, 23, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.notif-settings__form {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.notif-settings__head {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.notif-settings__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.notif-settings__eyebrow .ui-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--brand);
+}
+
+.notif-settings__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.notif-settings__lead {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.notif-settings__group {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.notif-settings__group > legend {
+  padding: 0;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Control segmentado del umbral. */
+.notif-seg {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--mist);
+}
+
+.notif-seg input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notif-seg label {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 0.65rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-out-soft), box-shadow 0.2s var(--ease-out-soft);
+}
+
+.notif-seg label strong {
+  font-size: 0.98rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.notif-seg label small {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.notif-seg input:checked + label {
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--ink), var(--shadow-card);
+}
+
+.notif-seg input:focus-visible + label {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Interruptores por watchlist. */
+.notif-switches {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.notif-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.notif-switch__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.notif-switch__name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.notif-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notif-switch__track {
+  position: relative;
+  width: 2.3rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition: background-color 0.2s var(--ease-out-soft);
+}
+
+.notif-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.25);
+  transition: transform 0.2s var(--ease-out-soft);
+}
+
+.notif-switch:has(input:checked) .notif-switch__track {
+  background: var(--brand);
+}
+
+.notif-switch:has(input:checked) .notif-switch__track::after {
+  transform: translateX(0.95rem);
+}
+
+.notif-switch:has(input:checked) .notif-switch__icon {
+  color: var(--brand);
+}
+
+.notif-switch:has(input:focus-visible) {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.notif-settings__error {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-size: 0.84rem;
+}
+
+.notif-settings__error[hidden] {
+  display: none;
+}
+
+.notif-settings__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* Botones píldora como .btn de style.css: un primario rojo, un secundario con contorno. */
+.notif-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.6rem;
+  padding: 0 1.3rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-out-soft), border-color 0.2s var(--ease-out-soft);
+}
+
+.notif-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.notif-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.notif-btn--primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 24px -12px rgba(200, 16, 46, 0.55);
+}
+
+.notif-btn--primary:hover {
+  background: var(--brand-deep);
+  border-color: var(--brand-deep);
+}
+
+.notif-btn--secondary {
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.notif-btn--secondary:hover {
+  border-color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+
+/* ---- Móvil: el panel ocupa el ancho bajo la barra superior ---- */
+@media (max-width: 760px) {
+  .notif-panel {
+    position: fixed;
+    top: calc(var(--topbar-height) + 0.4rem);
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-height: calc(100vh - var(--topbar-height) - 1.2rem);
+  }
+
+  .notif-settings__form {
+    padding: 1.2rem;
+  }
+
+  .notif-seg label small {
+    display: none;
+  }
+
+  .notif-settings__foot .notif-btn {
+    flex: 1;
+  }
+}
+
+/* Teléfonos estrechos: la campana añade un botón a la barra, así que el logo
+   y los huecos se ajustan para que todo quepa en 360px. */
+@media (max-width: 420px) {
+  .topbar {
+    gap: 0.6rem;
+  }
+
+  .topbar__logo {
+    width: min(38vw, 160px);
+    height: auto;
+  }
+
+  .topbar__links {
+    gap: 0.9rem;
+  }
+
+  .notif__bell {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif__bell.has-unread .ui-icon {
+    animation: none;
+  }
+}

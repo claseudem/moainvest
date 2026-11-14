@@ -27,7 +27,9 @@ class StoreError(Exception):
     """No se pudo hablar con InsForge (red, clave o tabla)."""
 
 
-def _request(method: str, *, params: dict | None = None, json: Any = None, prefer: str | None = None) -> Any:
+def _request(
+    method: str, *, params: dict | None = None, json: Any = None, prefer: str | None = None, table: str = TABLE
+) -> Any:
     base = current_app.config["INSFORGE_URL"].rstrip("/")
     key = current_app.config["INSFORGE_API_KEY"]
     if not base or not key:
@@ -37,7 +39,7 @@ def _request(method: str, *, params: dict | None = None, json: Any = None, prefe
         headers["Prefer"] = prefer
     try:
         response = requests.request(
-            method, f"{base}/api/database/records/{TABLE}", params=params, json=json, headers=headers, timeout=TIMEOUT
+            method, f"{base}/api/database/records/{table}", params=params, json=json, headers=headers, timeout=TIMEOUT
         )
     except requests.RequestException as exc:
         raise StoreError("No se pudo conectar con la base de datos.") from exc

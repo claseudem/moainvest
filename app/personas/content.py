@@ -1,8 +1,7 @@
-"""Contenido estático de PERSONAS (comunidad): equipos y propósito.
+"""Contenido estático: los equipos de MOAINVEST (se muestran en su presentación).
 
 Los perfiles y las rutas viven en ``app/mi_perfil/content.py``, porque son
-personales. Los equipos se muestran en la presentación de MOAINVEST; esta
-sección muestra a los demás: el directorio, los filtros y los indicadores.
+personales.
 """
 from __future__ import annotations
 
@@ -23,22 +22,4 @@ TEAMS: tuple[Team, ...] = (
     Team("Equipo Mercadeo", "Comunicación, posicionamiento y crecimiento de comunidad.", "activity"),
     Team("Equipo Finanzas", "Análisis financiero e inversión.", "trending-up"),
     Team("Equipo Análisis de Datos", "Métricas, indicadores y visualización.", "chart-column"),
-)
-
-PILLARS: tuple[tuple[str, str, str], ...] = (
-    (
-        "Nuestro propósito",
-        "Hacer que el conocimiento financiero sea más comprensible y accesible para las personas.",
-        "target",
-    ),
-    (
-        "Nuestra visión",
-        "Construir una comunidad que aprenda a comprender los mercados, interpretar información y desarrollar habilidades financieras.",
-        "eye",
-    ),
-    (
-        "Nuestra filosofía",
-        "Creemos que el crecimiento comienza con el conocimiento, la práctica y la constancia.",
-        "layers",
-    ),
 )

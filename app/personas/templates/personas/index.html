@@ -1,167 +1,95 @@
 {% extends "core/base.html" %}
-{% import "core/icons.html" as icons %}
 
-{% block title %}Personas · {{ site_name }}{% endblock %}
+{% block title %}Comunidad · {{ site_name }}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ url_for('personas.static', filename='community-shared.css') }}">
 <link rel="stylesheet" href="{{ url_for('personas.static', filename='personas.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="page pe">
+<div class="page cm">
   <header class="page-head">
     <p class="eyebrow">Comunidad</p>
-    <h1 class="page-title">Conoce a las personas de nuestra <span class="accent">comunidad</span>.</h1>
-    <p class="page-lead">Descubre personas que comparten tus intereses, explora diferentes perfiles y conecta con quienes están aprendiendo sobre los mercados.</p>
+    <h1 class="page-title">El pulso de la <span class="accent">comunidad</span>.</h1>
+    <p class="page-lead">Noticias de los activos de la plataforma y lo que esperan los miembros de MOAINVEST: vota si cada activo sube o baja y mira el sentimiento del mercado en tiempo real.</p>
   </header>
 
-  <p class="card card--mist pe-notice">
-    <span class="pe-tag">Sin base de datos</span>
-    Todavía no hay usuarios conectados al directorio. Aparecerán aquí las personas que decidan hacer público su perfil. Las cifras de la comunidad son demostrativas.
-  </p>
+  {# ── Noticias de activos: bloque propio, separado del resto ──── #}
+  <section class="cm-block cm-panel" id="noticias" aria-labelledby="noticias-title">
+    <div class="cm-block__head">
+      <p class="cm-kicker">01 · Mercado</p>
+      <h2 id="noticias-title">Noticias de activos</h2>
+      <span class="cm-tag" data-news-demo hidden title="Yahoo Finance no respondió: se muestran noticias de ejemplo">Datos demostrativos</span>
+    </div>
 
-  {# ── Directorio: buscador y filtros ──────────────────────────── #}
-  <section class="pe-block" id="directorio" aria-labelledby="directorio-title">
-    <h2 id="directorio-title">Directorio</h2>
+    <div class="cm-chips" role="group" aria-label="Filtrar noticias por activo" data-news-filters>
+      <button type="button" class="cm-chip" aria-pressed="true" data-news-filter="">Todos</button>
+      <button type="button" class="cm-chip" aria-pressed="false" data-news-filter="__mine" data-mine-only hidden>Mis activos</button>
+    </div>
 
-    <div class="card pe-search">
-      <label class="pe-search__field">
-        <span class="pe-sr">Buscar por nombre o intereses</span>
-        <input class="input" type="search" placeholder="Buscar por nombre o interés" autocomplete="off" data-search>
+    <p class="cm-hint" role="status" data-news-status>Cargando noticias…</p>
+    <ul class="cm-news" data-news-list></ul>
+    <p class="cm-hint cm-trend-note">La tendencia se estima a partir del titular y el resumen: es orientativa, no una recomendación.</p>
+    <div class="cm-more" data-news-pager hidden>
+      <button type="button" class="btn btn--secondary btn--sm" data-news-more>Ver más noticias</button>
+      <button type="button" class="btn btn--secondary btn--sm" data-news-less hidden>Ver menos noticias</button>
+      <span class="cm-hint" data-news-shown></span>
+    </div>
+  </section>
+
+  {# ── Sentimiento: votación y ranking ─────────────────────────── #}
+  <section class="cm-block cm-block--votes" id="sentimiento" aria-labelledby="sentimiento-title">
+    <div class="cm-block__head">
+      <p class="cm-kicker">02 · Comunidad</p>
+      <h2 id="sentimiento-title">¿Sube o baja?</h2>
+      <span class="cm-tag" data-votes-local hidden>Votos guardados en este navegador</span>
+    </div>
+    <p class="cm-hint">Vota tu expectativa para cada activo y, si quieres, deja una nota corta con tu tesis. Puedes cambiar tu voto cuando quieras; tocar de nuevo el mismo botón lo retira.</p>
+
+    <div class="cm-toolbar">
+      <label class="cm-sort">
+        <span>Ordenar por</span>
+        <select class="input" data-votes-sort>
+          <option value="total" selected>Más votos</option>
+          <option value="sube">Más votos «Sube»</option>
+          <option value="baja">Más votos «Baja»</option>
+          <option value="balance">Más alcistas (balance)</option>
+        </select>
       </label>
-
-      <fieldset class="pe-filters">
-        <legend>Perfil profesional</legend>
-        <div class="pe-chips">
-          {% for profile in profiles %}
-          <button type="button" class="pe-chip" aria-pressed="false" data-filter-profile="{{ profile.slug }}">{{ profile.name }}</button>
-          {% endfor %}
-        </div>
-      </fieldset>
-
-      <fieldset class="pe-filters">
-        <legend>Nivel</legend>
-        <div class="pe-chips">
-          {% for level in levels %}
-          <button type="button" class="pe-chip" aria-pressed="false" data-filter-level="{{ level }}">Nivel {{ level }}</button>
-          {% endfor %}
-        </div>
-      </fieldset>
-
-      <p class="pe-count" role="status" data-results-count></p>
+      <p class="cm-hint cm-total" data-votes-total></p>
     </div>
 
-    <ul class="pe-directory" data-directory></ul>
-    <p class="pe-empty" data-directory-empty>Aún no hay integrantes que mostrar. Cuando haya perfiles públicos, aparecerán aquí.</p>
-
-    {# Perfil público: solo lo que la persona decidió compartir. #}
-    <article class="card pe-public" data-public hidden aria-labelledby="public-title">
-      <div class="pe-public__head">
-        <span class="pe-avatar" data-public-avatar aria-hidden="true"></span>
-        <div>
-          <h3 id="public-title" data-public-name></h3>
-          <p class="pe-hint" data-public-profile></p>
-        </div>
-        <button type="button" class="btn btn--secondary btn--sm" data-public-close>Cerrar</button>
-      </div>
-      <p data-public-level></p>
-      <p class="pe-hint" data-public-bio></p>
-      <h4 class="pe-label">Intereses</h4>
-      <ul class="pe-tags" data-public-interests></ul>
-      <h4 class="pe-label">Logros compartidos</h4>
-      <ul class="pe-list" data-public-achievements></ul>
-    </article>
-  </section>
-
-  {# ── Comunidad: indicadores demostrativos ────────────────────── #}
-  <section class="pe-block" id="comunidad-indicadores" aria-labelledby="indicadores-title">
-    <h2 id="indicadores-title">La comunidad en números</h2>
-    <p class="pe-hint">Cifras demostrativas: todavía no hay una base de datos de usuarios.</p>
-
-    <div class="pe-stats">
-      <div class="card pe-stat">
-        <p class="pe-label">Integrantes</p>
-        <p class="pe-stat__num" data-member-count>{{ member_count }}</p>
-        <p class="pe-hint">Cifra de ejemplo</p>
-      </div>
-      <div class="card pe-stat">
-        <p class="pe-label">Nuevos esta semana</p>
-        <p class="pe-stat__num">{{ new_this_week }}</p>
-        <p class="pe-hint">Cifra de ejemplo</p>
-      </div>
-      <div class="card pe-stat">
-        <p class="pe-label">Crecimiento semanal</p>
-        <p class="pe-stat__num">{{ growth_percent }}%</p>
-        <p class="pe-hint">Cifra de ejemplo</p>
-      </div>
-    </div>
-
-    <div class="card pe-bars">
-      <p class="pe-label">Personas por perfil</p>
-      <ul class="pe-bar-list">
-        {% for item in by_profile %}
-        <li>
-          <span class="pe-bar-list__name">{{ item.name }}</span>
-          <span class="pe-bar"><span class="pe-bar__fill" style="width: {{ item.percent }}%"></span></span>
-          <span class="pe-mono">{{ item.count }}</span>
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-
-    <div class="pe-milestones-wrap">
-      <div class="card pe-count-card">
-        <p class="pe-label">Próxima meta</p>
-        {% if next_target %}
-        <p class="pe-next"><strong>{{ next_target }} personas</strong></p>
-        <div class="pe-bar pe-bar--thick" role="progressbar" aria-label="Avance hacia la próxima meta" aria-valuemin="0" aria-valuemax="{{ next_target }}" aria-valuenow="{{ member_count }}">
-          <div class="pe-bar__fill" style="width: {{ next_percent }}%"></div>
-        </div>
-        <p class="pe-hint">{{ next_percent }}% · cifra de ejemplo</p>
-        {% endif %}
-        <div class="pe-invite">
-          <button type="button" class="btn btn--primary" data-copy-invite>Invitar personas</button>
-          <label class="pe-invite__label">
-            Enlace de registro
-            <input class="input" id="invite-link" readonly value="{{ invite_url }}" onfocus="this.select()">
-          </label>
-          <p role="status" data-copy-status class="pe-status"></p>
-        </div>
-      </div>
-
-      <ol class="pe-milestones" aria-label="Hitos de la comunidad">
-        {% set state_text = {"completado": "Completado", "proximo": "Próximo objetivo", "bloqueado": "Bloqueado"} %}
-        {% for m in milestones %}
-        <li class="card pe-milestone is-{{ m.state }}">
-          <span class="pe-milestone__icon">{{ icons.icon('star' if m.state == 'completado' else ('trending-up' if m.state == 'proximo' else 'layers'), extra_class="size-5", stroke_width=1.6) }}</span>
-          <div>
-            <p class="pe-milestone__title">{{ m.target }} personas · {{ m.title }} <span class="pe-badge">{{ state_text[m.state] }}</span></p>
-            <p class="pe-hint">{{ m.unlocks }}</p>
-          </div>
-        </li>
-        {% endfor %}
-      </ol>
-    </div>
-  </section>
-
-  {# ── Nuestro propósito ───────────────────────────────────────── #}
-  <section class="pe-block" id="proposito" aria-labelledby="proposito-title">
-    <h2 id="proposito-title">Nuestro propósito</h2>
-    <ul class="pe-grid">
-      {% for title, text, icon in pillars %}
-      <li class="card pe-team">
-        <span class="pe-icon">{{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}</span>
-        <p class="pe-team__name">{{ title }}</p>
-        <p class="pe-hint">{{ text }}</p>
-      </li>
-      {% endfor %}
-    </ul>
+    <p class="cm-status" role="status" data-votes-status></p>
+    <ol class="cm-ranking" data-ranking aria-label="Ranking de activos por votos"></ol>
   </section>
 </div>
 
-<script id="personas-data" type="application/json">{{ payload|tojson }}</script>
+{# Plantilla del panel de notas de un activo (se clona por fila). #}
+<template id="cm-notes-template">
+  <div class="cm-notes">
+    <form class="cm-notes__form" data-note-form>
+      <p class="cm-notes__label">Tu tesis sobre <strong data-note-asset></strong></p>
+      <div class="cm-quick" role="group" aria-label="Reacciones rápidas" data-note-tags></div>
+      <div class="cm-notes__row">
+        <label class="cm-notes__field">
+          <span class="cm-sr">Nota corta (opcional)</span>
+          <input class="input" name="text" maxlength="140" placeholder="Nota corta (opcional, 140 caracteres)" autocomplete="off" data-note-text>
+        </label>
+        <button type="submit" class="btn btn--primary btn--sm" data-note-save>Guardar nota</button>
+        <button type="button" class="btn btn--secondary btn--sm" data-note-delete hidden>Quitar mi nota</button>
+      </div>
+      <p class="cm-notes__status" role="status" data-note-status></p>
+    </form>
+    <ul class="cm-notes__list" data-note-list></ul>
+    <button type="button" class="cm-link" data-note-all hidden></button>
+  </div>
+</template>
+
+<script id="comunidad-data" type="application/json">{{ payload|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('personas.static', filename='community-shared.js') }}"></script>
 <script src="{{ url_for('personas.static', filename='personas.js') }}"></script>
 {% endblock %}

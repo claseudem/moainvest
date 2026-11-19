@@ -1,0 +1,45 @@
+/* Piezas compartidas por COMUNIDAD y MI PERFIL (prefijo mc-). */
+
+.mc-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--mist);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.mc-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mc-avatar--sm {
+  width: 30px;
+  height: 30px;
+  font-size: 0.7rem;
+}
+
+.mc-avatar--md {
+  width: 44px;
+  height: 44px;
+  font-size: 0.9rem;
+}
+
+.mc-avatar--lg {
+  width: 84px;
+  height: 84px;
+  font-size: 1.6rem;
+}
+
+.mc-avatar--xl {
+  width: 108px;
+  height: 108px;
+  font-size: 2rem;
+}

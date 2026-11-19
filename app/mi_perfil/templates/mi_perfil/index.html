@@ -4,7 +4,9 @@
 {% block title %}Mi perfil · {{ site_name }}{% endblock %}
 
 {% block head %}
+<link rel="stylesheet" href="{{ url_for('personas.static', filename='community-shared.css') }}">
 <link rel="stylesheet" href="{{ url_for('mi_perfil.static', filename='mi_perfil.css') }}">
+<link rel="stylesheet" href="{{ url_for('mi_perfil.static', filename='comunidad.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -12,18 +14,34 @@
   <header class="page-head">
     <p class="eyebrow">Mi perfil</p>
     <h1 class="page-title">Tu camino, <span class="accent">a tu ritmo</span>.</h1>
-    <p class="page-lead">Elige los temas que te interesan, completa misiones y mira cómo avanzas. Esta sección es privada.</p>
+    <p class="page-lead">Elige los temas que te interesan, completa misiones y participa en la comunidad. Tus misiones son privadas; tu perfil solo lo ven otros si lo haces visible.</p>
   </header>
 
-  {# ── A. Mi información ───────────────────────────────────────── #}
-  <section class="card mp-identity" aria-labelledby="mp-identidad">
-    <span class="mp-avatar" aria-hidden="true">{{ user_initial }}</span>
+  {# ── A. Mi información y perfil de comunidad ─────────────────── #}
+  <section class="card mp-identity mpc-identity" aria-labelledby="mp-identidad">
+    <span class="mpc-identity__avatar" data-c-avatar>
+      <span class="mc-avatar mc-avatar--lg" aria-hidden="true">{{ user_initial }}</span>
+    </span>
     <div class="mp-identity__body">
-      <h2 id="mp-identidad">{{ user_name or "Cuenta sin nombre" }}</h2>
+      <div class="mpc-identity__title">
+        <h2 id="mp-identidad" data-c-name>{{ user_name or "Cuenta sin nombre" }}</h2>
+        <span class="mpc-visibility" data-c-visibility>Perfil privado</span>
+      </div>
+      <p class="mpc-profession" data-c-profession hidden></p>
+      <p class="mpc-bio" data-c-bio hidden></p>
       <p class="mp-hint" data-chosen-line>Aún no has elegido un perfil.</p>
-      <p class="mp-hint">Fecha de ingreso: no disponible.</p>
     </div>
-    <button type="button" class="btn btn--secondary btn--sm" data-action="editar">Editar perfil</button>
+    <button type="button" class="btn btn--secondary btn--sm" data-c-edit>Editar perfil</button>
+
+    {# Resumen de actividad en la comunidad #}
+    <ul class="mpc-activity" aria-label="Tu actividad en la comunidad">
+      <li><span class="mpc-activity__num" data-c-stat="votes">0</span><span class="mp-label">Votos emitidos</span></li>
+      <li><span class="mpc-activity__num" data-c-stat="notes">0</span><span class="mp-label">Notas dejadas</span></li>
+      <li><span class="mpc-activity__num mpc-activity__num--text" data-c-stat="profile">—</span><span class="mp-label">Perfil seleccionado</span></li>
+      <li><span class="mpc-activity__num" data-c-stat="following">0</span><span class="mp-label">Siguiendo</span></li>
+      <li><span class="mpc-activity__num" data-c-stat="connections">0</span><span class="mp-label">Conexiones</span></li>
+    </ul>
+    <p class="mpc-notice" data-c-notice hidden></p>
   </section>
 
   {# ── B. Perfil elegido ───────────────────────────────────────── #}
@@ -126,11 +144,149 @@
       Los XP son puntos educativos: no representan dinero ni rentabilidad.
     </p>
   </div>
+
+  {# ── E. Interacción en la comunidad ──────────────────────────── #}
+  <section class="mp-block mpc" id="mp-interaccion" aria-labelledby="mp-interaccion-title">
+    <p class="mpc-kicker">Comunidad</p>
+    <h2 id="mp-interaccion-title">Interacción</h2>
+    <p class="mp-hint">Compara tus posturas, sigue a otros miembros y deja notas cortas sobre los activos. Votas y comentas desde <a href="{{ community.urls.community }}#sentimiento">Comunidad</a>.</p>
+    <p class="mpc-notice" data-c-db-notice hidden></p>
+
+    <div class="mpc-tabs" role="tablist" aria-label="Interacción">
+      <button type="button" role="tab" class="mpc-tab" id="tab-posturas" aria-controls="panel-posturas" aria-selected="true" data-c-tab="posturas">Comparar posturas</button>
+      <button type="button" role="tab" class="mpc-tab" id="tab-personas" aria-controls="panel-personas" aria-selected="false" tabindex="-1" data-c-tab="personas">Seguir y conectar</button>
+      <button type="button" role="tab" class="mpc-tab" id="tab-notas" aria-controls="panel-notas" aria-selected="false" tabindex="-1" data-c-tab="notas">Notas y reacciones</button>
+    </div>
+
+    {# 1. Comparar posturas en "Sube o baja" #}
+    <div class="card mpc-panel" role="tabpanel" id="panel-posturas" aria-labelledby="tab-posturas" data-c-panel="posturas">
+      <div class="mpc-summary" data-c-agree-summary></div>
+      <ul class="mpc-compare" data-c-compare></ul>
+      <p class="mp-hint" data-c-compare-empty hidden>Todavía no has votado. Ve a <a href="{{ community.urls.community }}#sentimiento">¿Sube o baja?</a> y vota algunos activos para comparar tu postura con la comunidad.</p>
+      <h3 class="mpc-subtitle">Con las personas que sigues</h3>
+      <ul class="mpc-peers" data-c-peers></ul>
+    </div>
+
+    {# 2. Seguir / conectar con perfiles públicos #}
+    <div class="card mpc-panel" role="tabpanel" id="panel-personas" aria-labelledby="tab-personas" data-c-panel="personas" hidden>
+      <label class="mpc-search">
+        <span class="mp-sr">Buscar personas</span>
+        <input class="input" type="search" placeholder="Buscar por nombre, profesión o activo" autocomplete="off" data-c-member-search>
+      </label>
+      <ul class="mpc-members" data-c-members></ul>
+      <p class="mp-hint" data-c-members-empty hidden></p>
+    </div>
+
+    {# 3. Reacciones o comentarios rápidos en tesis / activos #}
+    <div class="card mpc-panel" role="tabpanel" id="panel-notas" aria-labelledby="tab-notas" data-c-panel="notas" hidden>
+      <form class="mpc-composer" data-c-note-form>
+        <div class="mpc-composer__row">
+          <label class="mpc-field">
+            <span class="mp-label">Activo</span>
+            <select class="input" name="ticker" data-c-note-asset required>
+              {% for asset in community.assets %}
+              <option value="{{ asset.ticker }}">{{ asset.name }} · {{ asset.ticker }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="mpc-field mpc-field--grow">
+            <span class="mp-label">Nota corta (opcional)</span>
+            <input class="input" name="text" maxlength="{{ community.limits.note }}" placeholder="Tu tesis en una frase" autocomplete="off" data-c-note-text>
+          </label>
+        </div>
+        <div class="mpc-quick" role="group" aria-label="Reacciones rápidas" data-c-note-tags>
+          {% for tag in community.quickTags %}
+          <button type="button" class="mpc-chip" aria-pressed="false" data-c-note-tag="{{ tag }}">{{ tag }}</button>
+          {% endfor %}
+        </div>
+        <div class="mpc-composer__actions">
+          <button type="submit" class="btn btn--primary btn--sm">Guardar nota</button>
+          <p class="mpc-status" role="status" data-c-note-status></p>
+        </div>
+      </form>
+
+      <div class="mpc-notes-grid">
+        <div>
+          <h3 class="mpc-subtitle">Mis notas</h3>
+          <ul class="mpc-notes" data-c-my-notes></ul>
+        </div>
+        <div>
+          <h3 class="mpc-subtitle">Recientes en la comunidad</h3>
+          <ul class="mpc-notes" data-c-recent-notes></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ── Editar perfil (diálogo) ─────────────────────────────────── #}
+  <dialog class="mpc-dialog" aria-labelledby="mpc-dialog-title" data-c-dialog>
+    <form method="dialog" class="mpc-form" data-c-form novalidate>
+      <header class="mpc-form__head">
+        <h2 id="mpc-dialog-title">Editar perfil</h2>
+        <button type="button" class="mpc-close" aria-label="Cerrar" data-c-cancel>×</button>
+      </header>
+
+      <fieldset class="mpc-photo">
+        <legend class="mp-label">Foto de perfil</legend>
+        <span class="mpc-photo__preview" data-c-preview></span>
+        <div class="mpc-photo__controls">
+          <label class="btn btn--secondary btn--sm mpc-upload">
+            Subir foto
+            <input type="file" accept="image/png,image/jpeg,image/webp" data-c-file>
+          </label>
+          <div class="mpc-swatches" role="radiogroup" aria-label="O usa tus iniciales con un color">
+            {% for color in community.avatarColors %}
+            <button type="button" class="mpc-swatch" role="radio" aria-checked="false" aria-label="Iniciales en color {{ loop.index }}" style="--swatch: {{ color }}" data-c-color="{{ color }}"></button>
+            {% endfor %}
+          </div>
+          <button type="button" class="mpc-link" data-c-photo-clear>Quitar foto</button>
+          <p class="mp-hint mpc-photo__hint">JPG, PNG o WebP. Se recorta en cuadrado y se reduce antes de guardarse.</p>
+        </div>
+      </fieldset>
+
+      <label class="mpc-field">
+        <span class="mp-label">Nombre visible</span>
+        <input class="input" name="nombre" maxlength="{{ community.limits.name }}" autocomplete="name" data-c-input="nombre">
+      </label>
+
+      <label class="mpc-field">
+        <span class="mp-label">Profesión</span>
+        <input class="input" name="profesion" maxlength="{{ community.limits.profession }}" list="mpc-professions" placeholder="Ej. Ingeniería, Estudiante, Finanzas" autocomplete="organization-title" data-c-input="profesion">
+        <datalist id="mpc-professions">
+          {% for item in professions %}<option value="{{ item }}">{% endfor %}
+        </datalist>
+      </label>
+
+      <label class="mpc-field">
+        <span class="mp-label">Biografía / enfoque</span>
+        <textarea class="input mpc-textarea" name="bio" rows="3" maxlength="{{ community.limits.bio }}" placeholder="Qué te interesa del mercado y cómo inviertes o aprendes" data-c-input="bio"></textarea>
+        <span class="mpc-counter" data-c-bio-count></span>
+      </label>
+
+      <label class="mpc-toggle">
+        <input type="checkbox" name="visible" data-c-input="visible">
+        <span class="mpc-toggle__track" aria-hidden="true"></span>
+        <span>
+          <strong>Perfil visible en la comunidad</strong>
+          <span class="mp-hint">Otros miembros verán tu nombre, foto, profesión, bio, tus activos y tus votos, y podrán seguirte. Si lo apagas, tus notas aparecen como «Miembro de la comunidad».</span>
+        </span>
+      </label>
+
+      <p class="mpc-status" role="status" data-c-form-status></p>
+      <footer class="mpc-form__actions">
+        <button type="button" class="btn btn--secondary btn--sm" data-c-cancel>Cancelar</button>
+        <button type="submit" class="btn btn--primary btn--sm" data-c-save>Guardar perfil</button>
+      </footer>
+    </form>
+  </dialog>
 </div>
 
 <script id="mi-perfil-data" type="application/json">{{ payload|tojson }}</script>
+<script id="mi-perfil-comunidad" type="application/json">{{ community|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('mi_perfil.static', filename='mi_perfil.js') }}"></script>
+<script src="{{ url_for('personas.static', filename='community-shared.js') }}"></script>
+<script src="{{ url_for('mi_perfil.static', filename='comunidad.js') }}"></script>
 {% endblock %}

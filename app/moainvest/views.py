@@ -13,6 +13,7 @@ from flask import Blueprint, abort, redirect, render_template, url_for
 
 from app.core.navigation import default_app
 from app.core.watchlists import WATCHLISTS, Watchlist, get_watchlist
+from app.graficador.indicators import INDICATORS
 from app.personas.content import TEAMS
 
 bp = Blueprint(
@@ -55,7 +56,13 @@ def chart_url(watchlist: Watchlist, ticker: str | None = None) -> str:
 def resumen():
     overview = get_watchlist("overview") or WATCHLISTS[0]
     return render_template(
-        "moainvest/resumen.html", watchlist=overview, watchlists=WATCHLISTS, chart_url=chart_url, teams=TEAMS
+        "moainvest/resumen.html",
+        watchlist=overview,
+        watchlists=WATCHLISTS,
+        chart_url=chart_url,
+        teams=TEAMS,
+        # La narrativa del inicio cita el número real de indicadores del Graficador.
+        indicator_count=len(INDICATORS),
     )
 
 

@@ -45,5 +45,5 @@
 {% macro nav_link(endpoint, label, extra="") -%}
 {%- set href = url_for(endpoint) -%}
 {%- set active = (request.path == href) if endpoint == "moainvest.resumen" else request.path.startswith(href) -%}
-<a href="{{ href }}"{% if active %} aria-current="page"{% endif %} class="transition-colors hover:text-ink {{ 'text-ink' if active else 'text-muted' }}{% if extra %} {{ extra }}{% endif %}">{{ label }}</a>
+<a href="{{ href }}"{% if active %} aria-current="page"{% endif %} class="underline-offset-[0.45em] transition-[color,text-decoration-color] duration-300 hover:text-ink {{ 'text-ink underline decoration-brand decoration-2' if active else 'text-muted decoration-transparent' }}{% if extra %} {{ extra }}{% endif %}">{{ label }}</a>
 {%- endmacro %}

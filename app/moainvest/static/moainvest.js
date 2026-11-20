@@ -71,6 +71,13 @@
     return el;
   }
 
+  /** Destello breve de un precio que cambia entre dos sondeos (CSS [data-flash]). */
+  function flash(el, direction) {
+    el.removeAttribute("data-flash");
+    void el.offsetWidth; // reinicia la animación aunque se repita la dirección
+    el.setAttribute("data-flash", direction);
+  }
+
   function getJSON(url) {
     return fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
   }
@@ -179,12 +186,6 @@
         setText(card, '[data-field="change"]', change);
       }
 
-      function flash(el, direction) {
-        el.removeAttribute("data-flash");
-        void el.offsetWidth; // reinicia la animación aunque se repita la dirección
-        el.setAttribute("data-flash", direction);
-      }
-
       /** Tarjetas que nunca recibieron precio: se quita el esqueleto de carga. */
       function markUnavailable() {
         root.querySelectorAll("[data-quote]:not([data-loaded])").forEach((card) => {
@@ -202,14 +203,17 @@
               if (q) fillCard(card, q);
             });
             markUnavailable();
-            if (updated) updated.textContent = "· " + fmtTime(new Date());
+            const at = new Date();
+            if (updated) updated.textContent = "· " + fmtTime(at);
             setState("ok");
+            root.dispatchEvent(new CustomEvent("moai:quotes", { detail: { quotes: quotes, at: at } }));
           })
           // Se mantienen en pantalla los últimos valores.
           .catch(() => {
             if (failed) failed.hidden = false;
             markUnavailable();
             setState("error");
+            root.dispatchEvent(new CustomEvent("moai:quotes-error"));
           }),
       );
     });
@@ -220,7 +224,10 @@
   const monthCandles = {};
   function getMonthCandles(ticker) {
     if (!monthCandles[ticker]) {
-      monthCandles[ticker] = getJSON("/api/candles/" + encodeURIComponent(ticker) + "?range=1mo&interval=1d");
+      monthCandles[ticker] = getJSON("/api/candles/" + encodeURIComponent(ticker) + "?range=1mo&interval=1d").catch((err) => {
+        delete monthCandles[ticker];
+        throw err;
+      });
     }
     return monthCandles[ticker];
   }
@@ -312,6 +319,240 @@
         toggle.querySelector('[data-tape-icon="play"]').hidden = !paused;
       });
     });
+  }
+
+  // ───────────────────────── Mapa de calor ─────────────────────────
+  // Todos los bloques miden lo mismo; el color codifica el signo y tres niveles
+  // de |variación| (< 0,5 %, < 2 %, ≥ 2 %), como explica la leyenda.
+  const HEAT_TONES = {
+    none: "bg-mist text-ink border-line",
+    up1: "bg-up-soft text-ink border-up/25",
+    up2: "bg-up/25 text-ink border-up/30",
+    up3: "bg-up text-white border-up",
+    down1: "bg-brand-soft text-ink border-brand/25",
+    down2: "bg-brand/25 text-ink border-brand/30",
+    down3: "bg-brand text-white border-brand",
+  };
+
+  function heatLevel(pct) {
+    if (pct === null || pct === undefined || !isFinite(pct)) return "none";
+    const size = Math.abs(pct);
+    return (pct >= 0 ? "up" : "down") + (size < 0.5 ? 1 : size < 2 ? 2 : 3);
+  }
+
+  function paintHeatmap(root, quotes) {
+    root.querySelectorAll("[data-heat]").forEach((tile) => {
+      const q = quotes[tile.dataset.heat];
+      const pct = q && q.price !== null && q.price !== undefined ? q.change_percent : null;
+      setText(tile, "[data-heat-value]", pct === null || pct === undefined ? "Sin datos" : fmtPercent(pct));
+      const level = heatLevel(pct);
+      // Solo se cambia el color si cambia el nivel: nada de parpadeos en cada sondeo.
+      if (tile.dataset.level !== level) {
+        setTone(tile, HEAT_TONES, level);
+        tile.dataset.level = level;
+      }
+    });
+  }
+
+  // ───────────────────────── Ventana de mercado + constelación ─────────────────────────
+  /**
+   * Un único activo seleccionado, compartido por la constelación (radiogroup),
+   * el mapa de calor, las tarjetas y la ventana. Precio y variación salen del
+   * sondeo común (evento moai:quotes); el gráfico, de /api/candles con la
+   * misma caché que las sparklines. Cada carga lleva un número: si el usuario
+   * cambia de activo antes de que llegue la respuesta, la antigua se descarta.
+   */
+  function initMarketWindow() {
+    const win = document.querySelector("[data-market-window]");
+    const root = win && win.closest("[data-watchlist-quotes]");
+    if (!win || !root) return;
+    const radios = Array.from(win.querySelectorAll("[data-select]"));
+    if (!radios.length) return;
+    const tiles = Array.from(root.querySelectorAll("[data-heat]"));
+    const cards = Array.from(root.querySelectorAll("[data-card]"));
+    const chartBox = win.querySelector("[data-window-chart]");
+    const selLink = root.querySelector("[data-selected-link]");
+    const selName = root.querySelector("[data-selected-name]");
+    const field = (key) => win.querySelector('[data-window="' + key + '"]');
+    const meta = (ticker) => radios.find((r) => r.dataset.select === ticker);
+
+    let selected = (radios.find((r) => r.getAttribute("aria-checked") === "true") || radios[0]).dataset.select;
+    let quotes = null;
+    let lastAt = null;
+    let failed = false;
+    let seq = 0;
+
+    function paintQuote(flashChange) {
+      const ageEl = field("age");
+      if (ageEl) ageEl.textContent = lastAt ? (failed ? "Datos de las " : "Actualizado ") + fmtTime(lastAt) : failed ? "Sin conexión" : "";
+      if (!quotes) {
+        if (failed) {
+          setText(win, '[data-window="price"]', "—");
+          setText(win, '[data-window="change"]', "No pudimos cargar el precio. Se reintentará en unos segundos.");
+        }
+        return;
+      }
+      const q = quotes[selected];
+      const hasPrice = !!q && q.price !== null && q.price !== undefined;
+      const priceEl = setText(win, '[data-window="price"]', hasPrice ? fmtPrice(q.price) : "—");
+      if (flashChange && priceEl && hasPrice && flashChange !== q.price) flash(priceEl, q.price > flashChange ? "up" : "down");
+      setText(win, '[data-window="currency"]', hasPrice ? q.currency || "" : "");
+      const pct = hasPrice ? q.change_percent : null;
+      const pill = setText(win, '[data-window="pill"]', fmtPercent(pct));
+      if (pill) setTone(pill, PILL_TONES, toneOf(pct));
+      let change = "Sin datos en Yahoo Finance";
+      if (hasPrice) change = q.change === null || q.change === undefined ? "Variación no disponible" : fmtSigned(q.change) + " vs. cierre anterior";
+      setText(win, '[data-window="change"]', change);
+    }
+
+    function loadChart() {
+      const id = ++seq;
+      chartBox.setAttribute("data-loading", "");
+      getMonthCandles(selected)
+        .then((candles) => id === seq && renderSparkline(chartBox, Array.isArray(candles) ? candles : []))
+        .catch(() => id === seq && renderSparkline(chartBox, []))
+        .finally(() => id === seq && chartBox.removeAttribute("data-loading"));
+    }
+
+    function select(ticker, announce) {
+      const m = meta(ticker);
+      if (!m) return;
+      const changed = ticker !== selected;
+      selected = ticker;
+      radios.forEach((r) => {
+        const on = r === m;
+        r.setAttribute("aria-checked", String(on));
+        r.tabIndex = on ? 0 : -1;
+      });
+      tiles.forEach((t) => t.setAttribute("aria-pressed", String(t.dataset.heat === ticker)));
+      cards.forEach((c) => c.toggleAttribute("data-selected", c.dataset.quote === ticker));
+      setText(win, '[data-window="name"]', m.dataset.name);
+      setText(win, '[data-window="kind"]', m.dataset.kind);
+      setText(win, '[data-window="ticker"]', ticker);
+      field("link").href = m.dataset.href;
+      if (selLink) selLink.href = m.dataset.href;
+      if (selName) selName.textContent = m.dataset.name;
+      chartBox.dataset.sparklineLabel = m.dataset.name;
+      paintQuote();
+      if (changed || !chartBox.querySelector("svg")) loadChart();
+      if (announce) {
+        const q = quotes && quotes[ticker];
+        const price = q && q.price !== null && q.price !== undefined ? ": " + fmtPrice(q.price) + " " + (q.currency || "") + ", " + fmtPercent(q.change_percent) : "";
+        setText(win, '[data-window="announce"]', m.dataset.name + " en la ventana de mercado" + price);
+      }
+    }
+
+    radios.forEach((r, i) => {
+      r.addEventListener("click", () => select(r.dataset.select, true));
+      // Patrón de radiogroup: las flechas mueven foco y selección; Inicio/Fin van a los extremos.
+      r.addEventListener("keydown", (e) => {
+        const moves = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+        let next = null;
+        if (e.key in moves) next = (i + moves[e.key] + radios.length) % radios.length;
+        else if (e.key === "Home") next = 0;
+        else if (e.key === "End") next = radios.length - 1;
+        if (next === null) return;
+        e.preventDefault();
+        radios[next].focus();
+        select(radios[next].dataset.select, true);
+      });
+    });
+    tiles.forEach((t) => t.addEventListener("click", () => select(t.dataset.heat, true)));
+
+    root.addEventListener("moai:quotes", (e) => {
+      const before = quotes && quotes[selected] ? quotes[selected].price : null;
+      quotes = e.detail.quotes;
+      lastAt = e.detail.at;
+      failed = false;
+      paintQuote(before);
+      paintHeatmap(root, quotes);
+    });
+    root.addEventListener("moai:quotes-error", () => {
+      failed = true;
+      paintQuote();
+    });
+
+    select(selected, false);
+  }
+
+  // ───────────────────────── MOAI SIGNAL (apertura) ─────────────────────────
+  /**
+   * La apertura la decide el script del <head> (html.intro-play) y la anima el
+   * CSS, que también la cierra solo. Aquí solo se permite omitirla (botón,
+   * Escape, cualquier tecla, clic, rueda o toque) y se limpia al terminar.
+   */
+  function initIntro() {
+    const html = document.documentElement;
+    const intro = document.querySelector("[data-intro]");
+    if (!intro || !html.classList.contains("intro-play")) return;
+    let done = false;
+    const events = ["keydown", "wheel", "touchstart"];
+
+    function finish() {
+      html.classList.remove("intro-play", "intro-skip");
+      if (intro.contains(document.activeElement)) document.activeElement.blur();
+    }
+    function skip() {
+      if (done) return;
+      done = true;
+      events.forEach((type) => window.removeEventListener(type, skip));
+      html.classList.add("intro-skip");
+      setTimeout(finish, 320);
+    }
+
+    intro.querySelector("[data-intro-skip]").addEventListener("click", skip);
+    intro.addEventListener("pointerdown", skip);
+    events.forEach((type) => window.addEventListener(type, skip, { passive: true }));
+    intro.addEventListener("animationend", (e) => {
+      if (e.target !== intro || done) return;
+      done = true;
+      events.forEach((type) => window.removeEventListener(type, skip));
+      finish();
+    });
+  }
+
+  // ───────────────────────── Profundidad (parallax sutil) ─────────────────────────
+  /** Capas [data-depth] del hero que siguen al cursor unos píxeles. Solo con ratón,
+   *  en escritorio, sin movimiento reducido ni ahorro de datos. */
+  function initDepth() {
+    const hero = document.querySelector("[data-depth-root]");
+    if (!hero || !window.matchMedia) return;
+    const capable =
+      window.matchMedia("(pointer: fine) and (min-width: 1024px)").matches &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
+      !(navigator.connection && navigator.connection.saveData) &&
+      (navigator.hardwareConcurrency || 4) > 2;
+    if (!capable) return;
+    const layers = Array.from(hero.querySelectorAll("[data-depth]"));
+    let x = 0;
+    let y = 0;
+    let frame = 0;
+    function apply() {
+      frame = 0;
+      layers.forEach((layer) => {
+        const depth = Number(layer.dataset.depth) || 0;
+        layer.style.translate = (x * depth).toFixed(1) + "px " + (y * depth).toFixed(1) + "px";
+      });
+    }
+    function queue() {
+      if (!frame) frame = requestAnimationFrame(apply);
+    }
+    hero.addEventListener("pointermove", (e) => {
+      const box = hero.getBoundingClientRect();
+      x = (e.clientX - box.left) / box.width - 0.5;
+      y = (e.clientY - box.top) / box.height - 0.5;
+      queue();
+    });
+    hero.addEventListener("pointerleave", () => {
+      x = 0;
+      y = 0;
+      queue();
+    });
+  }
+
+  /** Con la pestaña oculta se pausan las animaciones infinitas (CSS html.tab-hidden). */
+  function initTabVisibility() {
+    document.addEventListener("visibilitychange", () => document.documentElement.classList.toggle("tab-hidden", document.hidden));
   }
 
   // ───────────────────────── Gráfica de velas ─────────────────────────
@@ -457,10 +698,15 @@
     });
   }
 
+  initIntro();
+  initTabVisibility();
   initReveal();
   initMobileNav();
   initTape();
+  // La ventana se suscribe antes de que el sondeo emita su primer evento.
+  initMarketWindow();
   initWatchlistQuotes();
+  initDepth();
   initSparklines();
   initChartWorkspace();
   initReportBuilder();

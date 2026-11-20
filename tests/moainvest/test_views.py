@@ -36,19 +36,86 @@ def test_resumen_hero_has_single_h1_and_cta_to_app(client):
     assert 'href="#mercado"' in page and 'id="mercado"' in page
 
 
-def test_resumen_hero_features_first_symbol_with_live_hooks(client):
+def _market_window(page: str) -> str:
+    window = re.search(r"<article data-market-window.*?</article>", page, re.S)
+    assert window, "falta la ventana de mercado"
+    return window.group(0)
+
+
+def test_market_window_starts_on_first_symbol_without_invented_figures(client):
     page = client.get("/").get_data(as_text=True)
     first = get_watchlist("overview").symbols[0]
-    hero = re.search(r'<article aria-labelledby="destacado-title".*?</article>', page, re.S)
-    assert hero, "falta el panel destacado del hero"
-    hero = hero.group(0)
-    assert f'data-quote="{first.ticker}"' in hero
-    assert f'data-sparkline="{first.ticker}"' in hero
+    window = _market_window(page)
+    assert "data-spark-scope" in window and "data-window-chart" in window
+    assert f'data-window="link" href="/graficas/overview/%5EGSPC"' in window
+    assert f'data-window="name" class="mt-1 truncate text-xl font-semibold tracking-tight">{html.escape(first.display_name)}<' in window
     for stat in ("min", "max", "change"):
-        assert f'data-spark-stat="{stat}"' in hero
+        assert f'data-spark-stat="{stat}"' in window
+    # La ventana no lleva [data-quote]: la rellena el JS con el activo elegido.
+    assert "data-quote=" not in window
     # Sin datos inventados: los valores los rellena el JS desde la API.
-    visible = re.sub(r"<[^>]+>", " ", hero)
+    visible = re.sub(r"<[^>]+>", " ", window)
     assert not re.search(r"\d+,\d{2}", visible)
+    assert 'data-window="announce" role="status"' in window
+
+
+def test_constellation_is_a_keyboard_radiogroup_of_real_symbols(app, client):
+    page = client.get("/").get_data(as_text=True)
+    window = _market_window(page)
+    overview = get_watchlist("overview")
+    assert 'role="radiogroup"' in window
+    radios = re.findall(r'<button type="button" role="radio" aria-checked="(\w+)" tabindex="(-?\d)"\s+data-select="([^"]+)"', window)
+    assert [t for _, _, t in radios] == [s.ticker for s in overview.symbols]
+    # Un único activo marcado y solo él en el orden de tabulación (roving tabindex).
+    assert [(c, i) for c, i, _ in radios].count(("true", "0")) == 1
+    assert all(i == "-1" for c, i, _ in radios if c == "false")
+    with app.test_request_context():
+        for s in overview.symbols:
+            href = url_for("moainvest.grafica", slug="overview", ticker=s.ticker)
+            assert f'data-select="{s.ticker}"' in window and f'data-href="{href}"' in window
+    assert "no representa correlaciones" in window
+
+
+def test_heatmap_has_one_comparable_tile_per_symbol(client):
+    page = client.get("/").get_data(as_text=True)
+    overview = get_watchlist("overview")
+    tiles = re.findall(r'<button type="button" data-heat="([^"]+)" aria-pressed="(\w+)"', page)
+    assert [t for t, _ in tiles] == [s.ticker for s in overview.symbols]
+    assert [p for _, p in tiles].count("true") == 1
+    assert "data-selected-link" in page
+    assert "Todos los bloques miden lo mismo" in page
+    assert "Leyenda:" in page
+
+
+def test_intro_plays_once_per_session_and_can_be_skipped(client):
+    page = client.get("/").get_data(as_text=True)
+    head = page.split("</head>")[0]
+    # Decide antes de pintar, una vez por sesión y nunca con movimiento reducido.
+    assert 'sessionStorage.getItem("moai:intro")' in head
+    assert "prefers-reduced-motion: reduce" in head
+    assert 'classList.add("intro-play")' in head
+    assert 'data-intro class="signal-intro' in page
+    assert "data-intro-skip" in page and "Omitir introducción" in page
+    # El logotipo oficial, no una reconstrucción.
+    assert "logo/moainvest-compact.png" in re.search(r"<div data-intro.*?</button>", page, re.S).group(0)
+
+
+def test_intro_only_on_home(client):
+    for path in ("/informe", "/graficas/overview/%5EGSPC"):
+        page = client.get(path).get_data(as_text=True)
+        assert "moai:intro" not in page and "data-intro" not in page
+
+
+def test_narrative_has_four_stages_with_real_capabilities(client):
+    from app.graficador.indicators import INDICATORS
+
+    page = client.get("/").get_data(as_text=True)
+    story = re.search(r'<section id="como-funciona".*', page, re.S).group(0)
+    for stage in ("Mercado", "Datos", "Análisis", "Herramientas"):
+        assert f'<h3 class="mt-4 text-lg font-semibold tracking-tight">{stage}</h3>' in story
+    assert f"{len(INDICATORS)} indicadores de TA-Lib" in story
+    assert "/api/candles" in story
+    assert "no representan datos" in story
 
 
 def test_resumen_quote_states_are_accessible(client):
@@ -230,7 +297,9 @@ def test_old_chart_urls_are_gone(client):
 def test_compiled_css_includes_classes_used_by_templates_and_js():
     css = (STATIC / "moainvest.css").read_text()
     # Clases que solo aparecen en moainvest.js (tonos que se ponen en tiempo de ejecución).
-    for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30", ".bg-up{", ".border-dashed"):
+    for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30", ".bg-up{", ".border-dashed",
+                r"bg-brand\/25", r"bg-up\/25", r"border-up\/30", r"border-brand\/25"):
         assert cls in css, cls
-    for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e", ".tape-track", ".spark-reveal", "tape-scroll"):
+    for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e", ".tape-track", ".spark-reveal", "tape-scroll",
+                ".signal-intro{display:none}", "intro-out", ".sig-logo", "html.tab-hidden"):
         assert cls in css, cls

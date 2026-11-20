@@ -150,12 +150,13 @@ def test_app_layout_loads_geist_and_moainvest_brand(client, url):
     assert 'src="/static/moainvest/logo/moainvest-compact.png"' in _topbar(page)
 
 
-def test_topbar_links_to_home_and_marks_app_as_active(client):
+def test_topbar_has_logo_to_home_and_a_free_slot(client):
     topbar = _topbar(client.get("/app/analisis-varianza/").get_data(as_text=True))
-    # El logo vuelve a Inicio y el navbar es el mismo del sitio rojo (moainvest_nav).
+    # El logo vuelve a Inicio; el navbar del sitio rojo (Inicio / App) no se repite
+    # y su sitio queda libre (reservado para el selector global de ticker).
     assert '<a class="topbar__brand" href="/"' in topbar
-    assert '<a class="topbar__link" href="/">Inicio</a>' in topbar
-    assert '<a class="topbar__link is-active" href="/app/" aria-current="page">App</a>' in topbar
+    assert 'id="topbar-slot"' in topbar
+    assert "topbar__link" not in topbar and ">Inicio</a>" not in topbar
     # Botón del cajón del sidebar en móvil.
     assert 'id="sidebar-open"' in topbar and 'aria-controls="sidebar"' in topbar
 

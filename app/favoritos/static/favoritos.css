@@ -140,19 +140,54 @@
   color: var(--down);
 }
 
+/* Acciones de la fila: iconos de core/_asset_actions.html y «Quitar». */
 .activos__actions {
   text-align: right;
 }
 
-.activos__actions a {
-  margin-left: 0.6rem;
-  font-size: 0.8rem;
-  color: var(--ink);
-  text-decoration: none;
-  border-bottom: 1px solid var(--line);
+.activos__actions > .asset-actions,
+.activos__actions > form {
+  display: inline-flex;
+  vertical-align: middle;
 }
 
-.activos__actions a:hover {
+.activos__actions > .asset-actions {
+  justify-content: flex-end;
+}
+
+/* Analizar todos los activos a la vez (Varianza y Pyportfolio). */
+.activos__bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+
+.activos__bulk-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.activos__bulk a {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.activos__bulk a:hover {
   border-color: var(--brand);
   color: var(--brand);
 }
@@ -205,11 +240,7 @@
   color: var(--down);
 }
 
-.activos__actions form {
-  display: inline;
-}
-
-.activos__actions button {
+.activos__actions > form button {
   margin-left: 0.6rem;
   padding: 0;
   font: inherit;
@@ -221,7 +252,7 @@
   cursor: pointer;
 }
 
-.activos__actions button:hover {
+.activos__actions > form button:hover {
   border-color: var(--down);
   color: var(--down);
 }

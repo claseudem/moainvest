@@ -32,6 +32,9 @@
 
 .graficador__heading { min-width: 0; }
 
+/* Acciones del activo (core/_asset_actions.html): Quant, Varianza, Retornos, Guardar. */
+.graficador__actions { margin-top: 0.9rem; }
+
 .graficador__eyebrow {
   margin: 0;
   font-family: var(--font-mono);

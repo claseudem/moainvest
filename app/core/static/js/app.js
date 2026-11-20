@@ -3,7 +3,8 @@
  * - en escritorio, colapsar y expandir el sidebar, recordando la preferencia
  *   en localStorage;
  * - en móvil, abrir y cerrar el sidebar como cajón desde el botón de menú de
- *   la barra superior (se cierra con el fondo, con Escape o al navegar).
+ *   la barra superior (se cierra con el fondo, con Escape o al navegar);
+ * - cerrar los avisos flash (botón ✕, o solos a los 6 s si no son errores).
  */
 (function () {
   "use strict";
@@ -72,5 +73,21 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", initSidebar);
+  function initFlashes() {
+    const box = document.querySelector("[data-app-flashes]");
+    if (!box) return;
+    const dismiss = (flash) => {
+      flash.remove();
+      if (!box.children.length) box.remove();
+    };
+    box.querySelectorAll(".app-flash").forEach((flash) => {
+      flash.querySelector("[data-flash-close]").addEventListener("click", () => dismiss(flash));
+      if (flash.dataset.tone !== "error") setTimeout(() => dismiss(flash), 6000);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initSidebar();
+    initFlashes();
+  });
 })();

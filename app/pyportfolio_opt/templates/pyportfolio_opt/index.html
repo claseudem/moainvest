@@ -21,7 +21,7 @@
   <section class="card pypfopt-card" aria-labelledby="pypfopt-form-title">
     <h2 class="pypfopt-card__title" id="pypfopt-form-title">Parámetros</h2>
 
-    <form class="pypfopt-form" id="pypfopt-form" data-max-tickers="{{ max_tickers }}">
+    <form class="pypfopt-form" id="pypfopt-form" data-max-tickers="{{ max_tickers }}"{% if autorun %} data-autorun{% endif %}>
       <label class="pypfopt-field pypfopt-field--wide">
         <span class="pypfopt-field__label">Tickers (máx. {{ max_tickers }}, separados por coma)</span>
         <input type="text" id="pypfopt-tickers" class="input" value="{{ default_tickers }}"

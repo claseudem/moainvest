@@ -1,0 +1,45 @@
+{#- Acciones de un activo: saltar con un clic a su gráfica o a su análisis en
+    cualquier app de /app/, y (opcional) guardarlo en «Mis activos».
+
+    Uso:
+      {% import "core/_asset_actions.html" as aa with context %}
+      {{ aa.asset_actions("AAPL") }}                              todas, con texto
+      {{ aa.asset_actions("AAPL", skip=("chart",)) }}             sin la de la app actual
+      {{ aa.asset_actions("AAPL", compact=true) }}                solo iconos (tablas, tarjetas)
+      {{ aa.asset_actions("AAPL", favorite=false) }}              + botón «Guardar» (true: «Guardado»)
+
+    ``favorite`` es ``none`` (sin botón), ``false`` (no está guardado) o
+    ``true`` (ya guardado: el botón lo quita). El formulario vuelve a la página
+    actual (``next``). Estilos en core/static/css/asset-actions.css, que también
+    importa el Tailwind del sitio rojo (moainvest/static/src/moainvest.css). -#}
+{% import "core/icons.html" as icons %}
+
+{#- (clave, endpoint, parámetro de la URL, icono, texto) -#}
+{% set targets = [
+  ("chart", "graficador.index", "ticker", "candlestick-chart", "Gráfica"),
+  ("quant", "quant_stats.fundamentales", "ticker", "flask-conical", "Quant stats"),
+  ("varianza", "varianza.index", "ticker", "sigma", "Varianza"),
+  ("portfolio", "pyportfolio_opt.index", "tickers", "trending-up", "Retornos"),
+] %}
+
+{% macro asset_actions(ticker, skip=(), favorite=none, compact=false, extra_class="") -%}
+<div class="asset-actions{% if compact %} asset-actions--compact{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}" role="group" aria-label="Analizar {{ ticker }}">
+  {%- for key, endpoint, param, icon, label in targets if key not in skip %}
+  <a class="asset-actions__item" href="{{ url_for(endpoint, **{param: ticker}) }}" title="{{ label }} de {{ ticker }}" data-asset-action="{{ key }}">
+    {{- icons.icon(icon) -}}
+    <span class="asset-actions__label">{{ label }}</span><span class="asset-actions__sr"> de {{ ticker }}</span>
+  </a>
+  {%- endfor %}
+  {%- if favorite is not none %}
+  <form class="asset-actions__form" method="post" action="{{ url_for('favoritos.quitar' if favorite else 'favoritos.agregar') }}">
+    <input type="hidden" name="ticker" value="{{ ticker }}">
+    <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+    <button type="submit" class="asset-actions__item asset-actions__fav" aria-pressed="{{ 'true' if favorite else 'false' }}"
+            title="{{ ('Quitar ' ~ ticker ~ ' de Mis activos') if favorite else ('Guardar ' ~ ticker ~ ' en Mis activos') }}" data-asset-action="favorite">
+      {{- icons.icon("star") -}}
+      <span class="asset-actions__label">{{ "Guardado" if favorite else "Guardar" }}</span><span class="asset-actions__sr">{{ " " ~ ticker ~ (" (quitar de Mis activos)" if favorite else " en Mis activos") }}</span>
+    </button>
+  </form>
+  {%- endif %}
+</div>
+{%- endmacro %}

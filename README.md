@@ -231,7 +231,7 @@ El sitio principal, con el diseño rojo de MOAINVEST, se sirve en la raíz:
 
 | Ruta | En el navbar | Contenido |
 |---|---|---|
-| `/` | **Inicio** | **Resumen**: watchlist «Resumen» con precios en vivo y la línea del último mes |
+| `/` | **Inicio** | **Resumen**: 01 la watchlist «Resumen» en vivo (pulso «suben/bajan», sparkline y acciones del activo), 02 las herramientas del área App (Graficador destacado con buscador, Quant stats, Varianza, Pyportfolio) y 03 atajos a Gráficas, Personas y Comunidad |
 | `/app/` | **App** (y botón «Abrir app») | Redirige a la primera app del sidebar (`default_app()`) |
 | `/graficas/<watchlist>/<ticker>` | — (atajo del Resumen) | **Gráficas**: velas, rangos de 1D a Todo y precios del resto de la watchlist (`/graficas` y `/graficas/<watchlist>` redirigen al primer símbolo) |
 
@@ -464,9 +464,12 @@ Las páginas de `/app/...` usan el mismo lenguaje visual que el sitio rojo
   Google (Geist, Geist Mono, Instrument Serif), los favicons de
   `moainvest.static` y `theme-color` blanco. Arriba, una **barra superior**
   fija (`.topbar`) con el logo `moainvest/static/logo/moainvest-compact.png`
-  enlazado a Inicio y el navbar de `moainvest_nav` (Inicio / App, con App
-  activo y subrayado rojo). Bloques: `title`, `head`, `content` y `scripts`.
-- **Sidebar** (`core/sidebar.html`): blanco con borde `line`, iconos de línea
+  enlazado a Inicio y un hueco libre (`#topbar-slot`, reservado para el
+  selector global de ticker); no repite el navbar del sitio rojo. Los mensajes
+  flash de cualquier app se pintan como avisos (`.app-flash`) que se cierran
+  solos. Bloques: `title`, `head`, `content` y `scripts`.
+- **Sidebar** (`core/sidebar.html`): sin rótulos; los grupos de `App.group`
+  (herramientas / perfil y comunidad) se separan con una línea. Blanco con borde `line`, iconos de línea
   de `core/icons.html` por slug (`nav_icons`; una app sin entrada usa el emoji
   de `App.icon`) y la app activa con fondo `brand-soft`, texto `brand` y barra
   lateral roja. En escritorio se colapsa (`#sidebar-toggle`, recordado en
@@ -509,6 +512,28 @@ Las páginas de `/app/...` usan el mismo lenguaje visual que el sitio rojo
     </div>
   </div>
   ```
+
+### Acciones del activo y deep links
+
+El macro `asset_actions(ticker)` de `app/core/templates/core/_asset_actions.html`
+lleva de cualquier activo a sus herramientas con un clic: **Gráfica**
+(`/app/graficador/?ticker=`), **Quant stats**, **Varianza**
+(`/app/analisis-varianza/?ticker=`) y **Retornos** (`/app/pyportfolio-opt/?tickers=`),
+y opcionalmente **Guardar** en Mis activos (`favorite=true/false`; el formulario
+vuelve a la página actual con `next`, solo rutas locales).
+
+```jinja
+{% import "core/_asset_actions.html" as aa with context %}
+{{ aa.asset_actions("AAPL", skip=("chart",), compact=true) }}
+```
+
+Se usa en las tarjetas del Inicio, la cabecera del Graficador y de Quant stats
+y las filas de Mis activos (que además ofrece analizar todos sus activos a la
+vez en Varianza y Pyportfolio). Varianza y Pyportfolio leen `?ticker=` /
+`?tickers=` (validados con `app/core/tickers.py`), rellenan el formulario y
+lanzan el análisis al cargar. El CSS (`core/static/css/asset-actions.css`) es
+plano y lo comparten los dos layouts: el área App lo enlaza y el Tailwind del
+sitio rojo lo importa (recompila con `build-css` si lo cambias).
 
 ### Estética de Quant stats
 

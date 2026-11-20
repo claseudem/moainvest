@@ -1,5 +1,6 @@
 {% extends "core/base.html" %}
 {% import "core/icons.html" as icons %}
+{% import "core/_asset_actions.html" as aa with context %}
 
 {% block title %}Mis activos · {{ site_name }}{% endblock %}
 
@@ -18,9 +19,7 @@
     </p>
   </header>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% for category, message in messages %}<p class="activos__flash" data-tone="{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</p>{% endfor %}
-  {% endwith %}
+  {#- Los flash de agregar/quitar los pinta core/base.html. -#}
   {% if error %}<p class="activos__flash" data-tone="error" role="alert">{{ error }}</p>{% endif %}
 
   {% if not current_user %}
@@ -52,6 +51,14 @@
   </div>
 
   {% if favorites %}
+  {%- set tickers = favorites | map(attribute="ticker") | list %}
+  {% if tickers | length > 1 %}
+  <div class="activos__bulk" role="group" aria-label="Analizar mis activos">
+    <span class="activos__bulk-label">Analizar todos a la vez</span>
+    <a href="{{ url_for('varianza.index', tickers=tickers[:max_volatility] | join(',')) }}">Volatilidad{% if tickers | length > max_volatility %} (primeros {{ max_volatility }}){% endif %}</a>
+    <a href="{{ url_for('pyportfolio_opt.index', tickers=tickers[:max_portfolio] | join(',')) }}">Retornos esperados{% if tickers | length > max_portfolio %} (primeros {{ max_portfolio }}){% endif %}</a>
+  </div>
+  {% endif %}
   <div class="activos__table-wrap">
     <table class="activos__table" id="activos-table">
       <thead>
@@ -74,8 +81,8 @@
           <td class="is-num" data-field="price">…</td>
           <td class="is-num"><span class="activos__pill" data-field="change" data-tone="none">…</span></td>
           <td class="activos__actions">
-            <a href="{{ url_for('graficador.index', ticker=f.ticker) }}" title="Gráfica de {{ f.ticker }}">Gráfica</a>
-            <a href="{{ url_for('quant_stats.fundamentales', ticker=f.ticker) }}" title="Quant stats de {{ f.ticker }}">Quant</a>
+            {#- El ticker ya enlaza a la gráfica: aquí, el resto de herramientas. -#}
+            {{ aa.asset_actions(f.ticker, skip=("chart",), compact=true) }}
             <form method="post" action="{{ url_for('favoritos.quitar') }}">
               <input type="hidden" name="ticker" value="{{ f.ticker }}">
               <button type="submit" aria-label="Quitar {{ f.ticker }}">Quitar</button>

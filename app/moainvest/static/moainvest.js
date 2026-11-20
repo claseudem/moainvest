@@ -109,18 +109,57 @@
   }
 
   // ───────────────────────── Precios de una watchlist ─────────────────────────
+  const PULSE_TONES = { live: "bg-up", off: "bg-muted", error: "bg-brand" };
+
+  /** Pulso del mercado ([data-market-pulse]): estado, cuántos suben/bajan y barra de amplitud. */
+  function paintPulse(root, quotes, ok) {
+    const pulse = root.querySelector("[data-market-pulse]");
+    if (!pulse) return;
+    const dot = pulse.querySelector('[data-pulse="dot"]');
+    const ping = pulse.querySelector('[data-pulse="ping"]');
+    [dot, ping].forEach((el) => el && setTone(el, PULSE_TONES, ok ? "live" : "error"));
+    if (ping) ping.hidden = !ok;
+    if (!ok) {
+      setText(pulse, '[data-pulse="status"]', "Sin conexión");
+      return;
+    }
+    const changes = Object.values(quotes)
+      .map((q) => q && q.change_percent)
+      .filter((v) => v !== null && v !== undefined);
+    const up = changes.filter((v) => v >= 0).length;
+    const down = changes.length - up;
+    const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    setText(pulse, '[data-pulse="status"]', "En vivo · " + time);
+    setText(pulse, '[data-pulse="up"]', String(up));
+    setText(pulse, '[data-pulse="down"]', String(down));
+    const bar = pulse.querySelector('[data-pulse="bar"]');
+    if (bar && changes.length) bar.style.width = ((up / changes.length) * 100).toFixed(0) + "%";
+  }
+
+  /** Destello verde/rojo en el precio cuando cambia respecto al refresco anterior. */
+  function flashTick(el, previous, current) {
+    if (!el || previous === undefined || previous === current) return;
+    el.classList.remove("tick-up", "tick-down");
+    void el.offsetWidth; // reinicia la animación
+    el.classList.add(current > previous ? "tick-up" : "tick-down");
+  }
+
   /** Rellena cada [data-quote="TICKER"] con su precio; se refresca cada 15 s. */
   function initWatchlistQuotes() {
     document.querySelectorAll("[data-watchlist-quotes]").forEach((root) => {
       const slug = root.dataset.watchlistQuotes;
       const failed = root.querySelector("[data-quotes-failed]");
+      const lastPrice = {};
       poll(() =>
         getJSON("/api/watchlist/" + encodeURIComponent(slug) + "/quotes")
           .then((quotes) => {
             if (failed) failed.hidden = true;
+            paintPulse(root, quotes, true);
             root.querySelectorAll("[data-quote]").forEach((card) => {
               const q = quotes[card.dataset.quote];
               if (!q) return;
+              flashTick(card.querySelector('[data-field="price"]'), lastPrice[card.dataset.quote], q.price);
+              lastPrice[card.dataset.quote] = q.price;
               setText(card, '[data-field="price"]', fmtPrice(q.price));
               setText(card, '[data-field="currency"]', q.currency || "");
               const pill = setText(card, '[data-field="change-pill"]', fmtPercent(q.change_percent));
@@ -130,7 +169,10 @@
             });
           })
           // Se mantienen en pantalla los últimos valores.
-          .catch(() => failed && (failed.hidden = false)),
+          .catch(() => {
+            if (failed) failed.hidden = false;
+            paintPulse(root, {}, false);
+          }),
       );
     });
   }

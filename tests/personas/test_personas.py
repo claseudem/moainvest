@@ -106,11 +106,13 @@ def test_legacy_personas_url_redirects_into_the_app(client):
     assert response.headers["Location"].endswith("/app/personas/")
 
 
-def test_sidebar_groups_tools_and_new_sections(client):
+def test_sidebar_separates_tools_from_new_sections(client):
     page = client.get("/app/personas/").get_data(as_text=True)
-    assert '<p class="sidebar__group" role="presentation">Herramientas</p>' in page
-    assert '<p class="sidebar__group" role="presentation">Nuevas secciones</p>' in page
-    assert page.index("Herramientas") < page.index("Nuevas secciones")
+    # Sin rótulos: una línea separa las herramientas de Mi perfil / Personas.
+    assert "Nuevas secciones" not in page
+    divider = page.index('<hr class="sidebar__divider">')
+    assert page.index('class="sidebar__app-name">Graficador</span>') < divider
+    assert divider < page.index('class="sidebar__app-name">Mi perfil</span>')
     assert 'class="sidebar__app-name">Mi perfil</span>' in page
     assert 'class="sidebar__app-name">Personas</span>' in page
 

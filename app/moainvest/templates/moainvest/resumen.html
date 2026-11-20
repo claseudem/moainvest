@@ -38,6 +38,100 @@
     {% endfor %}
   </ul>
 
+  {#- Radar de noticias: lo pinta initNewsRadar() de moainvest.js con /api/radar. -#}
+  <section aria-labelledby="radar-title" class="mt-16" data-news-radar="{{ watchlist.slug }}">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="eyebrow mb-3 flex items-center gap-3"><span aria-hidden="true" class="h-px w-6 bg-brand"></span>Radar de noticias</p>
+        <h2 id="radar-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+          ¿Qué está <span class="accent">moviendo</span> el mercado?
+        </h2>
+        <p class="mt-3 max-w-2xl leading-relaxed text-muted">Leemos los titulares de estos activos, medimos su tono y lo cruzamos con el precio de hoy.</p>
+      </div>
+      <p class="font-mono text-xs text-muted" data-radar-updated aria-live="polite">Cargando titulares…</p>
+    </div>
+    <p role="status" data-radar-failed hidden class="mt-6 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-deep">
+      No pudimos cargar las noticias ahora. Lo intentaremos de nuevo en unos minutos.
+    </p>
+
+    <div class="mt-8 grid gap-4 lg:grid-cols-3">
+      {#- Termómetro de sentimiento -#}
+      <article class="flex flex-col rounded-2xl border border-line bg-white p-6" aria-labelledby="pulse-title">
+        <h3 id="pulse-title" class="flex items-center gap-2 font-semibold tracking-tight">
+          {{ icons.icon("activity", extra_class="size-4 text-brand") }} Termómetro del mercado
+        </h3>
+        <div class="relative mx-auto mt-4 w-full max-w-64">
+          <svg viewBox="0 0 200 112" class="w-full" role="img" aria-labelledby="pulse-title" data-pulse-gauge>
+            <defs>
+              <linearGradient id="pulse-gradient" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0" stop-color="var(--color-brand)"/>
+                <stop offset="0.5" stop-color="var(--color-line)"/>
+                <stop offset="1" stop-color="var(--color-up)"/>
+              </linearGradient>
+            </defs>
+            <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#pulse-gradient)" stroke-width="14" stroke-linecap="round"/>
+            <g data-pulse-needle style="transform-origin: 100px 100px; transform: rotate(-90deg); transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1)">
+              <line x1="100" y1="100" x2="100" y2="34" stroke="var(--color-ink)" stroke-width="3" stroke-linecap="round"/>
+            </g>
+            <circle cx="100" cy="100" r="7" fill="var(--color-ink)"/>
+          </svg>
+          <div class="mt-1 flex justify-between font-mono text-[0.65rem] uppercase tracking-[0.12em] text-muted"><span>Miedo</span><span>Euforia</span></div>
+        </div>
+        <p class="mt-4 text-center">
+          <span class="font-mono text-4xl font-medium tabular-nums tracking-tight" data-pulse-value>—</span>
+          <span class="ml-1 text-sm text-muted">/ 100</span>
+        </p>
+        <p class="mt-1 text-center text-lg font-semibold tracking-tight" data-pulse-label>Midiendo…</p>
+        <p class="mt-2 text-center text-sm leading-relaxed text-muted" data-pulse-description></p>
+        <div class="mt-5 flex h-2 overflow-hidden rounded-full bg-mist" aria-hidden="true">
+          <span class="bg-up transition-[width] duration-700" style="width: 0" data-pulse-bar="alcista"></span>
+          <span class="bg-line transition-[width] duration-700" style="width: 0" data-pulse-bar="neutral"></span>
+          <span class="bg-brand transition-[width] duration-700" style="width: 0" data-pulse-bar="bajista"></span>
+        </div>
+        <p class="mt-2 flex justify-between font-mono text-xs text-muted" data-pulse-counts></p>
+        <details class="mt-auto pt-5 text-sm text-muted">
+          <summary class="cursor-pointer font-medium text-ink">¿Cómo se calcula?</summary>
+          <p class="mt-2 leading-relaxed">Cada titular suma +1 si es alcista, −1 si es bajista y 0 si es neutral. Los más recientes pesan más (a las 12 horas pesan la mitad). El promedio se lleva a una escala de 0 a 100, donde 50 es neutral.</p>
+        </details>
+      </article>
+
+      {#- Noticias vs. precio -#}
+      <article class="rounded-2xl border border-line bg-white p-6 lg:col-span-2" aria-labelledby="signals-title">
+        <h3 id="signals-title" class="flex items-center gap-2 font-semibold tracking-tight">
+          {{ icons.icon("chart-spline", extra_class="size-4 text-brand") }} Noticias vs. precio
+        </h3>
+        <p class="mt-1 text-sm text-muted">¿El precio de hoy le hace caso a sus noticias? Las <strong class="font-semibold text-ink">divergencias</strong> son preguntas para investigar, no señales de compra o venta.</p>
+        <ul class="mt-5 divide-y divide-line" data-radar-assets>
+          {% for s in watchlist.symbols %}
+          <li class="flex items-center gap-4 py-3">
+            <span class="h-4 w-32 animate-pulse rounded bg-mist"></span>
+            <span class="ml-auto h-4 w-20 animate-pulse rounded bg-mist"></span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+    </div>
+
+    {#- Titulares -#}
+    <div class="mt-10 flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar titulares por sentimiento">
+      {% for value, label in [("todos", "Todos"), ("alcista", "Alcistas"), ("bajista", "Bajistas"), ("neutral", "Neutrales")] %}
+      <button type="button" data-radar-filter="{{ value }}" aria-pressed="{{ 'true' if loop.first else 'false' }}"
+              class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors {{ 'bg-ink text-white' if loop.first else 'bg-mist text-ink/80 hover:bg-line' }}">
+        {{ label }} <span class="ml-1 font-mono text-xs opacity-70" data-radar-filter-count></span>
+      </button>
+      {% endfor %}
+    </div>
+    <ul class="mt-5 grid gap-4 md:grid-cols-2" data-radar-news aria-live="polite">
+      {% for _ in range(4) %}
+      <li class="h-36 animate-pulse rounded-2xl bg-mist" aria-hidden="true"></li>
+      {% endfor %}
+    </ul>
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+      <button type="button" data-radar-more hidden class="{{ ui.btn('secondary', 'sm') }}">Ver más titulares</button>
+      <p class="text-xs text-muted">Sentimiento estimado por palabras clave del titular. Es orientativo y no es una recomendación de inversión. Fuente: Yahoo Finance.</p>
+    </div>
+  </section>
+
   {% set shortcuts = [
     ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico."),
     ("quant_stats.fundamentales", "flask-conical", "Quant stats", "Rentabilidad, riesgo y peores caídas de cualquier activo, explicados en lenguaje sencillo."),

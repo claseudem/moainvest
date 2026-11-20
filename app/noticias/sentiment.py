@@ -31,13 +31,19 @@ BEARISH = (
 )
 
 
-def _count(text: str, words: tuple[str, ...]) -> int:
-    return sum(1 for w in words if re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", text))
+def _matches(text: str, words: tuple[str, ...]) -> list[str]:
+    return [w for w in words if re.search(rf"(?<![\w-]){re.escape(w)}(?![\w-])", text)]
+
+
+def signals(title: str) -> dict[str, list[str]]:
+    """Palabras del titular que lo empujan a alcista o bajista (para explicarlo en la UI)."""
+    text = title.lower()
+    return {"alcistas": _matches(text, BULLISH), "bajistas": _matches(text, BEARISH)}
 
 
 def classify(title: str) -> Sentiment:
-    text = title.lower()
-    up, down = _count(text, BULLISH), _count(text, BEARISH)
+    found = signals(title)
+    up, down = len(found["alcistas"]), len(found["bajistas"])
     if up > down:
         return "alcista"
     if down > up:

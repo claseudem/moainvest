@@ -1,0 +1,154 @@
+{% extends "moainvest/base.html" %}
+{% import "moainvest/_macros.html" as ui with context %}
+{% import "core/icons.html" as icons %}
+
+{% block title %}MOAINVEST | Mercados: índices, acciones, cripto, divisas y bonos{% endblock %}
+{% block description %}Índices, acciones, cripto, divisas, materias primas, bonos públicos y corporativos y ETF en una sola página, con datos de Yahoo Finance.{% endblock %}
+
+{#- Tarjeta de precio de un símbolo (precio, variación y línea del último mes). -#}
+{% macro quote_card(s, suffix=None) -%}
+<li>
+  <a href="{{ url_for('graficador.index', ticker=s.ticker) }}" data-quote="{{ s.ticker }}"
+     class="group block h-full rounded-2xl border border-line bg-white p-5 transition-[border-color,box-shadow,transform] duration-500 ease-out-soft hover:-translate-y-1 hover:border-ink/20 hover:shadow-[0_24px_48px_-30px_rgba(23,23,23,.4)]">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="truncate font-semibold tracking-tight">{{ s.display_name }}</p>
+        <p class="font-mono text-xs tracking-[0.1em] text-muted">{{ s.ticker }}</p>
+      </div>
+      <span data-field="change-pill" class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
+    </div>
+    <p class="mt-4 font-mono text-xl font-medium tabular-nums tracking-tight" aria-live="polite">
+      <span data-field="price"><span class="inline-block h-6 w-24 animate-pulse rounded bg-mist align-middle"></span></span>{% if suffix %}<span class="ml-1 text-xs text-muted">{{ suffix }}</span>{% else %}<span data-field="currency" class="ml-1.5 text-xs text-muted"></span>{% endif %}
+    </p>
+    <div class="mt-3" data-sparkline="{{ s.ticker }}" data-sparkline-lazy>
+      <div class="h-16 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
+    </div>
+  </a>
+</li>
+{%- endmacro %}
+
+{% block content %}
+{% call ui.page_intro("Mercados · Yahoo Finance", lead="Índices, acciones, cripto, divisas, materias primas, bonos y ETF en una sola página, cada uno con una explicación corta de qué mide.") %}
+  Todos los <span class="accent">mercados</span>, de un vistazo.
+{% endcall %}
+
+{#- Navegación por categorías: se queda fija bajo la cabecera y marca la sección visible. -#}
+<nav aria-label="Categorías de mercados" class="sticky top-16 z-40 border-b border-line bg-white/90 backdrop-blur-md" data-market-nav>
+  <ul class="mx-auto flex w-full max-w-6xl gap-2 overflow-x-auto px-5 py-3 sm:px-8 [scrollbar-width:none]">
+    {% for m in markets %}
+    <li class="shrink-0">
+      <a href="#{{ m.slug }}" data-market-link="{{ m.slug }}" class="block rounded-full px-4 py-1.5 text-sm font-medium transition-colors bg-mist text-ink/80 hover:bg-line">{{ m.name }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<div class="mx-auto w-full max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+  {#- Panorama: cuántos activos suben y los extremos del día, con todos los precios de la página. -#}
+  <section aria-labelledby="panorama-title" class="grid gap-4 rounded-2xl border border-line bg-mist p-6 sm:p-8 lg:grid-cols-3" data-market-breadth>
+    <div>
+      <p class="eyebrow mb-3">Panorama del día</p>
+      <h2 id="panorama-title" class="text-2xl font-semibold tracking-tight">
+        <span data-breadth-up class="font-mono tabular-nums">—</span> de <span data-breadth-total class="font-mono tabular-nums">—</span> activos suben hoy
+      </h2>
+      <div class="mt-4 flex h-2 overflow-hidden rounded-full bg-white" aria-hidden="true">
+        <span class="bg-up transition-[width] duration-700" style="width: 0" data-breadth-bar="up"></span>
+        <span class="bg-brand transition-[width] duration-700" style="width: 0" data-breadth-bar="down"></span>
+      </div>
+      <p class="mt-3 text-sm text-muted">Se actualiza solo cada 15 segundos con los precios de esta página.</p>
+    </div>
+    <div>
+      <p class="flex items-center gap-2 font-semibold">{{ icons.icon("trending-up", extra_class="size-4 text-up") }} Lo que más sube</p>
+      <ol class="mt-3 space-y-2 text-sm" data-breadth-list="up"><li class="h-4 w-40 animate-pulse rounded bg-white"></li></ol>
+    </div>
+    <div>
+      <p class="flex items-center gap-2 font-semibold">{{ icons.icon("trending-down", extra_class="size-4 text-brand") }} Lo que más baja</p>
+      <ol class="mt-3 space-y-2 text-sm" data-breadth-list="down"><li class="h-4 w-40 animate-pulse rounded bg-white"></li></ol>
+    </div>
+  </section>
+
+  {% for m in markets %}
+  <section id="{{ m.slug }}" aria-labelledby="{{ m.slug }}-title" class="mt-16 scroll-mt-32"
+           data-market="{{ m.slug }}" data-watchlist-quotes="{{ m.slug }}" data-quotes-url="{{ url_for('moainvest_api.market_quotes', slug=m.slug) }}">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex items-start gap-4">
+        <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-mist text-brand">{{ icons.icon(m.icon, extra_class="size-5", stroke_width=1.6) }}</span>
+        <div>
+          <h2 id="{{ m.slug }}-title" class="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">{{ m.name }}</h2>
+          <p class="mt-1 max-w-2xl leading-relaxed text-muted">{{ m.about }}</p>
+        </div>
+      </div>
+      <p class="font-mono text-xs text-muted" data-market-count aria-live="polite"></p>
+    </div>
+    <p role="status" data-quotes-failed hidden class="mt-6 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-deep">
+      No pudimos actualizar estos precios. Se muestran los últimos valores disponibles.
+    </p>
+
+    {% if m.kind == "yield" %}
+    <div class="mt-6 grid gap-4 lg:grid-cols-3">
+      <article class="rounded-2xl border border-line bg-white p-6 lg:col-span-2" data-yield-curve data-curve-url="{{ url_for('moainvest_api.yield_curve') }}">
+        <h3 class="font-semibold tracking-tight">Curva de rendimiento</h3>
+        <p class="mt-1 text-sm text-muted">Rendimiento anual (%) según el plazo del bono.</p>
+        <div class="mt-4" data-curve-chart>
+          <div class="h-48 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
+        </div>
+        <p class="mt-4 rounded-xl bg-mist px-4 py-3 text-sm" data-curve-text>Leyendo la curva…</p>
+      </article>
+      <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+        {% for s in m.symbols %}
+        <li>
+          <a href="{{ url_for('graficador.index', ticker=s.ticker) }}" data-quote="{{ s.ticker }}" class="flex items-center justify-between gap-3 rounded-2xl border border-line bg-white p-4 transition-colors hover:border-ink/20">
+            <span class="min-w-0">
+              <span class="block truncate font-semibold tracking-tight">{{ s.display_name }}</span>
+              <span class="font-mono text-xs text-muted">{{ s.ticker }}</span>
+            </span>
+            <span class="text-right">
+              <span class="block font-mono text-lg tabular-nums"><span data-field="price">—</span><span class="ml-0.5 text-xs text-muted">%</span></span>
+              <span data-field="change-tone" class="font-mono text-xs tabular-nums text-muted">—</span>
+            </span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% elif m.kind == "bonds" %}
+    <div class="mt-6 flex flex-wrap gap-2" role="group" aria-label="Filtrar {{ m.name | lower }}" data-bond-filters>
+      {% for value in ["Todos"] + m.groups|list %}
+      <button type="button" data-bond-filter="{{ value }}" aria-pressed="{{ 'true' if loop.first else 'false' }}"
+              class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors {{ 'bg-ink text-white' if loop.first else 'bg-mist text-ink/80 hover:bg-line' }}">{{ value }}</button>
+      {% endfor %}
+    </div>
+    <div class="mt-4 overflow-x-auto rounded-2xl border border-line bg-white">
+      <table class="w-full min-w-[36rem] text-left text-sm">
+        <thead class="border-b border-line font-mono text-xs uppercase tracking-[0.1em] text-muted">
+          <tr><th scope="col" class="px-5 py-3 font-normal">Fondo</th><th scope="col" class="px-5 py-3 font-normal">Tipo</th><th scope="col" class="px-5 py-3 text-right font-normal">Precio</th><th scope="col" class="px-5 py-3 text-right font-normal">Hoy</th></tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          {% for s in m.symbols %}
+          <tr data-quote="{{ s.ticker }}" data-bond-group="{{ s.group }}">
+            <td class="px-5 py-3">
+              <a href="{{ url_for('graficador.index', ticker=s.ticker) }}" class="font-semibold tracking-tight hover:text-brand">{{ s.display_name }}</a>
+              <span class="block font-mono text-xs text-muted">{{ s.ticker }}</span>
+            </td>
+            <td class="px-5 py-3"><span class="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{{ s.group }}</span></td>
+            <td class="px-5 py-3 text-right font-mono tabular-nums"><span data-field="price">—</span> <span data-field="currency" class="text-xs text-muted"></span></td>
+            <td class="px-5 py-3 text-right"><span data-field="change-pill" class="inline-flex rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-xs text-muted">Cuando suben las tasas de interés, el precio de los bonos baja (y al revés). Los de alto rendimiento se mueven más con el ánimo del mercado.</p>
+
+    {% else %}
+    <ul class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {% for s in m.symbols %}{{ quote_card(s) }}{% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  {% endfor %}
+
+  <p class="mt-16 text-xs text-muted">Datos de Yahoo Finance, con algunos minutos de retraso según el mercado. Información educativa, no es una recomendación de inversión.</p>
+</div>
+{% endblock %}

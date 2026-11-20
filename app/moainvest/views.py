@@ -1,7 +1,8 @@
 """Controlador: sitio MOAINVEST (Resumen y Gráficas), en la raíz.
 
-El navbar solo enlaza a «Inicio» (``/``) y «App» (``/app/``, que redirige a la
-primera app del sidebar); Gráficas sigue accesible desde el contenido.
+El navbar enlaza a «Inicio» (``/``), «Mercados» (``/mercados``) y «App»
+(``/app/``, que redirige a la primera app del sidebar); Gráficas sigue
+accesible desde el contenido.
 
 Plantillas Jinja2 en ``moainvest/templates/moainvest/``. Las páginas se renderizan con el
 registro de watchlists; los precios y las velas los pide el JavaScript
@@ -13,6 +14,7 @@ from flask import Blueprint, abort, redirect, render_template, url_for
 
 from app.core.navigation import default_app
 from app.core.watchlists import WATCHLISTS, Watchlist, get_watchlist
+from app.moainvest.markets import MARKETS
 from app.personas.content import TEAMS
 
 bp = Blueprint(
@@ -26,6 +28,7 @@ bp = Blueprint(
 # Navegación principal (cabecera, menú móvil y pie de página).
 MAIN_NAV = (
     ("moainvest.resumen", "Inicio"),
+    ("moainvest.mercados", "Mercados"),
     ("moainvest.app_home", "App"),
 )
 
@@ -55,6 +58,12 @@ def chart_url(watchlist: Watchlist, ticker: str | None = None) -> str:
 def resumen():
     overview = get_watchlist("overview") or WATCHLISTS[0]
     return render_template("moainvest/resumen.html", watchlist=overview, chart_url=chart_url, teams=TEAMS)
+
+
+@bp.get("/mercados", strict_slashes=False)
+def mercados():
+    """Todos los mercados en una página: índices, acciones, cripto, divisas, bonos..."""
+    return render_template("moainvest/mercados.html", markets=MARKETS)
 
 
 @bp.get("/app/", strict_slashes=False)

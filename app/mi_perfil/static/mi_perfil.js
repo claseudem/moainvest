@@ -54,7 +54,6 @@
     history: $("[data-history]"),
     historyCount: $("[data-history-count]"),
     historyList: $("[data-history-list]"),
-    editar: $("[data-action='editar']"),
     section: $("#mp-perfil"),
   };
 
@@ -284,6 +283,8 @@
     renderCards();
     render();
     say("");
+    // El perfil de comunidad (comunidad.js) muestra y guarda el perfil elegido.
+    document.dispatchEvent(new CustomEvent("mp:perfil", { detail: slug }));
   }
 
   function startCurrent() {
@@ -333,10 +334,6 @@
     if (action === "iniciar" && state.perfil) startCurrent();
     if (action === "completar" && state.perfil) completeCurrent();
     if (action === "cerrar") closePanel();
-    if (action === "editar") {
-      ui.section.focus();
-      ui.section.scrollIntoView?.({ behavior: "smooth", block: "start" });
-    }
   });
 
   renderCards();

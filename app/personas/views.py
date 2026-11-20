@@ -1,20 +1,22 @@
-"""Controlador de PERSONAS, la comunidad (``/app/personas/``).
+"""Controlador de COMUNIDAD (``/app/personas/``).
 
-Es el directorio de quienes forman parte de MOAINVEST. No muestra el progreso
-personal de nadie: eso vive en "Mi perfil". Los integrantes llegan de
-``community.members()`` (solo perfiles públicos), y los indicadores son
-demostrativos mientras no exista una base de datos de usuarios.
+Vista unificada del sentimiento de mercado: noticias de los activos presentes en
+la plataforma y votación "Sube" / "Baja" con ranking por votos. Los activos son
+los de las watchlists más los de "Mis activos" del usuario (``assets()``).
 
-``/personas/`` redirige aquí (ver ``core/views.py``).
+La ruta conserva el prefijo ``/app/personas`` (y ``/personas/`` redirige aquí,
+ver ``core/views.py``); ``/app/comunidad/`` es un alias.
 """
 from __future__ import annotations
 
-from flask import Blueprint, render_template, url_for
+from flask import Blueprint, redirect, render_template, url_for
 
 from app.core.navigation import get_app
-from app.mi_perfil.content import PROFILES
-from app.personas import community
-from app.personas.content import PILLARS
+from app.core.watchlists import WATCHLISTS
+from app.cuentas.views import current_user
+from app.favoritos import store
+from app.favoritos.store import StoreError
+from app.personas import members
 
 bp = Blueprint(
     "personas",
@@ -25,37 +27,44 @@ bp = Blueprint(
     static_url_path="/static/personas",
 )
 
-# Niveles del filtro: cada nivel de una ruta de cinco.
-LEVELS = tuple(range(1, 6))
+
+@bp.record_once
+def _comunidad_alias(state) -> None:
+    state.app.add_url_rule(
+        "/app/comunidad/",
+        endpoint="comunidad_redirect",
+        view_func=lambda: redirect(url_for("personas.index"), code=301),
+    )
+
+
+def assets(user: dict | None) -> list[dict]:
+    """Activos presentes: los de "Mis activos" primero y luego los de las watchlists."""
+    items: dict[str, dict] = {}
+    if user is not None:
+        try:
+            for row in store.list_favorites(user["id"]):
+                items[row["ticker"]] = {"ticker": row["ticker"], "name": row.get("nombre") or row["ticker"], "mine": True}
+        except StoreError:
+            pass
+    for watchlist in WATCHLISTS:
+        for symbol in watchlist.symbols:
+            items.setdefault(symbol.ticker, {"ticker": symbol.ticker, "name": symbol.display_name, "mine": False})
+    return list(items.values())
 
 
 @bp.get("/")
 def index():
-    count, count_source = community.member_count()
-    target = community.next_target(count)
-    by_profile = [
-        {"slug": profile.slug, "name": profile.name, "count": community.DEMO_BY_PROFILE.get(profile.slug, 0)}
-        for profile in PROFILES
-    ]
-    top = max((item["count"] for item in by_profile), default=0) or 1
-
+    user = current_user()
     return render_template(
         "personas/index.html",
         active_app=get_app("personas"),
-        profiles=PROFILES,
-        levels=LEVELS,
         payload={
-            "members": community.members(),
-            "profiles": [{"slug": profile.slug, "name": profile.name} for profile in PROFILES],
+            "assets": assets(user),
+            "signedIn": user is not None,
+            "userKey": user["id"] if user else "anon",
+            "newsUrl": url_for("personas_api.noticias"),
+            "votesUrl": url_for("personas_api.votos"),
+            "notesUrl": url_for("personas_api.notas"),
+            "quickTags": members.QUICK_TAGS,
         },
-        by_profile=[{**item, "percent": round(item["count"] * 100 / top)} for item in by_profile],
-        new_this_week=community.DEMO_NEW_THIS_WEEK,
-        growth_percent=community.DEMO_GROWTH_PERCENT,
-        pillars=PILLARS,
-        member_count=count,
-        count_source=count_source,
-        next_target=target,
-        next_percent=min(100, round(count * 100 / target)) if target else 100,
-        milestones=community.milestone_states(count),
-        invite_url=url_for("cuentas.registro", _external=True),
     )

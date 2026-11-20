@@ -2,65 +2,483 @@
 {% import "moainvest/_macros.html" as ui with context %}
 {% import "core/icons.html" as icons %}
 
+{#- MOAI SIGNAL: la apertura solo se reproduce una vez por sesión, con JS y sin
+    movimiento reducido. Este script corre antes de pintar para que el contenido
+    no parpadee; si algo falla, la página se muestra tal cual. La propia
+    animación CSS cierra la apertura aunque moainvest.js no llegue a cargar. -#}
+{% block head %}
+<script>
+  try {
+    var calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var saveData = navigator.connection && navigator.connection.saveData;
+    if (!calm && !saveData && !sessionStorage.getItem("moai:intro")) {
+      sessionStorage.setItem("moai:intro", "1");
+      document.documentElement.classList.add("intro-play");
+    }
+  } catch (e) {}
+</script>
+{% endblock %}
+
 {% block content %}
-{% call ui.page_intro("Mercado en vivo · Yahoo Finance", lead="Índices, cripto y divisas de un vistazo. Los precios se actualizan cada 15 segundos.") %}
-  Resumen del <span class="accent">mercado</span>.
-{% endcall %}
+{#- Tipo de instrumento según el formato del ticker de Yahoo Finance. -#}
+{%- macro asset_kind(ticker) -%}
+{%- if ticker.startswith("^") -%}Índice
+{%- elif ticker.endswith("=X") -%}Divisa
+{%- elif ticker.endswith("-USD") -%}Cripto
+{%- else -%}Acción
+{%- endif -%}
+{%- endmacro -%}
 
-<div class="mx-auto w-full max-w-6xl px-5 sm:px-8 py-12 sm:py-16" data-watchlist-quotes="{{ watchlist.slug }}">
-  <p role="status" data-quotes-failed hidden class="mb-6 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-deep">
-    No pudimos actualizar los precios. Se muestran los últimos valores disponibles.
-  </p>
-  <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for s in watchlist.symbols %}
-    <li data-reveal style="--i: {{ loop.index0 }}">
-      <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}"
-         class="group block h-full rounded-2xl border border-line bg-white p-6 transition-[border-color,box-shadow,transform] duration-500 ease-out-soft hover:-translate-y-1 hover:border-ink/20 hover:shadow-[0_24px_48px_-30px_rgba(23,23,23,.4)]">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="truncate text-lg font-semibold tracking-tight">{{ s.display_name }}</p>
-            <p class="font-mono text-xs tracking-[0.1em] text-muted">{{ s.ticker }}</p>
-          </div>
-          {{ icons.icon("arrow-up-right", extra_class="size-5 shrink-0 text-muted transition-[color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand") }}
-        </div>
-        <div class="mt-5 flex items-end justify-between gap-3">
-          <p class="font-mono text-2xl font-medium tabular-nums tracking-tight" aria-live="polite">
-            <span data-field="price"><span class="inline-block h-7 w-28 animate-pulse rounded bg-mist align-middle"></span></span><span data-field="currency" class="ml-1.5 text-xs text-muted"></span>
-          </p>
-          <span data-field="change-pill" class="inline-flex items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
-        </div>
-        <div class="mt-4" data-sparkline="{{ s.ticker }}">
-          <div class="h-16 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
-        </div>
-        <p class="mt-2 text-xs text-muted">Último mes · ver gráfica</p>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
+{#- Etiqueta corta para los nodos de la constelación. -#}
+{%- macro short_name(s) -%}{{ s.display_name if s.display_name | length <= 10 else s.ticker }}{%- endmacro -%}
 
-  {% set shortcuts = [
-    ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico."),
-    ("moainvest.informe", "file-text", "Informe", "Elige tus watchlists, revisa el informe de activos y envíalo por correo."),
-    ("personas.index", "layers", "Comunidad", "Noticias de los activos y el sentimiento de los miembros: vota si cada activo sube o baja."),
-  ] %}
-  <ul class="mt-16 grid gap-4 md:grid-cols-2">
-    {% for endpoint, icon, title, body in shortcuts %}
-    <li data-reveal style="--i: {{ loop.index0 }}">
-      <a href="{{ url_for(endpoint) }}" class="group flex h-full items-start gap-5 rounded-2xl border border-line bg-mist p-6 transition-colors hover:border-brand/40 sm:p-8">
-        <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-white text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-          {{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}
-        </span>
-        <span>
-          <span class="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            {{ title }}
-            {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
-          </span>
-          <span class="mt-1.5 block leading-relaxed text-muted">{{ body }}</span>
-        </span>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
+{%- set featured = watchlist.symbols[0] -%}
+{#- Con AUTH_REQUIRED, el área /app/ pide sesión: se avisa antes de entrar. -#}
+{%- set needs_login = config.AUTH_REQUIRED and not current_user -%}
+
+{# ───────────────────────── MOAI SIGNAL · apertura ───────────────────────── #}
+<div data-intro class="signal-intro fixed inset-0 z-[70] place-items-center bg-[#0b0b0c] px-6">
+  <div aria-hidden="true" class="relative w-full max-w-[34rem]">
+    <svg viewBox="0 0 400 240" class="block h-auto w-full" focusable="false">
+      <g fill="none" stroke="var(--color-brand)" stroke-width="1" stroke-linecap="round">
+        {% for x, y in [(34, 46), (92, 196), (150, 22), (60, 128), (366, 52), (318, 206), (252, 20), (344, 140), (210, 226)] %}
+        <path class="sig-line" pathLength="1" d="M{{ x }} {{ y }} L200 120" style="--i: {{ loop.index0 }}"/>
+        {% endfor %}
+      </g>
+      {% for x, y in [(34, 46), (92, 196), (150, 22), (60, 128), (366, 52), (318, 206), (252, 20), (344, 140), (210, 226)] %}
+      <circle class="sig-node" cx="{{ x }}" cy="{{ y }}" r="3" fill="var(--color-brand-bright)" style="--i: {{ loop.index0 }}"/>
+      {% endfor %}
+      <circle class="sig-core" cx="200" cy="120" r="46" fill="none" stroke="var(--color-brand)" stroke-width="1"/>
+    </svg>
+    <img src="{{ url_for('moainvest.static', filename='logo/moainvest-compact.png') }}" alt="" width="844" height="110"
+         class="sig-logo absolute top-1/2 left-1/2 h-auto w-[min(70%,22rem)] -translate-x-1/2 -translate-y-1/2">
+  </div>
+  <button type="button" data-intro-skip
+          class="absolute right-5 bottom-6 inline-flex h-11 items-center gap-2 rounded-full border border-white/25 px-5 text-sm text-white transition-colors hover:border-white/60 hover:bg-white/10 sm:right-8 sm:bottom-8">
+    Omitir introducción
+  </button>
 </div>
+
+{#- Un único bloque de precios: ventana, cinta, mapa de calor y tarjetas comparten
+    el sondeo de 15 s de /api/watchlist/<slug>/quotes. -#}
+<div data-watchlist-quotes="{{ watchlist.slug }}">
+
+{# ───────────────────────── Hero ───────────────────────── #}
+<section aria-labelledby="page-title" data-depth-root class="relative overflow-hidden border-b border-line">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 [background-image:radial-gradient(var(--color-line)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent)]"></div>
+  <div class="relative mx-auto grid w-full max-w-6xl gap-12 px-5 pt-14 pb-16 sm:px-8 sm:pt-20 sm:pb-20 lg:grid-cols-12 lg:items-center lg:gap-10">
+    <div class="min-w-0 lg:col-span-6">
+      <p class="hero-in eyebrow mb-5 flex items-center gap-3">
+        <span aria-hidden="true" class="h-px w-6 bg-brand"></span>
+        Plataforma de análisis financiero
+      </p>
+      <h1 id="page-title" class="hero-in max-w-3xl text-balance text-[2.6rem] leading-[1.02] font-semibold tracking-[-0.045em] sm:text-6xl lg:text-[4.1rem]" style="--i: 1">
+        Analiza el mercado con <span class="accent">datos reales</span>.
+      </h1>
+      <p class="hero-in mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted sm:text-xl" style="--i: 2">
+        {{ site_name }} reúne cotizaciones en vivo de Yahoo Finance, gráficas de velas con indicadores técnicos, análisis cuantitativo e informes por correo en un solo panel.
+      </p>
+      <div class="hero-in mt-9 flex flex-col gap-3 sm:flex-row sm:items-center" style="--i: 3">
+        <a href="{{ url_for('moainvest.app_home') }}" class="{{ ui.btn('primary', 'lg') }}">
+          Empezar a analizar
+          {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
+        </a>
+        <a href="#mercado" class="{{ ui.btn('secondary', 'lg') }}">Ver resumen del mercado</a>
+      </div>
+      {% if needs_login %}
+      <p class="hero-in mt-4 flex items-center gap-2 text-sm text-muted" style="--i: 3">
+        {{ icons.icon("lock", extra_class="size-3.5 shrink-0") }}
+        <span>El área App requiere <a href="{{ url_for('cuentas.ingresar') }}" class="font-medium text-ink underline decoration-line underline-offset-4 transition-colors hover:text-brand hover:decoration-brand">iniciar sesión</a>.</span>
+      </p>
+      {% endif %}
+      <dl class="hero-in mt-12 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6" style="--i: 4">
+        <div>
+          <dt class="eyebrow">Activos</dt>
+          <dd class="mt-1.5 font-mono text-2xl font-medium tabular-nums tracking-tight">{{ watchlist.symbols | length }}</dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Watchlists</dt>
+          <dd class="mt-1.5 font-mono text-2xl font-medium tabular-nums tracking-tight">{{ watchlists | length }}</dd>
+        </div>
+        <div>
+          <dt class="eyebrow">Refresco</dt>
+          <dd class="mt-1.5 font-mono text-2xl font-medium tabular-nums tracking-tight">15&nbsp;s</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="hero-in relative min-w-0 lg:col-span-6" style="--i: 2">
+      {#- Capa decorativa (no son datos): se dibuja una vez y, en escritorio con
+          ratón, se desplaza unos píxeles con el cursor (data-depth). -#}
+      <svg data-scene data-depth="16" aria-hidden="true" focusable="false" viewBox="0 0 480 520" preserveAspectRatio="xMidYMid slice"
+           class="pointer-events-none absolute -top-12 -left-10 hidden h-[calc(100%+6rem)] w-[calc(100%+5rem)] animate-float transition-transform duration-700 ease-out-soft sm:block">
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <g stroke="var(--color-line)" stroke-width="1">
+            <path class="fade" d="M0 130H480M0 260H480M0 390H480" style="--i: 0"/>
+            <path class="fade" d="M120 0V520M360 0V520" stroke-dasharray="2 6" style="--i: 1"/>
+          </g>
+          <path class="draw" style="--len: 620; --i: 0" stroke="var(--color-ink)" stroke-opacity="0.14" stroke-width="1.5"
+                d="M0 360 L70 318 L130 342 L200 262 L268 286 L330 204 L400 230 L480 150"/>
+          <path class="draw" style="--len: 620; --i: 1" stroke="var(--color-brand)" stroke-opacity="0.5" stroke-width="1.75"
+                d="M0 430 L60 404 L120 420 L190 356 L250 372 L320 300 L390 318 L480 246"/>
+          <g fill="var(--color-brand)">
+            <circle class="pop" style="--i: 3" cx="190" cy="356" r="4"/>
+            <circle class="pop" style="--i: 4" cx="320" cy="300" r="4"/>
+            <circle class="animate-pulse-node opacity-35 [transform-box:fill-box] [transform-origin:center]" cx="320" cy="300" r="9" fill-opacity="0.25"/>
+          </g>
+        </g>
+      </svg>
+
+      {# ───────── MOAI LIVE MARKET WINDOW ───────── #}
+      <article data-market-window data-spark-scope data-depth="-5" aria-labelledby="window-title"
+               class="relative rounded-3xl border border-line bg-white p-5 shadow-[0_32px_64px_-44px_rgba(23,23,23,.45)] transition-transform duration-700 ease-out-soft sm:p-7">
+        <header class="flex items-center justify-between gap-3">
+          <p class="eyebrow flex items-center gap-2">
+            <span data-quotes-dot aria-hidden="true" class="size-1.5 rounded-full bg-line"></span>
+            Ventana de mercado
+          </p>
+          <p data-window="age" class="font-mono text-[0.68rem] tabular-nums text-muted"></p>
+        </header>
+
+        {#- MOAI MARKET CONSTELLATION: selector de activo. La posición de cada nodo
+            es solo una composición para navegar, no una medida financiera. -#}
+        <div class="relative mt-4 h-36 rounded-2xl border border-line bg-mist/60" data-constellation>
+          <svg aria-hidden="true" focusable="false" viewBox="0 0 100 100" preserveAspectRatio="none" class="absolute inset-0 h-full w-full">
+            {% set n = watchlist.symbols | length %}
+            {% for s in watchlist.symbols %}
+            {% set x1 = 9 + loop.index0 * (82 / (n - 1)) %}{% set y1 = 34 if loop.index0 % 2 == 0 else 68 %}
+            {% if not loop.last %}
+            {% set x2 = 9 + loop.index * (82 / (n - 1)) %}{% set y2 = 34 if loop.index % 2 == 0 else 68 %}
+            <line x1="{{ x1 }}" y1="{{ y1 }}" x2="{{ x2 }}" y2="{{ y2 }}" stroke="var(--color-ink)" stroke-opacity="0.18" stroke-width="1" vector-effect="non-scaling-stroke"/>
+            {% endif %}
+            {% if loop.revindex0 >= 2 %}
+            {% set x3 = 9 + (loop.index0 + 2) * (82 / (n - 1)) %}
+            <line x1="{{ x1 }}" y1="{{ y1 }}" x2="{{ x3 }}" y2="{{ y1 }}" stroke="var(--color-ink)" stroke-opacity="0.1" stroke-width="1" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/>
+            {% endif %}
+            {% endfor %}
+          </svg>
+          <div role="radiogroup" aria-label="Elige un activo para la ventana de mercado" class="absolute inset-0">
+            {% for s in watchlist.symbols %}
+            {% set top_row = loop.index0 % 2 == 0 %}
+            {% set selected = s.ticker == featured.ticker %}
+            <button type="button" role="radio" aria-checked="{{ 'true' if selected else 'false' }}" tabindex="{{ '0' if selected else '-1' }}"
+                    data-select="{{ s.ticker }}" data-name="{{ s.display_name }}" data-kind="{{ asset_kind(s.ticker) }}" data-href="{{ chart_url(watchlist, s.ticker) }}"
+                    aria-label="{{ s.display_name }} ({{ s.ticker }})"
+                    style="left: {{ 9 + loop.index0 * (82 / (n - 1)) }}%; top: {{ 34 if top_row else 68 }}%"
+                    class="group absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full">
+              <span aria-hidden="true" class="absolute size-7 rounded-full bg-brand/15 opacity-0 transition-opacity duration-500 group-aria-checked:opacity-100"></span>
+              <span aria-hidden="true" class="relative size-3 rounded-full border-2 border-ink/40 bg-white transition-[background-color,border-color,scale] duration-300 ease-out-soft group-hover:border-brand group-aria-checked:scale-125 group-aria-checked:border-brand group-aria-checked:bg-brand"></span>
+              <span aria-hidden="true" class="absolute left-1/2 -translate-x-1/2 font-mono text-[0.68rem] whitespace-nowrap text-muted transition-colors duration-300 group-hover:text-ink group-aria-checked:font-medium group-aria-checked:text-ink {{ 'bottom-[78%]' if top_row else 'top-[78%]' }}">{{ short_name(s) }}</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        <p class="mt-2 text-[0.7rem] leading-relaxed text-muted">La posición de los nodos solo sirve para navegar; no representa correlaciones entre activos.</p>
+
+        <div data-window-body class="mt-5 transition-opacity duration-300">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <p data-window="kind" class="font-mono text-[0.65rem] tracking-[0.14em] text-muted uppercase">{{ asset_kind(featured.ticker) }}</p>
+              <h2 id="window-title" data-window="name" class="mt-1 truncate text-xl font-semibold tracking-tight">{{ featured.display_name }}</h2>
+              <p data-window="ticker" class="font-mono text-xs tracking-[0.1em] text-muted">{{ featured.ticker }}</p>
+            </div>
+            <span data-window="pill" class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
+          </div>
+          <p class="mt-5 font-mono text-[2.1rem] leading-none font-medium tabular-nums tracking-tight sm:text-[2.5rem]">
+            <span data-window="price"><span class="sr-only">Cargando precio…</span><span aria-hidden="true" class="inline-block h-9 w-44 animate-pulse rounded-md bg-mist align-middle"></span></span><span data-window="currency" class="ml-2 text-sm text-muted"></span>
+          </p>
+          <p data-window="change" class="mt-2 font-mono text-xs tabular-nums text-muted">&nbsp;</p>
+          <div data-window-chart data-sparkline-height="150" data-sparkline-label="{{ featured.display_name }}" class="mt-5">
+            <div class="h-[150px] animate-pulse rounded-xl bg-mist" aria-hidden="true"></div>
+          </div>
+          <div class="mt-2 flex justify-between font-mono text-[0.68rem] tracking-[0.06em] text-muted" aria-hidden="true">
+            <span data-spark-stat="start">&nbsp;</span>
+            <span data-spark-stat="end"></span>
+          </div>
+          <dl class="mt-4 grid grid-cols-3 gap-3 border-t border-line pt-4">
+            <div class="min-w-0">
+              <dt class="font-mono text-[0.65rem] tracking-[0.12em] text-muted uppercase">Mín. 1M</dt>
+              <dd data-spark-stat="min" class="mt-1 truncate font-mono text-sm tabular-nums">—</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="font-mono text-[0.65rem] tracking-[0.12em] text-muted uppercase">Máx. 1M</dt>
+              <dd data-spark-stat="max" class="mt-1 truncate font-mono text-sm tabular-nums">—</dd>
+            </div>
+            <div class="min-w-0">
+              <dt class="font-mono text-[0.65rem] tracking-[0.12em] text-muted uppercase">Var. 1M</dt>
+              <dd data-spark-stat="change" class="mt-1 truncate font-mono text-sm tabular-nums">—</dd>
+            </div>
+          </dl>
+        </div>
+        <a data-window="link" href="{{ chart_url(watchlist, featured.ticker) }}" class="group mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink transition-colors hover:text-brand">
+          Abrir la gráfica completa
+          {{ icons.icon("arrow-up-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5") }}
+        </a>
+        {#- Solo se anuncia lo que elige el usuario, nunca cada sondeo. -#}
+        <p data-window="announce" role="status" class="sr-only"></p>
+      </article>
+    </div>
+  </div>
+</section>
+
+{#- Cinta de cotizaciones: mismos [data-quote] que las tarjetas, así que no añade
+    peticiones. La segunda copia solo existe para el bucle continuo (oculta a
+    lectores de pantalla y fuera del orden de tabulación); con movimiento
+    reducido no hay animación y la cinta se desplaza a mano. -#}
+<section aria-labelledby="cinta-title" data-tape class="tape border-b border-line bg-white">
+  <h2 id="cinta-title" class="sr-only">Cinta de cotizaciones</h2>
+  <div class="flex items-stretch">
+    <p aria-hidden="true" class="hidden shrink-0 items-center gap-2 border-r border-line px-5 font-mono text-[0.68rem] tracking-[0.14em] text-muted uppercase sm:flex">
+      <span data-quotes-dot class="size-1.5 rounded-full bg-line"></span>
+      En vivo
+    </p>
+    <div class="tape-viewport min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_4%,black_96%,transparent)]">
+      <ul class="tape-track flex w-max">
+        {% for copy in (False, True) %}
+        {% for s in watchlist.symbols %}
+        <li{% if copy %} aria-hidden="true" data-tape-copy{% endif %}>
+          <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}"{% if copy %} tabindex="-1"{% endif %}
+             class="flex items-center gap-3 border-r border-line px-4 py-3 text-sm whitespace-nowrap transition-colors duration-300 hover:bg-mist focus-visible:bg-mist focus-visible:outline-offset-[-3px] sm:px-5">
+            <span class="font-medium">{{ s.display_name }}</span>
+            <span data-field="price" class="font-mono tabular-nums text-ink/80">—</span>
+            <span data-field="change-tone" class="font-mono text-xs tabular-nums text-muted">—</span>
+          </a>
+        </li>
+        {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+    <button type="button" data-tape-toggle aria-pressed="false" aria-label="Pausar la cinta"
+            class="grid w-12 shrink-0 place-items-center border-l border-line text-muted transition-colors duration-300 hover:bg-mist hover:text-ink focus-visible:outline-offset-[-3px]">
+      <span data-tape-icon="pause">{{ icons.icon("pause", extra_class="size-3.5") }}</span>
+      <span data-tape-icon="play" hidden>{{ icons.icon("play", extra_class="size-3.5") }}</span>
+    </button>
+  </div>
+</section>
+
+{# ───────────────────────── Mercado: mapa de calor + tarjetas ───────────────────────── #}
+<section id="mercado" aria-labelledby="mercado-title" class="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+  <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p class="eyebrow mb-4 flex items-center gap-3">
+        <span aria-hidden="true" class="h-px w-6 bg-brand"></span>
+        Mercado en vivo · Yahoo Finance
+      </p>
+      <h2 id="mercado-title" class="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+        Resumen del <span class="accent">mercado</span>.
+      </h2>
+      <p class="mt-3 max-w-xl leading-relaxed text-muted">Índices, cripto, divisas y acciones de un vistazo. Pulsa un activo para abrir su gráfica de velas.</p>
+    </div>
+    <p class="inline-flex items-center gap-2.5 self-start rounded-full border border-line bg-white px-3.5 py-1.5 font-mono text-xs text-muted md:self-auto">
+      <span data-quotes-dot aria-hidden="true" class="size-2 shrink-0 rounded-full bg-line"></span>
+      <span data-quotes-status role="status">Conectando con Yahoo Finance…</span>
+      <span data-quotes-updated class="tabular-nums"></span>
+    </p>
+  </div>
+
+  <p data-quotes-failed hidden class="mt-8 flex items-start gap-3 rounded-xl border border-brand/20 bg-brand-soft px-4 py-3 text-sm text-brand-deep">
+    {{ icons.icon("refresh-cw", extra_class="mt-0.5 size-4 shrink-0") }}
+    <span>No pudimos actualizar los precios. Se muestran los últimos valores disponibles y se reintentará en unos segundos.</span>
+  </p>
+
+  <div class="mt-10 grid gap-8 lg:grid-cols-12 lg:gap-10">
+    {# ───────── MOAI MARKET HEATMAP ───────── #}
+    <div class="min-w-0 lg:col-span-4">
+      <div class="lg:sticky lg:top-24">
+        <h3 id="heatmap-title" class="text-lg font-semibold tracking-tight">Mapa de calor</h3>
+        <p class="mt-1 text-sm leading-relaxed text-muted">Variación del día frente al cierre anterior. Todos los bloques miden lo mismo: el color solo indica el signo y la intensidad del movimiento.</p>
+        <div data-heatmap role="group" aria-labelledby="heatmap-title" class="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
+          {% for s in watchlist.symbols %}
+          <button type="button" data-heat="{{ s.ticker }}" aria-pressed="{{ 'true' if s.ticker == featured.ticker else 'false' }}"
+                  class="flex min-h-24 flex-col justify-between rounded-xl border border-line bg-mist p-3 text-left text-ink transition-[background-color,color,border-color,box-shadow] duration-700 ease-out-soft hover:border-ink/30 aria-pressed:ring-2 aria-pressed:ring-ink aria-pressed:ring-offset-2">
+            <span class="block min-w-0">
+              <span class="block truncate text-sm font-semibold tracking-tight">{{ s.display_name }}</span>
+              <span class="block font-mono text-[0.65rem] tracking-[0.08em]">{{ s.ticker }}</span>
+            </span>
+            <span data-heat-value class="mt-3 block font-mono text-lg font-medium tabular-nums">—</span>
+          </button>
+          {% endfor %}
+        </div>
+        <figure class="mt-4">
+          <div aria-hidden="true" class="grid grid-cols-7 gap-1">
+            <span class="h-2.5 rounded-sm bg-brand"></span>
+            <span class="h-2.5 rounded-sm bg-brand/25"></span>
+            <span class="h-2.5 rounded-sm bg-brand-soft"></span>
+            <span class="h-2.5 rounded-sm bg-mist ring-1 ring-line ring-inset"></span>
+            <span class="h-2.5 rounded-sm bg-up-soft"></span>
+            <span class="h-2.5 rounded-sm bg-up/25"></span>
+            <span class="h-2.5 rounded-sm bg-up"></span>
+          </div>
+          <figcaption class="mt-1.5 flex justify-between font-mono text-[0.65rem] text-muted">
+            <span>≤ −2 %</span><span>Sin datos</span><span>≥ +2 %</span>
+          </figcaption>
+          <p class="sr-only">Leyenda: rojo para bajadas y verde para subidas, en tres intensidades: menos de 0,5 %, menos de 2 % y 2 % o más. Gris: sin datos.</p>
+        </figure>
+        <a data-selected-link href="{{ chart_url(watchlist, featured.ticker) }}" class="group mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink transition-colors hover:text-brand">
+          Abrir la gráfica de <span data-selected-name>{{ featured.display_name }}</span>
+          {{ icons.icon("arrow-up-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5") }}
+        </a>
+      </div>
+    </div>
+
+    <ul data-quotes-list aria-busy="true" class="grid min-w-0 gap-4 sm:grid-cols-2 lg:col-span-8">
+      {% for s in watchlist.symbols %}
+      <li data-reveal style="--i: {{ loop.index0 }}">
+        <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}" data-card
+           class="group flex h-full flex-col rounded-2xl border border-line bg-white p-5 transition-[border-color,box-shadow,transform] duration-500 ease-out-soft hover:-translate-y-0.5 hover:border-ink/25 hover:shadow-[0_24px_48px_-32px_rgba(23,23,23,.45)] focus-visible:-translate-y-0.5 focus-visible:border-brand focus-visible:shadow-[0_24px_48px_-32px_rgba(23,23,23,.45)] data-selected:border-brand/50 sm:p-6">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="flex items-center gap-2">
+                <span class="rounded-md bg-mist px-1.5 py-0.5 font-mono text-[0.68rem] font-medium tracking-[0.08em] text-ink/80">{{ s.ticker }}</span>
+                <span class="font-mono text-[0.65rem] tracking-[0.14em] text-muted uppercase">{{ asset_kind(s.ticker) }}</span>
+              </p>
+              <p class="mt-2.5 truncate text-lg font-semibold tracking-tight">{{ s.display_name }}</p>
+            </div>
+            <span data-field="change-pill" class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
+          </div>
+          <p class="mt-5 font-mono text-[1.7rem] leading-none font-medium tabular-nums tracking-tight">
+            <span data-field="price"><span class="sr-only">Cargando precio…</span><span aria-hidden="true" class="inline-block h-7 w-32 animate-pulse rounded bg-mist align-middle"></span></span><span data-field="currency" class="ml-1.5 text-xs text-muted"></span>
+          </p>
+          <p class="mt-2 font-mono text-xs tabular-nums text-muted" data-field="change">&nbsp;</p>
+          <div class="mt-4" data-sparkline="{{ s.ticker }}">
+            <div class="h-16 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
+          </div>
+          <p class="mt-auto flex items-center justify-between gap-3 pt-4 text-xs text-muted">
+            <span>Cierres diarios · último mes</span>
+            <span class="inline-flex items-center gap-1 font-medium text-ink/80 transition-colors group-hover:text-brand group-focus-visible:text-brand">
+              Ver gráfica
+              {{ icons.icon("arrow-up-right", extra_class="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-focus-visible:translate-x-0.5 group-focus-visible:-translate-y-0.5") }}
+            </span>
+          </p>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <p class="mt-8 text-xs leading-relaxed text-muted">Precios de Yahoo Finance, con el posible retraso de cada mercado. La línea discontinua marca el primer cierre del mes. No constituye asesoría financiera.</p>
+</section>
+
+</div>
+
+{# ───────────────────────── FROM DATA TO INSIGHT ───────────────────────── #}
+{#- Etapas: (título, texto, ilustración). Solo se citan capacidades que existen en el repositorio. -#}
+<section id="como-funciona" aria-labelledby="narrativa-title" class="border-y border-line bg-mist">
+  <div class="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+    <div class="max-w-2xl">
+      <p class="eyebrow mb-4 flex items-center gap-3">
+        <span aria-hidden="true" class="h-px w-6 bg-brand"></span>
+        Del dato al análisis
+      </p>
+      <h2 id="narrativa-title" class="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+        Cómo el mercado se convierte en <span class="accent">información útil</span>.
+      </h2>
+      <p class="mt-4 leading-relaxed text-muted">Cuatro pasos, de la fuente a la herramienta. Las ilustraciones son esquemas: no representan datos.</p>
+    </div>
+
+    <div class="relative mt-14">
+    <div data-scene aria-hidden="true" class="pointer-events-none absolute top-0 bottom-0 left-[1.15rem] w-px bg-line lg:top-[1.15rem] lg:right-0 lg:bottom-auto lg:left-0 lg:h-px lg:w-auto">
+      <span class="grow-y block h-full w-full bg-brand lg:hidden"></span>
+      <span class="grow-x hidden h-full w-full bg-brand lg:block"></span>
+    </div>
+    <ol class="relative grid gap-10 lg:grid-cols-4 lg:gap-8">
+
+      <li data-reveal style="--i: 0" class="relative pl-14 lg:pl-0">
+        <span class="absolute top-0 left-0 grid size-[2.3rem] place-items-center rounded-full border border-line bg-white font-mono text-xs text-brand lg:relative">01</span>
+        <svg data-scene aria-hidden="true" focusable="false" viewBox="0 0 160 88" class="mt-0 h-20 w-full max-w-[12rem] lg:mt-6" fill="none" stroke-linecap="round">
+          <path class="draw" style="--len: 160; --i: 0" d="M4 14 C50 14 70 44 120 44" stroke="var(--color-ink)" stroke-opacity="0.3"/>
+          <path class="draw" style="--len: 160; --i: 1" d="M4 44 H120" stroke="var(--color-brand)"/>
+          <path class="draw" style="--len: 160; --i: 2" d="M4 74 C50 74 70 44 120 44" stroke="var(--color-ink)" stroke-opacity="0.3"/>
+          <circle class="pop" style="--i: 3" cx="132" cy="44" r="9" fill="var(--color-brand)"/>
+        </svg>
+        <h3 class="mt-4 text-lg font-semibold tracking-tight">Mercado</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">Cotizaciones y velas de Yahoo Finance para índices, cripto, divisas y acciones, organizadas en {{ watchlists | length }} watchlists y en caché para no saturar la fuente.</p>
+      </li>
+
+      <li data-reveal style="--i: 1" class="relative pl-14 lg:pl-0">
+        <span class="absolute top-0 left-0 grid size-[2.3rem] place-items-center rounded-full border border-line bg-white font-mono text-xs text-brand lg:relative">02</span>
+        <svg data-scene aria-hidden="true" focusable="false" viewBox="0 0 160 88" class="mt-0 h-20 w-full max-w-[12rem] lg:mt-6">
+          {% for x, top, h, up in [(14, 40, 26, True), (36, 30, 24, True), (58, 36, 22, False), (80, 22, 26, True), (102, 28, 18, False), (124, 14, 26, True)] %}
+          <line class="fade" style="--i: {{ loop.index0 }}" x1="{{ x + 5 }}" x2="{{ x + 5 }}" y1="{{ top - 8 }}" y2="{{ top + h + 8 }}" stroke="var(--color-ink)" stroke-opacity="0.35"/>
+          <rect class="pop" style="--i: {{ loop.index0 }}" x="{{ x }}" y="{{ top }}" width="10" height="{{ h }}" rx="1.5" fill="{{ 'var(--color-up)' if up else 'var(--color-brand)' }}"/>
+          {% endfor %}
+        </svg>
+        <h3 class="mt-4 text-lg font-semibold tracking-tight">Datos</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">Cada activo se convierte en series OHLCV (apertura, máximo, mínimo, cierre y volumen) que la API sirve como JSON en <code class="font-mono text-[0.8em] text-ink">/api/candles</code>.</p>
+      </li>
+
+      <li data-reveal style="--i: 2" class="relative pl-14 lg:pl-0">
+        <span class="absolute top-0 left-0 grid size-[2.3rem] place-items-center rounded-full border border-line bg-white font-mono text-xs text-brand lg:relative">03</span>
+        <svg data-scene aria-hidden="true" focusable="false" viewBox="0 0 160 88" class="mt-0 h-20 w-full max-w-[12rem] lg:mt-6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path class="fade" style="--i: 0" d="M4 50 L30 40 L56 52 L82 30 L108 38 L134 18 L156 24 L156 52 L134 46 L108 64 L82 56 L56 76 L30 66 L4 74 Z" fill="var(--color-brand)" fill-opacity="0.08"/>
+          <path class="draw" style="--len: 200; --i: 1" d="M4 62 L30 52 L56 66 L82 42 L108 52 L134 30 L156 38" stroke="var(--color-ink)" stroke-width="1.5"/>
+          <path class="draw" style="--len: 200; --i: 2" d="M4 64 C40 58 70 54 100 46 S140 34 156 32" stroke="var(--color-brand)" stroke-width="1.5" stroke-dasharray="4 4"/>
+        </svg>
+        <h3 class="mt-4 text-lg font-semibold tracking-tight">Análisis</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">Sobre esas series trabajan el Graficador con {{ indicator_count }} indicadores de TA-Lib, Quant stats, el análisis de varianza, Pyportfolio opt y el Pronosticador AR-GARCH.</p>
+      </li>
+
+      <li data-reveal style="--i: 3" class="relative pl-14 lg:pl-0">
+        <span class="absolute top-0 left-0 grid size-[2.3rem] place-items-center rounded-full border border-line bg-white font-mono text-xs text-brand lg:relative">04</span>
+        <svg data-scene aria-hidden="true" focusable="false" viewBox="0 0 160 88" class="mt-0 h-20 w-full max-w-[12rem] lg:mt-6" fill="none">
+          <path class="draw" style="--len: 120; --i: 2" d="M40 30 L80 58 L120 30" stroke="var(--color-brand)" stroke-opacity="0.5" stroke-dasharray="3 4"/>
+          <rect class="converge" style="--i: 0; --dx: -14px; --dy: -8px" x="18" y="12" width="44" height="32" rx="6" fill="var(--color-paper)" stroke="var(--color-ink)" stroke-opacity="0.35"/>
+          <rect class="converge" style="--i: 1; --dx: 14px; --dy: -8px" x="98" y="12" width="44" height="32" rx="6" fill="var(--color-paper)" stroke="var(--color-ink)" stroke-opacity="0.35"/>
+          <rect class="converge" style="--i: 2; --dy: 10px" x="58" y="48" width="44" height="32" rx="6" fill="var(--color-brand)"/>
+        </svg>
+        <h3 class="mt-4 text-lg font-semibold tracking-tight">Herramientas</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">Gráficas en vivo, informes por correo y una comunidad para compartir el sentimiento sobre cada activo. Empieza por cualquiera:</p>
+      </li>
+    </ol>
+    </div>
+
+    {#- Accesos a las herramientas: (endpoint, icono, título, descripción, capacidades, requiere sesión). -#}
+    {% set tools = [
+      ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, agrupadas por watchlist, con rangos de 1 día a todo el histórico.", ["Velas OHLC", "Rangos de 1D a Todo", "Precio en vivo"], False),
+      ("moainvest.informe", "file-text", "Informe", "Elige tus watchlists, revisa el informe de activos y envíalo por correo.", ["Vista previa", "Mayores movimientos", "Envío por correo"], False),
+      ("personas.index", "users", "Comunidad", "Noticias de los activos y el sentimiento de los miembros: vota si cada activo sube o baja.", ["Noticias por activo", "Votos sube / baja"], True),
+    ] %}
+    <section id="herramientas" aria-labelledby="herramientas-title" class="mt-16">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <h3 id="herramientas-title" class="text-2xl font-semibold tracking-[-0.02em]">Herramientas para empezar</h3>
+        <a href="{{ url_for('moainvest.app_home') }}" class="{{ ui.btn('secondary', 'md', 'self-start sm:self-auto') }}">
+          Explorar la App
+          {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
+        </a>
+      </div>
+      <ul class="mt-6 grid gap-4 lg:grid-cols-3">
+        {% for endpoint, icon, title, body, features, gated in tools %}
+        <li data-reveal style="--i: {{ loop.index0 }}">
+          <a href="{{ url_for(endpoint) }}"
+             class="group flex h-full flex-col rounded-2xl border border-line bg-white p-6 transition-[border-color,box-shadow,transform] duration-300 ease-out-soft hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-[0_24px_48px_-36px_rgba(200,16,46,.45)] focus-visible:-translate-y-0.5 focus-visible:border-brand focus-visible:shadow-[0_24px_48px_-36px_rgba(200,16,46,.45)]">
+            <span class="flex items-start justify-between gap-4">
+              <span class="grid size-12 place-items-center rounded-xl bg-brand-soft text-brand transition-colors duration-300 group-hover:bg-brand group-hover:text-white group-focus-visible:bg-brand group-focus-visible:text-white">
+                {{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}
+              </span>
+              <span aria-hidden="true" class="grid size-10 place-items-center rounded-full border border-line text-ink/70 transition-[color,border-color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:border-brand group-hover:text-brand group-focus-visible:border-brand group-focus-visible:text-brand">
+                {{ icons.icon("arrow-up-right", extra_class="size-4") }}
+              </span>
+            </span>
+            <span class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span class="text-xl font-semibold tracking-tight">{{ title }}</span>
+              {% if gated and needs_login %}
+              <span class="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[0.7rem] text-muted">
+                {{ icons.icon("lock", extra_class="size-3") }} Requiere sesión
+              </span>
+              {% endif %}
+            </span>
+            <span class="mt-2 block leading-relaxed text-muted">{{ body }}</span>
+            <span class="mt-auto flex flex-wrap gap-2 pt-5">
+              {% for feature in features %}
+              <span class="rounded-full border border-line bg-mist px-2.5 py-1 text-xs text-ink/80">{{ feature }}</span>
+              {% endfor %}
+            </span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</section>
+
 {% include "moainvest/_equipos.html" %}
 {% endblock %}

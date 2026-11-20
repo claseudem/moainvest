@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="{{ url_for('moainvest.static', filename='moainvest.css') }}">
   {# Activa las animaciones de entrada solo si hay JS; sin JS todo es visible. #}
   <script>document.documentElement.classList.add("js")</script>
+  {% block head %}{% endblock %}
 </head>
 <body class="flex min-h-svh flex-col">
   <a href="#contenido" class="sr-only z-[60] rounded-full bg-ink px-4 py-2 text-sm text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Saltar al contenido</a>

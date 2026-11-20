@@ -190,6 +190,175 @@
   }
 }
 
+/* ───────────────────────── Inicio: cinta, sparklines y precios ─────────────────────────
+   Todo el movimiento vive bajo no-preference; con movimiento reducido la cinta
+   es una fila desplazable a mano y las líneas aparecen ya dibujadas. */
+.tape-track {
+  transition: opacity 0.4s var(--ease-out-soft);
+}
+/* Sin conexión con la API: la cinta conserva los últimos valores, atenuados. */
+[data-quotes-state="error"] .tape-track {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Dos copias idénticas: al desplazar -50% el bucle no tiene salto. */
+  .tape-track {
+    animation: tape-scroll 48s linear infinite;
+  }
+  .tape-viewport:hover .tape-track,
+  .tape-viewport:focus-within .tape-track,
+  .tape[data-paused] .tape-track {
+    animation-play-state: paused;
+  }
+  @keyframes tape-scroll {
+    to { transform: translateX(-50%); }
+  }
+
+  /* Recorte de la sparkline que se abre de izquierda a derecha, una sola vez.
+     En tarjetas aún fuera de pantalla espera pausada a que se revelen. */
+  .spark-reveal {
+    transform-box: fill-box;
+    transform-origin: left;
+    animation: spark-reveal 1.1s var(--ease-out-soft) both;
+  }
+  html.js [data-reveal]:not([data-visible]) .spark-reveal {
+    animation-play-state: paused;
+  }
+  @keyframes spark-reveal {
+    from { transform: scaleX(0); }
+  }
+
+  /* Precio que cambia entre dos sondeos: el color vuelve suave al del texto. */
+  [data-flash="up"] {
+    animation: flash-up 1.4s var(--ease-out-soft);
+  }
+  [data-flash="down"] {
+    animation: flash-down 1.4s var(--ease-out-soft);
+  }
+  @keyframes flash-up {
+    from { color: var(--color-up); }
+  }
+  @keyframes flash-down {
+    from { color: var(--color-brand); }
+  }
+}
+
+/* ───────────────────────── MOAI SIGNAL · apertura ─────────────────────────
+   Oculta por defecto: solo existe con html.intro-play, que pone el script del
+   <head> una vez por sesión. Duración total ≈ 2,4 s y se cierra sola con CSS
+   (no depende de moainvest.js). Escenas:
+     1. 0–0,7 s   nacen los nodos (opacidad y escala)
+     2. 0,3–1,3 s las conexiones se trazan hacia el centro
+     3. 0,95–1,9 s pulso central y revelado del logotipo oficial
+     4. 1,9–2,4 s fundido hacia la página, cuyo hero entra justo detrás */
+.signal-intro {
+  display: none;
+}
+html.intro-play .signal-intro {
+  display: grid;
+  animation: intro-out 0.5s var(--ease-out-soft) 1.9s forwards;
+}
+html.intro-play.intro-skip .signal-intro {
+  animation: intro-out 0.3s ease forwards;
+}
+@keyframes intro-out {
+  to { opacity: 0; visibility: hidden; }
+}
+html.intro-play .sig-node {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    sig-node 0.5s var(--ease-out-soft) calc(var(--i, 0) * 45ms) forwards,
+    sig-dim 0.4s ease 1.35s forwards;
+}
+html.intro-play .sig-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  stroke-opacity: 0.55;
+  animation:
+    sig-draw 0.7s var(--ease-out-soft) calc(0.3s + var(--i, 0) * 50ms) forwards,
+    sig-dim 0.4s ease 1.35s forwards;
+}
+html.intro-play .sig-core {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sig-core 0.95s var(--ease-out-soft) 0.95s forwards;
+}
+html.intro-play .sig-logo {
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  animation: sig-logo 0.75s var(--ease-out-soft) 1.15s forwards;
+}
+@keyframes sig-node {
+  from { opacity: 0; transform: scale(0.2); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sig-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sig-dim {
+  to { opacity: 0.12; }
+}
+@keyframes sig-core {
+  0% { opacity: 0; transform: scale(0.2); }
+  45% { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(2.6); }
+}
+@keyframes sig-logo {
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Continuidad: el hero entra cuando la apertura se desvanece. */
+  html.intro-play .hero-in {
+    animation-delay: calc(1.75s + var(--i, 0) * 110ms);
+  }
+  html.intro-play [data-depth-root] [data-scene] :is(.draw, .pop, .fade) {
+    transition-delay: calc(1.8s + var(--i, 0) * 160ms);
+  }
+
+  #menu-movil:not([hidden]) {
+    animation: menu-in 0.35s var(--ease-out-soft);
+  }
+  @keyframes menu-in {
+    from { opacity: 0; transform: translateY(-8px); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.intro-play .signal-intro {
+    display: none;
+  }
+}
+
+/* Ventana de mercado: el gráfico se atenúa mientras llega el del activo elegido. */
+[data-window-chart] {
+  transition: opacity 0.3s var(--ease-out-soft);
+}
+[data-window-chart][data-loading] {
+  opacity: 0.35;
+}
+
+/* Pestaña oculta: se pausan las animaciones infinitas (cinta, flotación, pulsos). */
+html.tab-hidden *,
+html.tab-hidden *::before,
+html.tab-hidden *::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tape-viewport {
+    overflow-x: auto;
+  }
+  .tape [data-tape-copy],
+  .tape [data-tape-toggle] {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

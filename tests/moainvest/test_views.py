@@ -1,4 +1,5 @@
 """Sitio MOAINVEST (Resumen, Gráficas e Informe), servido por Flask en la raíz."""
+import html
 import re
 from pathlib import Path
 
@@ -22,7 +23,90 @@ def test_resumen_lists_overview_symbols_with_chart_links(client):
     for s in overview.symbols:
         assert f'data-quote="{s.ticker}"' in page
         assert f'data-sparkline="{s.ticker}"' in page
+        assert html.escape(s.display_name) in page
     assert 'href="/graficas/overview/%5EGSPC"' in page
+
+
+def test_resumen_hero_has_single_h1_and_cta_to_app(client):
+    page = client.get("/").get_data(as_text=True)
+    assert page.count("<h1") == 1
+    assert 'Analiza el mercado con <span class="accent">datos reales</span>.' in page
+    # La acción principal lleva a /app/ sin duplicar el texto «Abrir app» del navbar.
+    assert re.search(r'<a href="/app/" class="[^"]*">\s*Empezar a analizar', page)
+    assert 'href="#mercado"' in page and 'id="mercado"' in page
+
+
+def test_resumen_hero_features_first_symbol_with_live_hooks(client):
+    page = client.get("/").get_data(as_text=True)
+    first = get_watchlist("overview").symbols[0]
+    hero = re.search(r'<article aria-labelledby="destacado-title".*?</article>', page, re.S)
+    assert hero, "falta el panel destacado del hero"
+    hero = hero.group(0)
+    assert f'data-quote="{first.ticker}"' in hero
+    assert f'data-sparkline="{first.ticker}"' in hero
+    for stat in ("min", "max", "change"):
+        assert f'data-spark-stat="{stat}"' in hero
+    # Sin datos inventados: los valores los rellena el JS desde la API.
+    visible = re.sub(r"<[^>]+>", " ", hero)
+    assert not re.search(r"\d+,\d{2}", visible)
+
+
+def test_resumen_quote_states_are_accessible(client):
+    page = client.get("/").get_data(as_text=True)
+    assert 'data-quotes-status role="status"' in page
+    assert 'data-quotes-list aria-busy="true"' in page
+    assert "data-quotes-failed hidden" in page
+    assert page.count('<span class="sr-only">Cargando precio…</span>') == len(get_watchlist("overview").symbols) + 1
+
+
+def test_resumen_tools_link_to_real_destinations(client):
+    page = client.get("/").get_data(as_text=True)
+    tools = re.search(r'<section id="herramientas".*?</section>', page, re.S).group(0)
+    for href in ("/graficas", "/informe", "/app/personas/"):
+        assert f'href="{href}"' in tools
+    for title in ("Gráficas", "Informe", "Comunidad"):
+        assert title in tools
+
+
+def test_resumen_warns_login_only_when_app_requires_it(app, client):
+    assert "Requiere sesión" not in client.get("/").get_data(as_text=True)
+    app.config["AUTH_REQUIRED"] = True
+    page = client.get("/").get_data(as_text=True)
+    assert "Requiere sesión" in page and 'href="/ingresar"' in page
+    with client.session_transaction() as s:
+        s["user"] = {"id": "u1", "email": "ana@example.com", "name": "Ana"}
+    assert "Requiere sesión" not in client.get("/").get_data(as_text=True)
+
+
+def test_resumen_tape_reuses_quotes_and_is_keyboard_friendly(client):
+    page = client.get("/").get_data(as_text=True)
+    tape = re.search(r"<section aria-labelledby=\"cinta-title\" data-tape.*?</section>", page, re.S)
+    assert tape, "falta la cinta de cotizaciones"
+    tape = tape.group(0)
+    root = page.index('data-watchlist-quotes="overview"')
+    assert root < page.index("data-tape") < page.index('id="mercado"')  # mismo sondeo que las tarjetas
+    symbols = get_watchlist("overview").symbols
+    for s in symbols:
+        assert tape.count(f'data-quote="{s.ticker}"') == 2
+    # La copia del bucle no se lee ni se tabula; el botón de pausa es un toggle.
+    assert tape.count('aria-hidden="true" data-tape-copy') == len(symbols)
+    assert tape.count('tabindex="-1"') == len(symbols)
+    assert 'data-tape-toggle aria-pressed="false" aria-label="Pausar la cinta"' in tape
+
+
+def test_resumen_hero_art_is_decorative_without_figures(client):
+    page = client.get("/").get_data(as_text=True)
+    art = re.search(r'<svg data-scene aria-hidden="true".*?</svg>', page, re.S)
+    assert art, "falta la pieza SVG del hero"
+    assert "<text" not in art.group(0)
+
+
+def test_resumen_lists_teams(client):
+    from app.personas.content import TEAMS
+
+    page = client.get("/").get_data(as_text=True)
+    for team in TEAMS:
+        assert team.name in page
 
 
 def _nav_links(page: str, label: str) -> list[tuple[str, str]]:
@@ -146,7 +230,7 @@ def test_old_chart_urls_are_gone(client):
 def test_compiled_css_includes_classes_used_by_templates_and_js():
     css = (STATIC / "moainvest.css").read_text()
     # Clases que solo aparecen en moainvest.js (tonos que se ponen en tiempo de ejecución).
-    for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30"):
+    for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30", ".bg-up{", ".border-dashed"):
         assert cls in css, cls
-    for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e"):
+    for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e", ".tape-track", ".spark-reveal", "tape-scroll"):
         assert cls in css, cls

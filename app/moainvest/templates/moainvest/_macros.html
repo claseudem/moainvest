@@ -5,7 +5,7 @@
     compilado (moainvest/static/moainvest.css) solo incluye las clases que
     Tailwind encuentra literalmente en estas plantillas y en moainvest.js. -#}
 
-{%- set _btn_base = "group inline-flex items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-out-soft active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50" -%}
+{%- set _btn_base = "group inline-flex items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-out-soft motion-safe:hover:-translate-y-px active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50" -%}
 {%- set _btn_variants = {
   "primary": "bg-brand text-white hover:bg-brand-deep shadow-[0_1px_0_rgba(255,255,255,.18)_inset,0_8px_24px_-12px_rgba(200,16,46,.55)]",
   "secondary": "border border-line bg-white text-ink hover:border-ink/40",

@@ -54,7 +54,9 @@ def chart_url(watchlist: Watchlist, ticker: str | None = None) -> str:
 @bp.get("/")
 def resumen():
     overview = get_watchlist("overview") or WATCHLISTS[0]
-    return render_template("moainvest/resumen.html", watchlist=overview, chart_url=chart_url, teams=TEAMS)
+    return render_template(
+        "moainvest/resumen.html", watchlist=overview, watchlists=WATCHLISTS, chart_url=chart_url, teams=TEAMS
+    )
 
 
 @bp.get("/app/", strict_slashes=False)

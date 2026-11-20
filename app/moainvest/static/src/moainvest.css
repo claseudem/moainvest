@@ -190,6 +190,70 @@
   }
 }
 
+/* ───────────────────────── Inicio: cinta, sparklines y precios ─────────────────────────
+   Todo el movimiento vive bajo no-preference; con movimiento reducido la cinta
+   es una fila desplazable a mano y las líneas aparecen ya dibujadas. */
+.tape-track {
+  transition: opacity 0.4s var(--ease-out-soft);
+}
+/* Sin conexión con la API: la cinta conserva los últimos valores, atenuados. */
+[data-quotes-state="error"] .tape-track {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Dos copias idénticas: al desplazar -50% el bucle no tiene salto. */
+  .tape-track {
+    animation: tape-scroll 48s linear infinite;
+  }
+  .tape-viewport:hover .tape-track,
+  .tape-viewport:focus-within .tape-track,
+  .tape[data-paused] .tape-track {
+    animation-play-state: paused;
+  }
+  @keyframes tape-scroll {
+    to { transform: translateX(-50%); }
+  }
+
+  /* Recorte de la sparkline que se abre de izquierda a derecha, una sola vez.
+     En tarjetas aún fuera de pantalla espera pausada a que se revelen. */
+  .spark-reveal {
+    transform-box: fill-box;
+    transform-origin: left;
+    animation: spark-reveal 1.1s var(--ease-out-soft) both;
+  }
+  html.js [data-reveal]:not([data-visible]) .spark-reveal {
+    animation-play-state: paused;
+  }
+  @keyframes spark-reveal {
+    from { transform: scaleX(0); }
+  }
+
+  /* Precio que cambia entre dos sondeos: el color vuelve suave al del texto. */
+  [data-flash="up"] {
+    animation: flash-up 1.4s var(--ease-out-soft);
+  }
+  [data-flash="down"] {
+    animation: flash-down 1.4s var(--ease-out-soft);
+  }
+  @keyframes flash-up {
+    from { color: var(--color-up); }
+  }
+  @keyframes flash-down {
+    from { color: var(--color-brand); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tape-viewport {
+    overflow-x: auto;
+  }
+  .tape [data-tape-copy],
+  .tape [data-tape-toggle] {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

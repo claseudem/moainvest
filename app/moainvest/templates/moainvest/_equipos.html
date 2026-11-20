@@ -1,20 +1,31 @@
 {#- Equipos que participan en MOAINVEST (presentación del sitio). Sin nombres
     individuales todavía: se agregarán con sus fotografías. -#}
 {% import "core/icons.html" as icons %}
-<section aria-labelledby="equipos-title" class="mx-auto w-full max-w-6xl border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-  <p class="eyebrow mb-4">Quiénes somos</p>
-  <h2 id="equipos-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-    Los equipos que <span class="accent">construyen MOAINVEST</span>.
-  </h2>
-  <ul class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for team in teams %}
-    <li data-reveal style="--i: {{ loop.index0 }}" class="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
-      <span class="grid size-12 place-items-center rounded-xl bg-mist text-brand">
-        {{ icons.icon(team.icon, extra_class="size-5", stroke_width=1.6) }}
-      </span>
-      <p class="mt-5 text-lg font-semibold tracking-tight">{{ team.name }}</p>
-      <p class="mt-2 leading-relaxed text-muted">{{ team.description }}</p>
-    </li>
-    {% endfor %}
-  </ul>
+<section aria-labelledby="equipos-title" class="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
+  <div class="grid gap-10 lg:grid-cols-12 lg:gap-12">
+    <div class="lg:col-span-4">
+      <p class="eyebrow mb-4 flex items-center gap-3">
+        <span aria-hidden="true" class="h-px w-6 bg-brand"></span>
+        Quiénes somos
+      </p>
+      <h2 id="equipos-title" class="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+        Los equipos que <span class="accent">construyen MOAINVEST</span>.
+      </h2>
+      <p class="mt-4 max-w-sm leading-relaxed text-muted">{{ teams | length }} equipos de disciplinas complementarias trabajan sobre la misma plataforma.</p>
+      <p class="mt-6 font-mono text-[0.7rem] tracking-[0.14em] text-ink/70 uppercase">Personas — Conocimiento — Oportunidades</p>
+    </div>
+    <ul class="grid gap-x-10 border-t border-line sm:grid-cols-2 lg:col-span-8">
+      {% for team in teams %}
+      <li data-reveal style="--i: {{ loop.index0 }}" class="flex gap-4 border-b border-line py-6">
+        <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-mist text-brand">
+          {{ icons.icon(team.icon, extra_class="size-[1.1rem]", stroke_width=1.6) }}
+        </span>
+        <span class="min-w-0">
+          <span class="block font-semibold tracking-tight">{{ team.name }}</span>
+          <span class="mt-1 block text-sm leading-relaxed text-muted">{{ team.description }}</span>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
 </section>

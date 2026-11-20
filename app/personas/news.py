@@ -4,7 +4,10 @@
 normalizadas para la tarjeta de COMUNIDAD:
 
     {"id", "ticker", "tickers", "title", "summary", "source", "published",
-     "url", "trend", "demo"}
+     "url", "image", "trend", "demo"}
+
+``image`` es la miniatura que publica Yahoo (o ``None`` si no hay); la portada
+de noticias del inicio la usa como imagen de la noticia principal.
 
 ``trend`` (``subir`` / ``bajar`` / ``medio``) es la tendencia que sugiere la
 noticia para el activo o el mercado. Se estima con un léxico de palabras
@@ -30,6 +33,7 @@ from typing import Any
 NEWS_CACHE_TTL = 900
 PER_TICKER = 4
 MAX_WORKERS = 8
+MAX_IMAGE_WIDTH = 1200
 
 _cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 
@@ -40,6 +44,16 @@ def _iso(value: Any) -> str | None:
     if isinstance(value, str) and value:
         return value
     return None
+
+
+def _image(node: dict) -> str | None:
+    """URL de la miniatura de Yahoo (``thumbnail``): la mayor resolución hasta ``MAX_IMAGE_WIDTH``."""
+    thumb = node.get("thumbnail") or {}
+    sizes = [r for r in thumb.get("resolutions") or [] if isinstance(r, dict) and r.get("url")]
+    fitting = [r for r in sizes if (r.get("width") or 0) <= MAX_IMAGE_WIDTH] or sizes
+    if fitting:
+        return max(fitting, key=lambda r: r.get("width") or 0)["url"]
+    return thumb.get("originalUrl") or None
 
 
 # Raíces de palabras (inglés y español) que suelen acompañar subidas o bajadas.
@@ -81,6 +95,7 @@ def _normalize_ticker_news(ticker: str, item: dict) -> dict | None:
         "source": (content.get("provider") or {}).get("displayName") or content.get("publisher"),
         "published": _iso(content.get("pubDate") or content.get("providerPublishTime")),
         "url": url,
+        "image": _image(content),
         "related": related,
     }
 
@@ -96,6 +111,7 @@ def _normalize_search_news(item: dict) -> dict | None:
         "source": item.get("publisher"),
         "published": _iso(item.get("providerPublishTime")),
         "url": item.get("link"),
+        "image": _image(item),
         "related": list(item.get("relatedTickers") or []),
     }
 
@@ -150,6 +166,7 @@ def news_for(tickers: list[str]) -> tuple[list[dict], bool]:
                 "source": row["source"],
                 "published": row["published"],
                 "url": row["url"],
+                "image": row.get("image"),
                 "trend": trend_of(row["title"], row["summary"]),
                 "demo": False,
             }
@@ -205,6 +222,7 @@ def demo_news(tickers: list[str]) -> list[dict]:
                     "source": "MOAINVEST · ejemplo",
                     "published": (now - timedelta(hours=3 * len(items) + 1)).isoformat(),
                     "url": None,
+                    "image": None,
                     "trend": trend,
                     "demo": True,
                 }

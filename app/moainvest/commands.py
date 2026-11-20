@@ -9,6 +9,8 @@ from pathlib import Path
 import click
 from flask import Flask
 
+from app.moainvest import worldmap
+
 # Versión del binario de Tailwind con la que se compila static/moainvest.css.
 TAILWINDCSS_VERSION = "v4.3.3"
 
@@ -31,3 +33,9 @@ def register(app: Flask) -> None:
         args.append("--watch" if watch else "--minify")
         env = {**os.environ, "TAILWINDCSS_VERSION": TAILWINDCSS_VERSION}
         raise SystemExit(subprocess.run(args, env=env, check=False).returncode)
+
+    @app.cli.command("build-world-map")
+    def build_world_map() -> None:
+        """Regenera el mapa SVG del Barómetro Global (Natural Earth 110m, dominio público)."""
+        out = worldmap.build()
+        click.echo(f"Mapa escrito en {out} ({out.stat().st_size // 1024} KB)")

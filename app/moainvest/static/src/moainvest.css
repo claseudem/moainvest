@@ -190,6 +190,376 @@
   }
 }
 
+/* ───────────────────────── Inicio (resumen.html) ───────────────────────── */
+
+/* Resplandor radial carmesí muy tenue detrás de la portada */
+.hero-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: -20% -10% auto;
+  height: 46rem;
+  background:
+    radial-gradient(38rem 22rem at 18% 18%, rgb(200 16 46 / 0.10), transparent 70%),
+    radial-gradient(34rem 24rem at 82% 8%, rgb(255 90 110 / 0.10), transparent 70%),
+    radial-gradient(40rem 20rem at 55% 70%, rgb(251 238 240 / 0.9), transparent 75%);
+  filter: blur(8px);
+}
+
+/* Cinta de precios con desplazamiento infinito; se pausa con el cursor o el foco */
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 42s linear infinite;
+}
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; mask-image: none; }
+  .marquee-track { animation: none !important; }
+  .marquee-track > ul[aria-hidden] { display: none; }
+}
+
+/* Herramientas en acordeón horizontal: una abierta y las demás se abren con hover/foco */
+.tool-accordion {
+  display: grid;
+  gap: 1rem;
+}
+.tool-item {
+  overflow: hidden; /* recorta el detalle cerrado sin tapar el anillo del spotlight */
+  border-radius: 1rem;
+}
+.tool-detail { transition: opacity 0.5s var(--ease-out-soft); }
+@media (min-width: 768px) {
+  .tool-accordion {
+    display: flex;
+    height: 21rem;
+  }
+  .tool-item {
+    flex: 1 1 0;
+    min-width: 0;
+    transition: flex-grow 0.6s var(--ease-out-soft);
+  }
+  .tool-item[data-open],
+  .tool-accordion .tool-item:hover,
+  .tool-accordion .tool-item:focus-within {
+    flex-grow: 3.2;
+  }
+  .tool-accordion:has(.tool-item:hover, .tool-item:focus-within) .tool-item[data-open]:not(:hover, :focus-within) {
+    flex-grow: 1;
+  }
+  .tool-item .tool-detail { opacity: 0; }
+  .tool-item[data-open] .tool-detail,
+  .tool-item:hover .tool-detail,
+  .tool-item:focus-within .tool-detail {
+    opacity: 1;
+    transition-delay: 0.15s;
+  }
+  .tool-accordion:has(.tool-item:hover, .tool-item:focus-within) .tool-item[data-open]:not(:hover, :focus-within) .tool-detail {
+    opacity: 0;
+    transition-delay: 0s;
+  }
+  /* El detalle tiene ancho fijo para no reflujar mientras la tarjeta crece */
+  .tool-detail { min-width: 30rem; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tool-detail { min-width: 22rem; }
+  .tool-preview { display: none; }
+}
+
+/* Spotlight: borde que se ilumina siguiendo al cursor (--mx / --my desde moainvest.js) */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before,
+.spotlight::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out-soft);
+}
+.spotlight::before {
+  inset: -1px;
+  padding: 1px;
+  background: radial-gradient(18rem circle at var(--mx, 50%) var(--my, 50%), rgb(200 16 46 / 0.65), transparent 45%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  z-index: 1;
+}
+.spotlight::after {
+  inset: 0;
+  background: radial-gradient(22rem circle at var(--mx, 50%) var(--my, 50%), rgb(200 16 46 / 0.045), transparent 50%);
+  z-index: -1;
+}
+.spotlight:hover::before,
+.spotlight:hover::after {
+  opacity: 1;
+}
+
+/* Etiqueta que sigue al cursor sobre noticias y gráficas */
+.cursor-badge {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+  pointer-events: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px -12px rgb(23 23 23 / 0.6);
+  opacity: 0;
+  scale: 0.85;
+  transition: opacity 0.2s ease, scale 0.25s var(--ease-out-soft);
+}
+.cursor-badge[data-on] {
+  opacity: 1;
+  scale: 1;
+}
+@media (hover: none) {
+  .cursor-badge { display: none; }
+}
+
+/* ── Activos principales: tarjeta con elevación y borde carmesí suave ── */
+.asset-card {
+  transition:
+    transform 0.5s var(--ease-out-soft),
+    border-color 0.4s var(--ease-out-soft),
+    box-shadow 0.5s var(--ease-out-soft);
+}
+.asset-card:hover,
+.asset-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgb(200 16 46 / 0.28);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 28px 56px -34px rgb(200 16 46 / 0.35),
+    0 12px 24px -20px rgb(23 23 23 / 0.25);
+}
+
+/* Mini-gráfica interactiva: línea vertical, punto y tooltip bajo el cursor */
+.spark-hover {
+  position: relative;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.spark-guide,
+.spark-dot,
+.spark-tip {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.18s ease,
+    left 0.12s var(--ease-out-soft),
+    top 0.12s var(--ease-out-soft);
+}
+.spark-hover[data-active] .spark-guide,
+.spark-hover[data-active] .spark-dot,
+.spark-hover[data-active] .spark-tip {
+  opacity: 1;
+}
+.spark-hover[data-active] .spark-last { opacity: 0; }
+.spark-guide {
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgb(23 23 23 / 0.4) 25%, rgb(23 23 23 / 0.4) 75%, transparent);
+}
+.spark-dot {
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent);
+}
+.spark-tip {
+  translate: -50% calc(-100% - 12px);
+  padding: 0.3rem 0.55rem;
+  border-radius: 8px;
+  background: rgb(23 23 23 / 0.92);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 10px 24px -14px rgb(23 23 23 / 0.7);
+  z-index: 2;
+}
+.spark-tip small {
+  display: block;
+  color: rgb(255 255 255 / 0.6);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+/* Punto luminoso del último cierre */
+.spark-last {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 999px;
+  background: currentColor;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.spark-last::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.25;
+  animation: spark-pulse 2.4s var(--ease-out-soft) infinite;
+}
+@keyframes spark-pulse {
+  0% { transform: scale(0.4); opacity: 0.45; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ── Carruseles (noticias y comunidad) ── */
+.carousel-viewport {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  cursor: grab;
+  mask-image: linear-gradient(to right, transparent 0, black 14%, black 86%, transparent 100%);
+}
+.carousel-viewport::-webkit-scrollbar { display: none; }
+.carousel-viewport[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+.carousel-viewport[data-dragging] a { pointer-events: none; }
+.carousel-track {
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+  padding: 1rem 0 1.5rem;
+}
+.carousel-slide {
+  width: min(82vw, 21rem);
+  flex: none;
+  transition:
+    transform 0.6s var(--ease-out-soft),
+    opacity 0.6s var(--ease-out-soft),
+    filter 0.6s var(--ease-out-soft);
+  transform: scale(0.94);
+  opacity: 0.6;
+}
+.carousel-slide[data-focus] {
+  transform: none;
+  opacity: 1;
+}
+.carousel-slide[data-focus] > * {
+  border-color: rgb(200 16 46 / 0.25);
+  box-shadow: 0 30px 60px -36px rgb(200 16 46 / 0.35), 0 16px 30px -24px rgb(23 23 23 / 0.3);
+}
+.carousel-slide img { -webkit-user-drag: none; user-select: none; }
+.carousel-arrow {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background: #fff;
+  color: var(--color-ink);
+  transition: border-color 0.3s, color 0.3s, background-color 0.3s;
+}
+.carousel-arrow:hover {
+  border-color: rgb(200 16 46 / 0.4);
+  color: var(--color-brand);
+}
+@media (min-width: 640px) {
+  .carousel-slide { width: 22rem; }
+}
+
+/* Portada generada cuando la noticia no trae miniatura */
+.news-cover-fallback {
+  background:
+    radial-gradient(24rem 14rem at 85% 10%, rgb(200 16 46 / 0.22), transparent 70%),
+    radial-gradient(20rem 16rem at 0% 100%, rgb(255 90 110 / 0.16), transparent 70%),
+    repeating-linear-gradient(90deg, transparent 0 39px, rgb(23 23 23 / 0.04) 39px 40px),
+    repeating-linear-gradient(0deg, transparent 0 39px, rgb(23 23 23 / 0.04) 39px 40px),
+    var(--color-brand-soft);
+}
+
+/* ── Barómetro Global de Mercado ── */
+.map-stage {
+  background:
+    radial-gradient(ellipse at center, #fff 0%, var(--color-mist) 100%);
+  touch-action: pan-y;
+}
+.map-stage[data-zoomed] { cursor: grab; touch-action: none; }
+.map-stage[data-dragging] { cursor: grabbing; }
+.world-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: none;
+}
+.map-region {
+  fill: var(--region-fill, #e6e4df);
+  stroke: #fff;
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  outline: none;
+  transition: fill 0.6s var(--ease-out-soft), opacity 0.3s ease, filter 0.3s ease;
+}
+.map-region path { vector-effect: non-scaling-stroke; }
+.world-map:has(.map-region[data-hot]) .map-region:not([data-hot]) { opacity: 0.45; }
+.map-region[data-hot] { filter: drop-shadow(0 4px 10px rgb(23 23 23 / 0.18)); }
+.map-region:focus-visible { stroke: var(--color-ink); stroke-width: 1.2; }
+.map-btn {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--color-ink);
+  transition: background-color 0.2s, color 0.2s;
+}
+.map-btn:hover { background: var(--color-mist); color: var(--color-brand); }
+.map-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+  min-width: 12rem;
+  max-width: 16rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-line);
+  background: rgb(255 255 255 / 0.96);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 20px 40px -24px rgb(23 23 23 / 0.45);
+  pointer-events: none;
+  font-size: 0.78rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

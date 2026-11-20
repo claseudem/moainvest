@@ -2,65 +2,319 @@
 {% import "moainvest/_macros.html" as ui with context %}
 {% import "core/icons.html" as icons %}
 
-{% block content %}
-{% call ui.page_intro("Mercado en vivo · Yahoo Finance", lead="Índices, cripto y divisas de un vistazo. Los precios se actualizan cada 15 segundos.") %}
-  Resumen del <span class="accent">mercado</span>.
-{% endcall %}
+{#- Inicio de MOAINVEST, de arriba abajo:
+    1. Portada con carrusel de noticias de activos (/api/comunidad/noticias).
+    2. Cinta (marquee) de precios y tarjetas «Activos principales».
+       Ambas viven en el mismo [data-watchlist-quotes], así que el sondeo de
+       15 s de moainvest.js las actualiza a la vez.
+    3. Barómetro Global de Mercado: mapa por regiones (/api/barometro).
+    4. Herramientas en acordeón (Gráficas, Informe, Comunidad).
+    5. Comunidad: carrusel de comentarios (/api/comunidad/comentarios).
+    Los dos carruseles comparten el componente [data-carousel] de moainvest.js. -#}
 
-<div class="mx-auto w-full max-w-6xl px-5 sm:px-8 py-12 sm:py-16" data-watchlist-quotes="{{ watchlist.slug }}">
-  <p role="status" data-quotes-failed hidden class="mb-6 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-deep">
-    No pudimos actualizar los precios. Se muestran los últimos valores disponibles.
-  </p>
-  <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for s in watchlist.symbols %}
-    <li data-reveal style="--i: {{ loop.index0 }}">
-      <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}"
-         class="group block h-full rounded-2xl border border-line bg-white p-6 transition-[border-color,box-shadow,transform] duration-500 ease-out-soft hover:-translate-y-1 hover:border-ink/20 hover:shadow-[0_24px_48px_-30px_rgba(23,23,23,.4)]">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="truncate text-lg font-semibold tracking-tight">{{ s.display_name }}</p>
-            <p class="font-mono text-xs tracking-[0.1em] text-muted">{{ s.ticker }}</p>
-          </div>
-          {{ icons.icon("arrow-up-right", extra_class="size-5 shrink-0 text-muted transition-[color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand") }}
-        </div>
-        <div class="mt-5 flex items-end justify-between gap-3">
-          <p class="font-mono text-2xl font-medium tabular-nums tracking-tight" aria-live="polite">
-            <span data-field="price"><span class="inline-block h-7 w-28 animate-pulse rounded bg-mist align-middle"></span></span><span data-field="currency" class="ml-1.5 text-xs text-muted"></span>
-          </p>
-          <span data-field="change-pill" class="inline-flex items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
-        </div>
-        <div class="mt-4" data-sparkline="{{ s.ticker }}">
-          <div class="h-16 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
-        </div>
-        <p class="mt-2 text-xs text-muted">Último mes · ver gráfica</p>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
+{% set kind_icons = {"Índice": "chart-column", "Cripto": "activity", "Divisa": "refresh-cw", "Acción": "briefcase"} %}
 
-  {% set shortcuts = [
-    ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico."),
-    ("moainvest.informe", "file-text", "Informe", "Elige tus watchlists, revisa el informe de activos y envíalo por correo."),
-    ("personas.index", "layers", "Comunidad", "Noticias de los activos y el sentimiento de los miembros: vota si cada activo sube o baja."),
-  ] %}
-  <ul class="mt-16 grid gap-4 md:grid-cols-2">
-    {% for endpoint, icon, title, body in shortcuts %}
-    <li data-reveal style="--i: {{ loop.index0 }}">
-      <a href="{{ url_for(endpoint) }}" class="group flex h-full items-start gap-5 rounded-2xl border border-line bg-mist p-6 transition-colors hover:border-brand/40 sm:p-8">
-        <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-white text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-          {{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}
-        </span>
-        <span>
-          <span class="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            {{ title }}
-            {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
-          </span>
-          <span class="mt-1.5 block leading-relaxed text-muted">{{ body }}</span>
-        </span>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
+{#- Armazón y flechas compartidos por los dos carruseles; el {% call %} pone
+    el contenido de la barra inferior (enlaces y aviso de error). -#}
+{% macro carousel(label, kind, src, names) -%}
+<div class="carousel" data-carousel data-carousel-kind="{{ kind }}" data-src="{{ src }}" data-names='{{ names | tojson }}'
+     role="region" aria-roledescription="carrusel" aria-label="{{ label }}">
+  <div class="carousel-viewport" data-carousel-viewport>
+    <ul class="carousel-track" data-carousel-track>
+      {% for _ in range(5) %}
+      <li class="carousel-slide" aria-hidden="true"><div class="h-[23rem] animate-pulse rounded-2xl border border-line bg-white"></div></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="mx-auto mt-6 flex w-full max-w-6xl items-center justify-end gap-2 px-5 sm:px-8">
+    {{ caller() }}
+    <button type="button" data-carousel-prev aria-label="Anterior" class="carousel-arrow">
+      <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <button type="button" data-carousel-next aria-label="Siguiente" class="carousel-arrow">
+      <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  </div>
 </div>
-{% include "moainvest/_equipos.html" %}
+{%- endmacro %}
+
+{% block content %}
+{% set names = {} %}
+{% for s in watchlist.symbols %}{% set _ = names.update({s.ticker: s.display_name}) %}{% endfor %}
+
+{# ───────────── 1. Portada + carrusel de noticias ───────────── #}
+<section aria-labelledby="page-title" class="relative overflow-hidden border-b border-line">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 [background-image:radial-gradient(var(--color-line)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent)]"></div>
+  <div aria-hidden="true" class="hero-glow"></div>
+
+  <div class="relative mx-auto w-full max-w-6xl px-5 pt-16 sm:px-8 sm:pt-24">
+    <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="hero-in eyebrow mb-5 flex items-center gap-3">
+          <span aria-hidden="true" class="h-px w-6 bg-brand"></span>
+          Mercado en vivo · Yahoo Finance
+        </p>
+        <h1 id="page-title" class="hero-in max-w-4xl text-balance text-[2.5rem] leading-[1.04] font-semibold tracking-[-0.04em] sm:text-6xl" style="--i: 1">
+          Resumen del <span class="accent">mercado</span>.
+        </h1>
+        <p class="hero-in mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted sm:text-xl" style="--i: 2">
+          Índices, cripto y divisas de un vistazo, con las <span class="accent">noticias</span> que los mueven. Los precios se actualizan cada 15 segundos.
+        </p>
+      </div>
+      <div class="hero-in flex flex-wrap gap-3" style="--i: 3">
+        <a href="{{ url_for('moainvest.graficas') }}" class="{{ ui.btn('primary', 'md') }}">
+          Ver gráficas {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
+        </a>
+        <a href="{{ url_for('personas.index') }}" class="{{ ui.btn('secondary', 'md') }}">Comunidad</a>
+      </div>
+    </div>
+
+    <div class="hero-in mt-14 mb-5 flex items-center justify-between gap-4" style="--i: 4">
+      <h2 class="eyebrow flex items-center gap-3">
+        <span aria-hidden="true" class="relative flex size-2"><span class="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-60"></span><span class="relative inline-flex size-2 rounded-full bg-brand"></span></span>
+        Noticias de activos
+        <span data-carousel-demo="news" hidden class="rounded-full bg-mist px-2 py-0.5 text-[0.62rem] tracking-[0.12em] text-muted">ejemplo</span>
+      </h2>
+      <a href="{{ url_for('personas.index') }}" class="group inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
+        Todas las noticias {{ icons.icon("arrow-up-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5") }}
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-in relative pb-12 sm:pb-16" style="--i: 5">
+    {% call carousel("Noticias de activos", "news", url_for('personas_api.noticias', tickers=watchlist.symbols | map(attribute='ticker') | join(',')), names) %}
+    <p data-carousel-failed hidden role="status" class="mr-auto text-sm text-brand-deep">No pudimos cargar las noticias ahora mismo.</p>
+    {% endcall %}
+  </div>
+</section>
+
+{# ───────────── 2. Cinta + Activos principales ───────────── #}
+<div data-watchlist-quotes="{{ watchlist.slug }}">
+  {#- La lista se repite dos veces para que el desplazamiento sea continuo; la
+      copia está oculta a los lectores de pantalla. -#}
+  <div class="marquee border-b border-line bg-mist" aria-label="Cinta de precios">
+    <div class="marquee-track">
+      {% for copy in range(2) %}
+      <ul class="flex shrink-0 items-center"{% if copy %} aria-hidden="true"{% endif %}>
+        {% for s in watchlist.symbols %}
+        <li>
+          <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}"{% if copy %} tabindex="-1"{% endif %}
+             class="flex items-center gap-3 border-r border-line px-6 py-3.5 text-sm whitespace-nowrap transition-colors hover:bg-white">
+            <span class="font-medium tracking-tight">{{ s.display_name }}</span>
+            <span data-field="price" class="font-mono tabular-nums text-ink/80">—</span>
+            <span data-field="change-tone" class="font-mono text-xs tabular-nums text-muted">—</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endfor %}
+    </div>
+  </div>
+
+  <section aria-labelledby="activos-title" class="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+    <p role="status" data-quotes-failed hidden class="mb-6 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-deep">
+      No pudimos actualizar los precios. Se muestran los últimos valores disponibles.
+    </p>
+    <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="eyebrow mb-4">Mercado · último mes</p>
+        <h2 id="activos-title" class="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Activos <span class="accent">principales</span>.</h2>
+      </div>
+      <p class="max-w-xs text-sm text-muted">Desliza el cursor sobre cada gráfica para ver el cierre de cada día.</p>
+    </div>
+    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% for s in watchlist.symbols %}
+      {% set kind = asset_kind(s.ticker) %}
+      <li data-reveal style="--i: {{ loop.index0 }}">
+        <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}" data-spotlight data-cursor-label="Ver activo ↗"
+           class="asset-card spotlight group flex h-full flex-col rounded-2xl border border-line bg-white p-6">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-mist px-2 py-0.5 font-mono text-[0.62rem] tracking-[0.14em] text-muted uppercase">
+                {{ icons.icon(kind_icons[kind], extra_class="size-3 text-brand", stroke_width=2) }}{{ kind }}
+              </span>
+              <p class="mt-3 truncate text-lg leading-tight font-semibold tracking-tight">{{ s.display_name }}</p>
+              <p class="mt-0.5 font-mono text-xs tracking-[0.1em] text-muted">{{ s.ticker }}</p>
+            </div>
+            <span class="grid size-9 shrink-0 place-items-center rounded-full border border-line text-muted transition-[color,border-color,background-color] duration-300 group-hover:border-brand/30 group-hover:bg-brand-soft group-hover:text-brand">
+              {{ icons.icon("arrow-up-right", extra_class="size-4 transition-transform duration-300 group-hover:translate-x-px group-hover:-translate-y-px") }}
+            </span>
+          </div>
+          <div class="mt-6 flex items-baseline justify-between gap-3 border-t border-line pt-5">
+            <p class="font-mono text-[1.65rem] leading-none font-medium tabular-nums tracking-tight" aria-live="polite">
+              <span data-field="price"><span class="inline-block h-7 w-28 animate-pulse rounded bg-mist align-middle"></span></span><span data-field="currency" class="ml-1.5 text-[0.68rem] tracking-[0.08em] text-muted"></span>
+            </p>
+            <span data-field="change-pill" class="inline-flex items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
+          </div>
+          <div class="mt-5" data-sparkline="{{ s.ticker }}">
+            <div class="h-20 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
+          </div>
+          <div class="mt-auto pt-5" data-period-range hidden>
+            <div class="flex justify-between font-mono text-[0.65rem] tracking-[0.06em] text-muted tabular-nums">
+              <span>Mín 1M <span data-range-min class="text-ink/80"></span></span>
+              <span>Máx 1M <span data-range-max class="text-ink/80"></span></span>
+            </div>
+            <div class="relative mt-2 h-1 rounded-full bg-gradient-to-r from-brand-soft via-line to-up-soft">
+              <span data-range-marker class="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-ink shadow-sm"></span>
+            </div>
+          </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+{# ───────────── 3. Barómetro Global de Mercado ───────────── #}
+<section aria-labelledby="barometro-title" class="border-y border-line bg-mist">
+  <div class="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="eyebrow mb-4">Variación del día por región</p>
+        <h2 id="barometro-title" class="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Barómetro Global de <span class="accent">Mercado</span>.</h2>
+      </div>
+      <p class="max-w-sm text-sm text-muted">Cada región se colorea con el promedio de sus índices de referencia. Pasa el cursor para ver el detalle.</p>
+    </div>
+
+    <div class="mt-10 rounded-3xl border border-line bg-white p-3 sm:p-5" data-barometer data-src="{{ url_for('moainvest.barometro') }}">
+      <div class="map-stage relative overflow-hidden rounded-2xl" data-map-stage>
+        {% include "moainvest/_world_map.svg" %}
+        <div class="absolute top-3 right-3 flex flex-col overflow-hidden rounded-xl border border-line bg-white/90 shadow-sm backdrop-blur" role="group" aria-label="Zoom del mapa">
+          <button type="button" data-map-zoom="in" aria-label="Acercar" class="map-btn">+</button>
+          <button type="button" data-map-zoom="out" aria-label="Alejar" class="map-btn border-t border-line">−</button>
+          <button type="button" data-map-zoom="reset" aria-label="Reiniciar vista" class="map-btn border-t border-line">
+            <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+        </div>
+        <p data-map-status role="status" class="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 font-mono text-[0.68rem] text-muted">Cargando índices…</p>
+      </div>
+
+      <div class="mt-5 flex flex-col gap-6 px-1 lg:flex-row lg:items-end lg:justify-between">
+        <div class="w-full max-w-sm shrink-0">
+          {#- Los mismos colores y posiciones que DIVERGING en moainvest.js (−2 % … +2 %). -#}
+          <div class="h-2 rounded-full" style="background: linear-gradient(90deg, #8f1025 0%, #d9566b 25%, #efc3ca 43.75%, #e6e4df 50%, #c4e5d5 56.25%, #4fae87 75%, #0a5c40 100%)"></div>
+          <div class="mt-2 flex justify-between font-mono text-[0.65rem] tracking-[0.06em] text-muted">
+            <span>Pérdida ≤ −2%</span><span>0%</span><span>Ganancia ≥ +2%</span>
+          </div>
+        </div>
+        <ul class="grid grid-cols-2 gap-x-5 gap-y-1 text-xs sm:grid-cols-3 lg:grid-cols-5">
+          {% for r in regions %}
+          <li><button type="button" data-region-chip="{{ r.slug }}" class="flex w-full items-center justify-between gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-mist">
+            <span class="truncate text-muted">{{ r.name }}</span><span data-region-value class="font-mono tabular-nums text-ink/80">—</span>
+          </button></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div data-map-tip class="map-tip" hidden></div>
+</section>
+
+{# ───────────── 4. Herramientas ───────────── #}
+{% set tools = [
+  ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico.", "Abrir gráficas", "chart"),
+  ("moainvest.informe", "file-text", "Informe", "Elige tus watchlists, revisa el informe de activos y envíalo por correo.", "Crear informe", "report"),
+  ("personas.index", "layers", "Comunidad", "Noticias de los activos y el sentimiento de los miembros: vota si cada activo sube o baja.", "Entrar a comunidad", "community"),
+] %}
+<section aria-labelledby="herramientas-title" class="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+  <p class="eyebrow mb-4">Herramientas</p>
+  <h2 id="herramientas-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+    Todo lo que necesitas para <span class="accent">decidir mejor</span>.
+  </h2>
+  <ul class="tool-accordion mt-10">
+    {% for endpoint, icon, title, body, cta, preview in tools %}
+    <li class="tool-item" {% if loop.first %}data-open{% endif %} data-reveal style="--i: {{ loop.index0 }}">
+      <a href="{{ url_for(endpoint) }}" data-spotlight
+         class="spotlight group flex h-full flex-col rounded-2xl border border-line bg-mist p-6 sm:p-7">
+        <span class="flex items-center gap-4">
+          <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-white text-brand transition-colors group-hover:bg-brand group-hover:text-white group-focus-visible:bg-brand group-focus-visible:text-white">
+            {{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}
+          </span>
+          <span class="text-xl font-semibold tracking-tight whitespace-nowrap">{{ title }}</span>
+        </span>
+        <span class="tool-detail mt-6 flex flex-1 flex-col gap-6 sm:flex-row sm:items-end">
+          <span class="flex flex-col sm:max-w-[16rem]">
+            <span class="block leading-relaxed text-muted">{{ body }}</span>
+            <span class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-brand">
+              {{ cta }} {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
+            </span>
+          </span>
+          <span class="tool-preview flex-1 rounded-xl border border-line bg-white p-4" aria-hidden="true">
+            {% if preview == "chart" %}
+            <svg viewBox="0 0 220 110" class="h-28 w-full">
+              {% set candles = [(14,70,40,82,30),(36,60,48,74,40),(58,52,36,62,28),(80,40,48,58,32),(102,46,30,54,22),(124,34,42,50,26),(146,40,24,48,16),(168,28,32,44,20),(190,30,14,36,8)] %}
+              <line x1="0" y1="96" x2="220" y2="96" stroke="var(--color-line)"/>
+              {% for x, o, c, lo, hi in candles %}
+              {% set up = c < o %}
+              <line x1="{{ x }}" x2="{{ x }}" y1="{{ hi }}" y2="{{ lo }}" stroke="{{ 'var(--color-up)' if up else 'var(--color-brand)' }}" stroke-width="1.5"/>
+              <rect x="{{ x - 5 }}" y="{{ [o, c] | min }}" width="10" height="{{ ((o - c) | abs) or 2 }}" rx="1.5" fill="{{ 'var(--color-up)' if up else 'var(--color-brand)' }}"/>
+              {% endfor %}
+            </svg>
+            {% elif preview == "report" %}
+            {#- Mini informe: cabecera de correo y filas de activos con su mini-línea. -#}
+            <svg viewBox="0 0 220 110" class="h-28 w-full">
+              <circle cx="5" cy="6" r="4" fill="var(--color-brand)"/>
+              <rect x="14" y="3.5" width="44" height="5" rx="2.5" fill="var(--color-ink)" opacity=".85"/>
+              <rect x="174" y="0" width="46" height="12" rx="6" fill="var(--color-brand)"/>
+              <text x="197" y="8.3" text-anchor="middle" font-family="Geist Mono, monospace" font-size="6.5" fill="#fff">ENVIAR</text>
+              {% for y, w, pts, pct, up in [
+                (34, 34, "0,8 8,6 16,7 24,3 32,4 40,1", "+1,24%", true),
+                (60, 28, "0,2 8,4 16,3 24,6 32,5 40,8", "−0,62%", false),
+                (86, 40, "0,7 8,8 16,5 24,4 32,2 40,0", "+3,08%", true)] %}
+              <line x1="0" x2="220" y1="{{ y - 13 }}" y2="{{ y - 13 }}" stroke="var(--color-line)"/>
+              <rect x="0" y="{{ y - 4 }}" width="{{ w }}" height="5" rx="2.5" fill="var(--color-ink)" opacity=".75"/>
+              <rect x="0" y="{{ y + 4 }}" width="22" height="3.5" rx="1.75" fill="var(--color-line)"/>
+              <polyline points="{{ pts }}" transform="translate(100 {{ y - 4 }})" fill="none" stroke="{{ 'var(--color-up)' if up else 'var(--color-brand)' }}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+              <rect x="174" y="{{ y - 6 }}" width="46" height="12" rx="6" fill="{{ 'var(--color-up-soft)' if up else 'var(--color-brand-soft)' }}"/>
+              <text x="197" y="{{ y + 2.3 }}" text-anchor="middle" font-family="Geist Mono, monospace" font-size="7" fill="{{ 'var(--color-up)' if up else 'var(--color-brand-deep)' }}">{{ pct }}</text>
+              {% endfor %}
+            </svg>
+            {% else %}
+            {#- Mini comunidad: dos comentarios y la barra de sentimiento. -#}
+            <svg viewBox="0 0 220 110" class="h-28 w-full">
+              {% for y, initials, color, ticker, stance, up, w, tx in [(0, "LM", "var(--color-brand)", "AAPL", "▲ SUBE", true, 120, 58), (34, "AP", "var(--color-ink)", "BTC", "▼ BAJA", false, 96, 54)] %}
+              <circle cx="11" cy="{{ y + 13 }}" r="11" fill="{{ color }}"/>
+              <text x="11" y="{{ y + 16 }}" text-anchor="middle" font-family="Geist, sans-serif" font-size="8" font-weight="600" fill="#fff">{{ initials }}</text>
+              <rect x="28" y="{{ y }}" width="192" height="27" rx="9" fill="var(--color-mist)"/>
+              <text x="36" y="{{ y + 11 }}" font-family="Geist Mono, monospace" font-size="7" fill="var(--color-ink)">{{ ticker }}</text>
+              <rect x="{{ tx }}" y="{{ y + 4.5 }}" width="32" height="9" rx="4.5" fill="{{ 'var(--color-up-soft)' if up else 'var(--color-brand-soft)' }}"/>
+              <text x="{{ tx + 16 }}" y="{{ y + 10.8 }}" text-anchor="middle" font-family="Geist Mono, monospace" font-size="5.5" fill="{{ 'var(--color-up)' if up else 'var(--color-brand-deep)' }}">{{ stance }}</text>
+              <rect x="36" y="{{ y + 17 }}" width="{{ w }}" height="4" rx="2" fill="var(--color-line)"/>
+              {% endfor %}
+              <text x="0" y="86" font-family="Instrument Serif, serif" font-style="italic" font-size="13" fill="var(--color-ink)">¿Sube o baja?</text>
+              <text x="220" y="86" text-anchor="end" font-family="Geist Mono, monospace" font-size="7" fill="var(--color-muted)">64% · 36%</text>
+              <rect x="0" y="95" width="220" height="7" rx="3.5" fill="var(--color-brand)"/>
+              <rect x="0" y="95" width="141" height="7" rx="3.5" fill="var(--color-up)"/>
+              <rect x="139" y="95" width="3" height="7" fill="#fff"/>
+            </svg>
+            {% endif %}
+          </span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{# ───────────── 5. Comunidad ───────────── #}
+<section aria-labelledby="comunidad-title" class="border-t border-line py-16 sm:py-20">
+  <div class="mx-auto w-full max-w-3xl px-5 text-center sm:px-8">
+    <p class="eyebrow mb-4 flex items-center justify-center gap-2">
+      Lo que opinan los miembros
+      <span data-carousel-demo="comments" hidden class="rounded-full bg-mist px-2 py-0.5 text-[0.62rem] tracking-[0.12em] text-muted">incluye ejemplos</span>
+    </p>
+    <h2 id="comunidad-title" class="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">Comunidad</h2>
+    <p class="mx-auto mt-4 max-w-xl text-pretty leading-relaxed text-muted">Tesis y comentarios sobre los activos: quién cree que <span class="accent">sube</span> y quién que <span class="accent">baja</span>.</p>
+  </div>
+  <div class="mt-10">
+    {% call carousel("Comentarios de la comunidad", "comments", url_for('personas_api.comentarios'), names) %}
+    <a href="{{ url_for('personas.index') }}" class="{{ ui.btn('secondary', 'sm', 'mr-auto') }}">
+      Ver toda la comunidad {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
+    </a>
+    <p data-carousel-failed hidden role="status" class="text-sm text-brand-deep">No pudimos cargar los comentarios.</p>
+    {% endcall %}
+  </div>
+</section>
+
+<div data-cursor-badge aria-hidden="true" class="cursor-badge"></div>
 {% endblock %}

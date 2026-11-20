@@ -166,4 +166,7 @@
         submitBtn.disabled = false;
       });
   });
+
+  // Deep link (?tickers=): el servidor rellena el campo y se calcula al cargar.
+  if (form.hasAttribute("data-autorun")) form.requestSubmit();
 })();

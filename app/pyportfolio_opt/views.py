@@ -2,9 +2,10 @@
 PyPortfolioOpt (los datos llegan desde la API de la propia app)."""
 from __future__ import annotations
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 
 from app.core.navigation import get_app
+from app.core.tickers import parse_tickers
 from app.pyportfolio_opt.api import ALLOWED_PERIODS, MAX_TICKERS, SPAN_MAX, SPAN_MIN
 from app.pyportfolio_opt.expected import DEFAULT_SPAN, METHODS, TRADING_DAYS_PER_YEAR
 
@@ -26,6 +27,9 @@ SUGGESTED_TICKERS = ("AAPL", "MSFT", "NVDA", "GOOG", "AMZN", "SPY", "QQQ", "BTC-
 
 @bp.get("/")
 def index():
+    # Deep link ``?tickers=AAPL,MSFT`` (acciones del activo, Mis activos): esos
+    # tickers sustituyen a los de ejemplo y pyportfolio-opt.js calcula al cargar.
+    linked = parse_tickers(request.args.get("tickers"), MAX_TICKERS)
     return render_template(
         "pyportfolio_opt/index.html",
         active_app=get_app("pyportfolio-opt"),
@@ -37,6 +41,7 @@ def index():
         span_max=SPAN_MAX,
         frequency=TRADING_DAYS_PER_YEAR,
         max_tickers=MAX_TICKERS,
-        default_tickers=", ".join(DEFAULT_TICKERS),
+        default_tickers=", ".join(linked or DEFAULT_TICKERS),
+        autorun=bool(linked),
         suggested_tickers=SUGGESTED_TICKERS,
     )

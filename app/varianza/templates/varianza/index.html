@@ -24,11 +24,12 @@
         </p>
       </header>
 
-      <form class="varianza-form" id="varianza-form">
+      <form class="varianza-form" id="varianza-form"{% if initial_ticker %} data-autorun{% endif %}>
         <input
           type="text"
           id="ticker-input"
           class="varianza-form__input varianza-ticker-input"
+          value="{{ initial_ticker }}"
           placeholder="Ticker, p. ej. AAPL"
           aria-label="Ticker"
           autocomplete="off"
@@ -83,7 +84,8 @@
         </p>
       </header>
 
-      <form class="varianza-form" id="volatility-form" data-max-tickers="{{ max_tickers }}">
+      <form class="varianza-form" id="volatility-form" data-max-tickers="{{ max_tickers }}"
+            {%- if initial_tickers %} data-initial-tickers="{{ initial_tickers | join(',') }}"{% endif %}>
         <div class="varianza-chips" id="tickers-field">
           <ul class="varianza-chips__list" id="tickers-chips" aria-label="Tickers añadidos"></ul>
           <input

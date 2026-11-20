@@ -141,41 +141,11 @@ a {
   width: auto;
 }
 
-.topbar__nav {
-  margin-left: auto;
-}
-
-.topbar__links {
-  display: flex;
-  align-items: center;
-  gap: 1.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.92rem;
-}
-
-.topbar__link {
-  position: relative;
-  color: var(--muted);
-  transition: color 0.2s var(--ease-out-soft);
-}
-
-.topbar__link:hover,
-.topbar__link.is-active {
-  color: var(--ink);
-}
-
-/* Sección activa: subrayado rojo pegado al borde de la barra. */
-.topbar__link.is-active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc((var(--topbar-height) - 1.4em) / -2);
-  height: 2px;
-  border-radius: 2px;
-  background: var(--brand);
+/* Hueco libre de la barra (a la derecha del logo): reservado para el
+   selector global de ticker. Empuja la campana y el botón de menú al extremo. */
+.topbar__slot {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Botón del cajón del sidebar: solo en móvil (ver Responsive). */
@@ -220,9 +190,10 @@ a {
 .sidebar__brand {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
-  min-height: 3.5rem;
-  padding: 0.75rem 0.75rem 0.5rem 1.25rem;
+  min-height: 3rem;
+  padding: 0.6rem 0.75rem 0.25rem 1.25rem;
   white-space: nowrap;
 }
 
@@ -381,18 +352,6 @@ a {
   height: 1rem;
 }
 
-.sidebar__foot {
-  margin: 0;
-  padding: 0.9rem 1.25rem;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
 /* Lista de símbolos (no la usa ninguna app ahora; se mantiene el estilo). */
 .sidebar__symbols {
   list-style: none;
@@ -448,13 +407,11 @@ a {
     width: var(--sidebar-width-collapsed);
   }
 
-  .layout.is-sidebar-collapsed .sidebar__title,
   .layout.is-sidebar-collapsed .sidebar__app-name,
   .layout.is-sidebar-collapsed .sidebar__section-name,
   .layout.is-sidebar-collapsed .sidebar__symbol-name,
   .layout.is-sidebar-collapsed .sidebar__symbol-price,
-  .layout.is-sidebar-collapsed .sidebar__symbol-change,
-  .layout.is-sidebar-collapsed .sidebar__foot {
+  .layout.is-sidebar-collapsed .sidebar__symbol-change {
     display: none;
   }
 
@@ -1365,11 +1322,6 @@ a {
     height: 1.5rem;
   }
 
-  .topbar__links {
-    gap: 1.1rem;
-    font-size: 0.88rem;
-  }
-
   .topbar__menu {
     display: grid;
   }
@@ -1443,29 +1395,6 @@ a {
   vertical-align: -0.125em;
 }
 
-/* Marca del sidebar: la marca (logo enlazado a "Inicio") vive en la barra
-   superior; el sidebar se titula con un "eyebrow" en mono como el sitio rojo. */
-.sidebar__title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex: 1;
-  min-width: 0;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.sidebar__title::before {
-  content: "";
-  width: 1.25rem;
-  height: 1px;
-  flex-shrink: 0;
-  background: var(--brand);
-}
-
 /* Usuario en sesión (login con InsForge) al pie del sidebar. */
 .sidebar__user { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; font-size: 0.85rem; }
 .sidebar__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; opacity: 0.8; }
@@ -1528,20 +1457,80 @@ a {
   gap: 0.5rem;
 }
 
-/* Encabezados de grupo del sidebar (Herramientas / Nuevas secciones). */
-.sidebar__group {
-  margin: 14px 12px 4px;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+/* Separador entre grupos del sidebar (herramientas / comunidad y perfil):
+   una línea, sin rótulo, también con el sidebar colapsado. */
+.sidebar__divider {
+  height: 1px;
+  margin: 0.6rem 0.75rem;
+  border: 0;
+  background: var(--line);
 }
 
-.sidebar__group:first-child {
-  margin-top: 4px;
+/* Acciones del activo (core/_asset_actions.html) bajo el ticker de Quant stats. */
+.qs-hero__actions {
+  margin-top: 0.75rem;
 }
 
-.layout.is-sidebar-collapsed .sidebar__group {
-  display: none;
+/* ---------- Avisos flash del área App (core/base.html) ---------- */
+.app-flashes {
+  position: fixed;
+  top: calc(var(--topbar-height) + 0.75rem);
+  right: 1rem;
+  z-index: 60;
+  display: grid;
+  gap: 0.5rem;
+  width: min(24rem, calc(100vw - 2rem));
+}
+
+.app-flash {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--up);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+
+.app-flash[data-tone="error"] {
+  border-left-color: var(--brand);
+  color: var(--brand-deep);
+}
+
+.app-flash__close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.app-flash__close:hover {
+  background: var(--mist);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app-flash {
+    animation: app-flash-in 0.35s var(--ease-out-soft);
+  }
+
+  @keyframes app-flash-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
 }

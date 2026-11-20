@@ -5,6 +5,7 @@
 {% extends "core/base.html" %}
 {% import "core/icons.html" as icons %}
 {% import "core/section_tabs.html" as tabs with context %}
+{% import "core/_asset_actions.html" as aa with context %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('quant_stats.static', filename='quant_stats.css') }}">
@@ -26,6 +27,9 @@
         <span class="qs-hero__ticker">{{ ticker }}</span>
         <span class="qs-head__name">{{ asset_name }}</span>
       </h1>
+      {#- Gráfico y Quant stats ya son pestañas del Graficador: aquí, el resto. -#}
+      {%- set saved = favorite_assets | map(attribute="ticker") | list %}
+      {{ aa.asset_actions(ticker, skip=("chart", "quant"), favorite=(ticker in saved) if current_user else none, extra_class="qs-hero__actions") }}
       <p class="qs-head__lead">{% block hero_lead %}{% endblock %}</p>
     </div>
     {% block asset_form %}{% include "quant_stats/_asset_form.html" %}{% endblock %}

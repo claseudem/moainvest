@@ -1,6 +1,7 @@
 {% extends "core/base.html" %}
 {% import "core/icons.html" as icons %}
 {% import "core/section_tabs.html" as tabs with context %}
+{% import "core/_asset_actions.html" as aa with context %}
 
 {% block title %}Graficador · {{ site_name }}{% endblock %}
 
@@ -55,6 +56,12 @@
     </div>
     {% endif %}
   </header>
+
+  {#- Acciones del activo: Gráfico y Quant stats ya son pestañas; aquí, el resto. -#}
+  {% if ticker %}
+  {%- set saved = favorite_assets | map(attribute="ticker") | list -%}
+  {{ aa.asset_actions(ticker, skip=("chart", "quant"), favorite=(ticker in saved) if current_user else none, extra_class="graficador__actions") }}
+  {% endif %}
 
   {% if not error %}
   {#- Fila 3: controles agrupados con etiqueta (período y vista a la izquierda;

@@ -1,6 +1,5 @@
-{#- Layout del área App (/app/...): barra superior con la marca MOAINVEST (la
-    misma cabecera que el sitio rojo, moainvest/base.html), sidebar de apps y
-    contenido. Bloques: title, head, content y scripts. -#}
+{#- Layout del área App (/app/...): barra superior con el logo de MOAINVEST
+    (enlazado a Inicio), sidebar de apps y contenido. Bloques: title, head, content y scripts. -#}
 {% import "core/icons.html" as icons -%}
 <!doctype html>
 <html lang="es">
@@ -16,6 +15,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Instrument+Serif:ital@0;1&display=swap">
   <link rel="stylesheet" href="{{ url_for('core.static', filename='css/style.css') }}">
   {% if current_user %}<link rel="stylesheet" href="{{ url_for('alertas.static', filename='css/alertas.css') }}">{% endif %}
+  <link rel="stylesheet" href="{{ url_for('core.static', filename='css/asset-actions.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -25,16 +25,9 @@
     <a class="topbar__brand" href="{{ url_for('moainvest.resumen') }}" aria-label="{{ site_name }} — inicio">
       <img class="topbar__logo" src="{{ url_for('moainvest.static', filename='logo/moainvest-compact.png') }}" alt="{{ site_name }}" width="844" height="110">
     </a>
-    <nav class="topbar__nav" aria-label="Menú principal">
-      <ul class="topbar__links">
-        {% for endpoint, label in moainvest_nav %}
-        {%- set href = url_for(endpoint) -%}
-        {#- Mismo criterio que moainvest/_macros.html: Inicio solo en "/", el resto por prefijo. -#}
-        {%- set active = (request.path == href) if endpoint == "moainvest.resumen" else request.path.startswith(href) -%}
-        <li><a class="topbar__link{% if active %} is-active{% endif %}" href="{{ href }}"{% if active %} aria-current="page"{% endif %}>{{ label }}</a></li>
-        {% endfor %}
-      </ul>
-    </nav>
+    {#- Hueco libre (reservado para el selector global de ticker). El logo ya
+        vuelve a Inicio, así que el área App no repite el navbar del sitio rojo. -#}
+    <div class="topbar__slot" id="topbar-slot"></div>
     {% if current_user %}{% include "alertas/_bell.html" %}{% endif %}
     <button class="topbar__menu" id="sidebar-open" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú de la app">
       {{ icons.icon("menu") }}
@@ -45,6 +38,20 @@
     {% include "core/sidebar.html" %}
     <div class="sidebar-backdrop" data-sidebar-close hidden></div>
     <main class="content" id="contenido">
+      {#- Mensajes flash de cualquier app (p. ej. «AAPL agregado a tus activos»
+          tras guardar desde el Graficador): avisos que se cierran solos. -#}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="app-flashes" data-app-flashes>
+        {% for category, message in messages %}
+        <p class="app-flash" data-tone="{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">
+          <span>{{ message }}</span>
+          <button type="button" class="app-flash__close" data-flash-close aria-label="Cerrar aviso">{{ icons.icon("x") }}</button>
+        </p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
       {% block content %}{% endblock %}
     </main>
   </div>

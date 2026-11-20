@@ -17,6 +17,8 @@ from app.core.navigation import get_app
 from app.cuentas.views import current_user
 from app.favoritos import store
 from app.favoritos.store import StoreError
+from app.pyportfolio_opt.api import MAX_TICKERS as MAX_PORTFOLIO_TICKERS
+from app.varianza.api import MAX_VOLATILITY_TICKERS
 
 bp = Blueprint(
     "favoritos",
@@ -93,7 +95,21 @@ def index():
         favorites=rows,
         error=error,
         max_favorites=store.MAX_FAVORITES,
+        max_volatility=MAX_VOLATILITY_TICKERS,
+        max_portfolio=MAX_PORTFOLIO_TICKERS,
     )
+
+
+def _next_url() -> str:
+    """Página a la que volver tras agregar/quitar (campo ``next`` del formulario).
+
+    Solo rutas locales (``/app/...``), nunca otro dominio (``//evil.com``,
+    ``https://...``): si no, la página de Mis activos.
+    """
+    target = request.form.get("next") or ""
+    if target.startswith("/") and not target.startswith(("//", "/\\")):
+        return target
+    return url_for("favoritos.index")
 
 
 @bp.post("/agregar")
@@ -101,7 +117,7 @@ def agregar():
     user = current_user()
     ticker = (request.form.get("ticker") or "").strip().upper()
     if user is None:
-        return redirect(url_for("cuentas.ingresar", next=url_for("favoritos.index")))
+        return redirect(url_for("cuentas.ingresar", next=_next_url()))
     if not TICKER_RE.match(ticker):
         flash(f"«{ticker}» no es un ticker válido de Yahoo Finance.", "error")
     else:
@@ -116,7 +132,7 @@ def agregar():
                 flash(f"{ticker} ya está en tus activos (o llegaste al máximo de {store.MAX_FAVORITES}).", "info")
         except StoreError as exc:
             flash(str(exc), "error")
-    return redirect(url_for("favoritos.index"))
+    return redirect(_next_url())
 
 
 @bp.post("/quitar")
@@ -124,11 +140,11 @@ def quitar():
     user = current_user()
     ticker = (request.form.get("ticker") or "").strip().upper()
     if user is None:
-        return redirect(url_for("cuentas.ingresar", next=url_for("favoritos.index")))
+        return redirect(url_for("cuentas.ingresar", next=_next_url()))
     if TICKER_RE.match(ticker):
         try:
             store.remove_favorite(user["id"], ticker)
             flash(f"{ticker} quitado de tus activos.", "info")
         except StoreError as exc:
             flash(str(exc), "error")
-    return redirect(url_for("favoritos.index"))
+    return redirect(_next_url())

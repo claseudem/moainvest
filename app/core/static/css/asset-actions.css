@@ -1,0 +1,131 @@
+/*
+ * Acciones de un activo (macro core/templates/core/_asset_actions.html).
+ *
+ * CSS plano, compartido por los dos layouts:
+ * - el área App lo enlaza en core/base.html (tokens --brand, --line... de style.css);
+ * - el sitio rojo lo importa en moainvest/static/src/moainvest.css (tokens
+ *   --color-brand, --color-line... de Tailwind). Si cambias este fichero,
+ *   recompila: uv run flask --app run build-css
+ */
+.asset-actions {
+  --aa-brand: var(--brand, var(--color-brand, #c8102e));
+  --aa-brand-soft: var(--brand-soft, var(--color-brand-soft, #fbeef0));
+  --aa-ink: var(--ink, var(--color-ink, #171717));
+  --aa-muted: var(--muted, var(--color-muted, #6b6b6b));
+  --aa-line: var(--line, var(--color-line, #e6e4df));
+  --aa-paper: var(--paper, var(--color-paper, #ffffff));
+  --aa-mist: var(--mist, var(--color-mist, #f7f7f5));
+
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.asset-actions__form {
+  display: contents;
+}
+
+.asset-actions__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  padding: 0 0.8rem;
+  border: 1px solid var(--aa-line);
+  border-radius: 999px;
+  background: var(--aa-paper);
+  color: var(--aa-ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.asset-actions__item .ui-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--aa-muted);
+  transition: color 0.2s ease;
+}
+
+.asset-actions__item:hover {
+  border-color: color-mix(in srgb, var(--aa-brand) 45%, transparent);
+  color: var(--aa-brand);
+}
+
+.asset-actions__item:hover .ui-icon,
+.asset-actions__item:focus-visible .ui-icon {
+  color: var(--aa-brand);
+}
+
+.asset-actions__item:active {
+  transform: scale(0.97);
+}
+
+.asset-actions__item:focus-visible {
+  outline: 2px solid var(--aa-brand);
+  outline-offset: 2px;
+}
+
+/* Guardado: estrella rellena en rojo de marca. */
+.asset-actions__fav[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--aa-brand) 35%, transparent);
+  background: var(--aa-brand-soft);
+  color: var(--aa-brand);
+}
+
+.asset-actions__fav[aria-pressed="true"] .ui-icon {
+  color: var(--aa-brand);
+  fill: currentColor;
+}
+
+/* Texto solo para lectores de pantalla («Gráfica de AAPL»). */
+.asset-actions__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Compacto (tablas y tarjetas): solo iconos, botones redondos. */
+.asset-actions--compact {
+  gap: 0.25rem;
+}
+
+.asset-actions--compact .asset-actions__item {
+  justify-content: center;
+  width: 2rem;
+  padding: 0;
+}
+
+.asset-actions--compact .asset-actions__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asset-actions__item,
+  .asset-actions__item .ui-icon {
+    transition: none;
+  }
+}

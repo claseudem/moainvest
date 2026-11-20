@@ -9,9 +9,12 @@
  *   uv run flask --app run build-css          (o --watch mientras desarrollas)
  */
 @import "tailwindcss" source(none);
+/* Acciones de un activo (macro core/_asset_actions.html), CSS plano compartido con el área App. */
+@import "../../../core/static/css/asset-actions.css";
 @source "../../templates/moainvest";
 @source "../../../cuentas/templates/cuentas";
 @source "../../../core/templates/core/icons.html";
+@source "../../../core/templates/core/_asset_actions.html";
 @source "../moainvest.js";
 
 /* Fuentes de Google Fonts (se cargan en moainvest/base.html). */
@@ -187,6 +190,22 @@
   }
   html.js [data-scene][data-visible] .grow-x {
     transform: none;
+  }
+}
+
+/* Destello del precio al refrescarse (moainvest.js añade .tick-up / .tick-down). */
+@media (prefers-reduced-motion: no-preference) {
+  .tick-up {
+    animation: tick-up 1.2s var(--ease-out-soft);
+  }
+  .tick-down {
+    animation: tick-down 1.2s var(--ease-out-soft);
+  }
+  @keyframes tick-up {
+    from { background-color: color-mix(in srgb, var(--color-up) 22%, transparent); }
+  }
+  @keyframes tick-down {
+    from { background-color: color-mix(in srgb, var(--color-brand) 18%, transparent); }
   }
 }
 

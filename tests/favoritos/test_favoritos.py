@@ -130,6 +130,11 @@ def test_page_shows_only_saved_assets_with_universo_layout(logged, db):
     assert "TSLA" not in html
 
 
+def test_single_asset_has_no_bulk_analysis(logged, db):
+    logged.post("/app/favoritos/agregar", data={"ticker": "AAPL"})
+    assert "activos__bulk" not in logged.get("/app/favoritos/").get_data(as_text=True)
+
+
 def test_empty_list_shows_no_sample_data(logged, db):
     html = logged.get("/app/favoritos/").get_data(as_text=True)
     assert "Aún no tienes activos guardados" in html
@@ -154,3 +159,35 @@ def test_sidebar_has_single_mis_activos_entry():
 
     assert [a.name for a in APPS].count("Mis activos") == 1
     assert all("universo" not in a.slug for a in APPS)
+
+
+def test_save_from_another_app_returns_there_with_a_flash(logged, db):
+    response = logged.post("/app/favoritos/agregar", data={"ticker": "MSFT", "next": "/app/graficador/?ticker=MSFT"})
+    assert response.headers["Location"].endswith("/app/graficador/?ticker=MSFT")
+    page = logged.get("/app/graficador/?ticker=MSFT").get_data(as_text=True)
+    # El aviso lo pinta core/base.html y el botón pasa a «Guardado» (quitar).
+    assert 'class="app-flash" data-tone="info"' in page and "MSFT agregado a tus activos." in page
+    assert 'action="/app/favoritos/quitar"' in page and 'aria-pressed="true"' in page
+
+
+def test_graficador_offers_save_when_logged_and_not_saved(logged, db):
+    page = logged.get("/app/graficador/?ticker=AMD").get_data(as_text=True)
+    assert 'action="/app/favoritos/agregar"' in page and 'aria-pressed="false"' in page
+    assert 'name="next" value="/app/graficador/?ticker=AMD"' in page
+
+
+@pytest.mark.parametrize("next_url", ["//evil.example/x", "https://evil.example/", "/\\evil.example", ""])
+def test_next_only_allows_local_paths(logged, db, next_url):
+    response = logged.post("/app/favoritos/quitar", data={"ticker": "AAPL", "next": next_url})
+    assert response.headers["Location"].endswith("/app/favoritos/")
+
+
+def test_table_rows_link_to_tools_and_bulk_analysis(logged, db):
+    for t in ("AAPL", "MSFT"):
+        logged.post("/app/favoritos/agregar", data={"ticker": t})
+    page = logged.get("/app/favoritos/").get_data(as_text=True)
+    assert "/app/analisis-varianza/?ticker=AAPL" in page and "/app/pyportfolio-opt/?tickers=AAPL" in page
+    assert 'href="/app/analisis-varianza/?tickers=AAPL,MSFT"' in page
+    assert 'href="/app/pyportfolio-opt/?tickers=AAPL,MSFT"' in page
+    # El ticker ya enlaza a la gráfica: la fila no repite «Gráfica».
+    assert 'data-asset-action="chart"' not in page

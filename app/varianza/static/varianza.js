@@ -262,4 +262,14 @@
         volatilityBtn.disabled = false;
       });
   });
+
+  // -----------------------------------------------------------------
+  // Deep links (?ticker= / ?tickers=): el servidor rellena los campos y
+  // aquí se lanza el análisis sin que el usuario tenga que pulsar nada.
+  // -----------------------------------------------------------------
+  if (form.hasAttribute("data-autorun") && tickerInput.value.trim()) form.requestSubmit();
+  if (volatilityForm.dataset.initialTickers) {
+    addTickers(volatilityForm.dataset.initialTickers);
+    volatilityForm.requestSubmit();
+  }
 })();

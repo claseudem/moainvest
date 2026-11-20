@@ -33,9 +33,9 @@ def _nav_links(page: str, label: str) -> list[tuple[str, str]]:
 
 
 @pytest.mark.parametrize("label", ["Menú principal", "Menú principal móvil", "Navegación del pie de página"])
-def test_navbar_has_only_inicio_and_app(client, label):
+def test_navbar_has_inicio_mercados_and_app(client, label):
     page = client.get("/").get_data(as_text=True)
-    assert _nav_links(page, label) == [("/", "Inicio"), ("/app/", "App")]
+    assert _nav_links(page, label) == [("/", "Inicio"), ("/mercados", "Mercados"), ("/app/", "App")]
 
 
 def test_navbar_marks_inicio_as_current_on_home(client):

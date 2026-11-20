@@ -253,11 +253,41 @@ Mis activos viven en el área App
   uv run flask --app run build-css          # o --watch mientras desarrollas
   ```
 
+### Mercados
+
+`/mercados` reúne en una sola página **índices, acciones, cripto, divisas,
+materias primas, bonos públicos, bonos corporativos y ETF**. Cada categoría
+trae una frase que explica qué mide, tarjetas con precio, variación y línea
+del último mes (que se piden al acercarse a la pantalla), y una barra de
+categorías fija que marca la sección visible. Arriba, el **panorama del día**
+cuenta cuántos activos suben y muestra los tres que más suben y bajan.
+
+- **Bonos públicos**: rendimientos del Tesoro de EE. UU. (3 meses, 5, 10 y 30
+  años) y su **curva de rendimiento**, que dice si está normal, plana o
+  invertida (`markets.curve_shape`).
+- **Bonos corporativos**: Yahoo no publica bonos corporativos uno a uno, así
+  que se siguen con ETF (VCSH, LQD, HYG...) en una tabla filtrable por corto
+  plazo, largo plazo, grado de inversión, alto rendimiento y emergentes.
+
+Las categorías viven en `MARKETS` de `app/moainvest/markets.py` (sin Flask):
+añadir una es añadir una entrada. APIs públicas:
+`GET /api/mercados/<slug>/quotes` y `GET /api/mercados/curva`.
+
+### Radar de noticias del Inicio
+
+Bajo los precios del Inicio, `app/moainvest/radar.py` y `GET /api/radar`
+pintan el **termómetro del mercado** (0 = miedo, 100 = euforia, con el
+sentimiento de los titulares ponderado por recencia), **noticias vs. precio**
+(si el precio de hoy confirma o diverge del tono de las noticias de cada
+activo) y los titulares con las palabras que deciden su sentimiento
+(`noticias.sentiment.signals`). Es una estimación por palabras clave, no una
+recomendación de inversión.
+
 ### Navbar
 
 El navbar del sitio rojo (cabecera, menú móvil y pie) sale de `MAIN_NAV` en
-`app/moainvest/views.py` y solo tiene dos enlaces: **Inicio** (`/`) y **App**
-(`/app/`). El botón de la cabecera y del menú móvil, «Abrir app», también
+`app/moainvest/views.py` y tiene tres enlaces: **Inicio** (`/`), **Mercados**
+(`/mercados`) y **App** (`/app/`). El botón de la cabecera y del menú móvil, «Abrir app», también
 apunta a `/app/`.
 
 `/app/` (endpoint `moainvest.app_home`, también responde en `/app`) no tiene

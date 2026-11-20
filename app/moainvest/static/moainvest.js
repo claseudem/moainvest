@@ -113,11 +113,20 @@
   function initWatchlistQuotes() {
     document.querySelectorAll("[data-watchlist-quotes]").forEach((root) => {
       const slug = root.dataset.watchlistQuotes;
+      const url = root.dataset.quotesUrl || "/api/watchlist/" + encodeURIComponent(slug) + "/quotes";
       const failed = root.querySelector("[data-quotes-failed]");
       poll(() =>
-        getJSON("/api/watchlist/" + encodeURIComponent(slug) + "/quotes")
+        getJSON(url)
           .then((quotes) => {
             if (failed) failed.hidden = true;
+            // Otros bloques (panorama de /mercados) escuchan los precios sin pedirlos otra vez.
+            document.dispatchEvent(new CustomEvent("moainvest:quotes", { detail: { slug: slug, root: root, quotes: quotes } }));
+            const counter = root.querySelector("[data-market-count]");
+            if (counter) {
+              const moves = Object.values(quotes).map((q) => q.change_percent).filter((v) => v !== null && v !== undefined);
+              const up = moves.filter((v) => v >= 0).length;
+              counter.textContent = "Hoy: " + up + " suben · " + (moves.length - up) + " bajan";
+            }
             root.querySelectorAll("[data-quote]").forEach((card) => {
               const q = quotes[card.dataset.quote];
               if (!q) return;
@@ -162,11 +171,25 @@
       "</svg>";
   }
 
+  function loadSparkline(box) {
+    getJSON("/api/candles/" + encodeURIComponent(box.dataset.sparkline) + "?range=1mo&interval=1d")
+      .then((candles) => renderSparkline(box, candles.map((c) => c.close)))
+      .catch(() => renderSparkline(box, []));
+  }
+
+  /** Las marcadas con data-sparkline-lazy se piden al acercarse a la pantalla (páginas con muchos activos). */
   function initSparklines() {
+    const lazy = "IntersectionObserver" in window ? new IntersectionObserver(
+      (entries) => entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        lazy.unobserve(entry.target);
+        loadSparkline(entry.target);
+      }),
+      { rootMargin: "300px 0px" },
+    ) : null;
     document.querySelectorAll("[data-sparkline]").forEach((box) => {
-      getJSON("/api/candles/" + encodeURIComponent(box.dataset.sparkline) + "?range=1mo&interval=1d")
-        .then((candles) => renderSparkline(box, candles.map((c) => c.close)))
-        .catch(() => renderSparkline(box, []));
+      if (lazy && box.hasAttribute("data-sparkline-lazy")) lazy.observe(box);
+      else loadSparkline(box);
     });
   }
 
@@ -427,10 +450,137 @@
     setInterval(load, RADAR_POLL_MS);
   }
 
+  // ───────────────────────── Mercados ─────────────────────────
+  const MARKET_LINK_TONES = { on: "bg-ink text-white", off: "bg-mist text-ink/80 hover:bg-line" };
+
+  /** Marca en la barra de categorías la sección que se está leyendo. */
+  function initMarketNav() {
+    const nav = document.querySelector("[data-market-nav]");
+    if (!nav || !("IntersectionObserver" in window)) return;
+    const links = nav.querySelectorAll("[data-market-link]");
+    function activate(slug) {
+      links.forEach((a) => {
+        const on = a.dataset.marketLink === slug;
+        setTone(a, MARKET_LINK_TONES, on ? "on" : "off");
+        if (on) {
+          a.setAttribute("aria-current", "true");
+          a.scrollIntoView({ block: "nearest", inline: "nearest" });
+        } else a.removeAttribute("aria-current");
+      });
+    }
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && activate(e.target.dataset.market)),
+      { rootMargin: "-40% 0px -55% 0px" },
+    );
+    document.querySelectorAll("[data-market]").forEach((section) => io.observe(section));
+  }
+
+  /** Panorama: cuántos activos suben y los extremos del día, con los precios que ya llegan a la página. */
+  function initMarketBreadth() {
+    const root = document.querySelector("[data-market-breadth]");
+    if (!root) return;
+    const all = {};
+    document.addEventListener("moainvest:quotes", (e) => {
+      const { root: section, quotes, slug } = e.detail;
+      // Los bonos públicos son rendimientos, no precios: no cuentan como "subir" o "bajar".
+      if (section.querySelector("[data-yield-curve]")) return;
+      Object.entries(quotes).forEach(([ticker, q]) => {
+        if (q.change_percent === null || q.change_percent === undefined) return;
+        const card = section.querySelector('[data-quote="' + CSS.escape(ticker) + '"]');
+        const nameEl = card && card.querySelector(".font-semibold");
+        all[slug + ":" + ticker] = { ticker: ticker, name: nameEl ? nameEl.textContent.trim() : ticker, change: q.change_percent };
+      });
+      const items = Object.values(all);
+      const up = items.filter((i) => i.change >= 0).length;
+      setText(root, "[data-breadth-up]", String(up));
+      setText(root, "[data-breadth-total]", String(items.length));
+      root.querySelector('[data-breadth-bar="up"]').style.width = (items.length ? (up / items.length) * 100 : 0) + "%";
+      root.querySelector('[data-breadth-bar="down"]').style.width = (items.length ? ((items.length - up) / items.length) * 100 : 0) + "%";
+      const sorted = items.slice().sort((a, b) => b.change - a.change);
+      const row = (i) =>
+        '<li class="flex items-center justify-between gap-3"><span class="min-w-0 truncate">' + esc(i.name) +
+        ' <span class="font-mono text-xs text-muted">' + esc(i.ticker) + "</span></span>" +
+        '<span class="font-mono tabular-nums ' + (i.change >= 0 ? "text-up" : "text-brand") + '">' + fmtPercent(i.change) + "</span></li>";
+      root.querySelector('[data-breadth-list="up"]').innerHTML = sorted.filter((i) => i.change > 0).slice(0, 3).map(row).join("") || '<li class="text-muted">Nada sube por ahora.</li>';
+      root.querySelector('[data-breadth-list="down"]').innerHTML = sorted.filter((i) => i.change < 0).reverse().slice(0, 3).map(row).join("") || '<li class="text-muted">Nada baja por ahora.</li>';
+    });
+  }
+
+  function initBondFilters() {
+    document.querySelectorAll("[data-bond-filters]").forEach((group) => {
+      const section = group.closest("[data-market]");
+      const buttons = group.querySelectorAll("[data-bond-filter]");
+      buttons.forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const value = btn.dataset.bondFilter;
+          buttons.forEach((b) => {
+            const on = b === btn;
+            b.setAttribute("aria-pressed", String(on));
+            setTone(b, FILTER_TONES, on ? "on" : "off");
+          });
+          section.querySelectorAll("[data-bond-group]").forEach((row) => {
+            row.hidden = value !== "Todos" && row.dataset.bondGroup !== value;
+          });
+        }),
+      );
+    });
+  }
+
+  const CURVE_TONES = { normal: "bg-up-soft text-up", plana: "bg-mist text-ink", invertida: "bg-brand-soft text-brand-deep", "sin-datos": "bg-mist text-muted" };
+
+  /** Curva de rendimiento: eje X en raíz cuadrada de los años para que 3 meses y 30 años quepan. */
+  function renderCurve(box, points) {
+    const pts = points.filter((p) => p.rendimiento !== null && p.rendimiento !== undefined);
+    if (pts.length < 2) {
+      box.innerHTML = '<p class="py-16 text-center text-sm text-muted">Sin datos suficientes para dibujar la curva.</p>';
+      return;
+    }
+    const W = 560, H = 220, L = 40, R = 24, T = 32, B = 32;
+    const maxX = Math.sqrt(Math.max(...points.map((p) => p.anios)));
+    const ys = pts.map((p) => p.rendimiento);
+    const lo = Math.floor(Math.min(...ys) - 0.25), hi = Math.ceil(Math.max(...ys) + 0.25);
+    const x = (years) => L + (Math.sqrt(years) / maxX) * (W - L - R);
+    const y = (v) => T + (1 - (v - lo) / (hi - lo || 1)) * (H - T - B);
+    let grid = "";
+    for (let v = lo; v <= hi; v += (hi - lo) > 3 ? 1 : 0.5) {
+      grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--color-line)"/>' +
+        '<text x="' + (L - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end" font-size="11" fill="var(--color-muted)">' + v.toFixed(1) + "%</text>";
+    }
+    const line = pts.map((p, i) => (i ? "L" : "M") + x(p.anios).toFixed(1) + " " + y(p.rendimiento).toFixed(1)).join(" ");
+    const dots = pts.map((p) =>
+      '<circle cx="' + x(p.anios) + '" cy="' + y(p.rendimiento) + '" r="5" fill="var(--color-brand)" stroke="#fff" stroke-width="2"/>' +
+      '<text x="' + x(p.anios) + '" y="' + (y(p.rendimiento) - 12) + '" text-anchor="middle" font-size="12" font-weight="600" fill="var(--color-ink)">' + p.rendimiento.toFixed(2) + "%</text>" +
+      '<text x="' + x(p.anios) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="11" fill="var(--color-muted)">' + (p.anios < 1 ? Math.round(p.anios * 12) + " m" : p.anios + " a") + "</text>",
+    ).join("");
+    box.innerHTML =
+      '<svg viewBox="0 0 ' + W + " " + H + '" class="w-full" role="img" aria-label="Curva de rendimiento del Tesoro de EE. UU.">' +
+      grid + '<path d="' + line + '" fill="none" stroke="var(--color-brand)" stroke-width="2.5" stroke-linejoin="round"/>' + dots + "</svg>";
+  }
+
+  function initYieldCurve() {
+    document.querySelectorAll("[data-yield-curve]").forEach((root) => {
+      const text = root.querySelector("[data-curve-text]");
+      const load = () =>
+        getJSON(root.dataset.curveUrl)
+          .then((data) => {
+            renderCurve(root.querySelector("[data-curve-chart]"), data.puntos);
+            text.textContent = data.texto;
+            setTone(text, CURVE_TONES, data.estado in CURVE_TONES ? data.estado : "sin-datos");
+          })
+          .catch(() => (text.textContent = "No pudimos cargar la curva ahora."));
+      load();
+      setInterval(load, 60000);
+    });
+  }
+
   initReveal();
   initMobileNav();
   initWatchlistQuotes();
   initSparklines();
   initChartWorkspace();
   initNewsRadar();
+  initMarketNav();
+  initMarketBreadth();
+  initBondFilters();
+  initYieldCurve();
 })();

@@ -1,5 +1,7 @@
 """Sitio MOAINVEST (Resumen, Gráficas e Informe), servido por Flask en la raíz."""
+import html
 import re
+from urllib.parse import parse_qs, urlsplit
 from pathlib import Path
 
 import pytest
@@ -7,6 +9,7 @@ from flask import url_for
 
 from app.core.navigation import default_app
 from app.core.watchlists import WATCHLISTS, get_watchlist
+from app.moainvest import barometer
 
 STATIC = Path(__file__).resolve().parents[2] / "app" / "moainvest" / "static"
 
@@ -150,3 +153,81 @@ def test_compiled_css_includes_classes_used_by_templates_and_js():
         assert cls in css, cls
     for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e"):
         assert cls in css, cls
+
+
+def test_home_has_carousels_marquee_barometer_and_tools(client):
+    overview = get_watchlist("overview")
+    page = client.get("/").get_data(as_text=True)
+    tickers = ",".join(s.ticker for s in overview.symbols)
+    # Carrusel de noticias: pide las noticias de COMUNIDAD de los activos del resumen.
+    carousels = dict(re.findall(r'data-carousel-kind="(\w+)" data-src="([^"]+)"', page))
+    news_url = urlsplit(html.unescape(carousels["news"]))
+    assert news_url.path == "/api/comunidad/noticias"
+    assert parse_qs(news_url.query)["tickers"] == [tickers]
+    assert carousels["comments"] == "/api/comunidad/comentarios"
+    # Cinta: cada activo dos veces (la copia, oculta a lectores de pantalla) dentro del mismo sondeo de precios.
+    marquee = page.split('class="marquee ', 1)[1].split("</div>", 2)[0]
+    for s in overview.symbols:
+        assert marquee.count(f'data-quote="{s.ticker}"') == 2
+    assert page.index(f'data-watchlist-quotes="{overview.slug}"') < page.index('class="marquee ')
+    # Barómetro: mapa con todas las regiones y su endpoint.
+    assert "Barómetro Global de" in page and 'data-src="/api/barometro"' in page
+    for region in barometer.REGIONS:
+        assert f'data-region="{region.slug}"' in page
+    # Herramientas en acordeón: solo la primera abierta por defecto.
+    assert page.count('class="tool-item"') == 3
+    assert page.count("data-open") == 1
+    # Comunidad con su título exacto y enlace; sin la sección de equipos.
+    assert '<h2 id="comunidad-title"' in page and ">Comunidad</h2>" in page
+    assert "Ver toda la comunidad" in page
+    assert "Los equipos que" not in page and "Quiénes somos" not in page
+
+
+@pytest.mark.parametrize(
+    "ticker, kind",
+    [("^GSPC", "Índice"), ("BTC-USD", "Cripto"), ("EURUSD=X", "Divisa"), ("UEC", "Acción")],
+)
+def test_asset_cards_show_category(client, ticker, kind):
+    page = client.get("/").get_data(as_text=True)
+    card = page.split(f'data-quote="{ticker}" data-spotlight', 1)[1].split("</li>", 1)[0]
+    assert kind in card
+    assert "data-period-range" in card
+
+
+def test_barometer_averages_indices_and_falls_back_to_global(client, monkeypatch):
+    from app.core.market_data import Quote
+
+    changes = {"^GSPC": 1.0, "^IXIC": 2.0, "^DJI": None, "^GSPTSE": 0.0}
+    monkeypatch.setattr(
+        barometer.market_data,
+        "get_quote",
+        lambda t: Quote(symbol=t, name=t, price=100.0, previous_close=None, change=None, change_percent=changes.get(t)),
+    )
+    regions = {r["slug"]: r for r in client.get("/api/barometro").get_json()["regions"]}
+    assert regions["norteamerica"]["change_percent"] == pytest.approx(1.0)  # (1 + 2 + 0) / 3
+    assert regions["norteamerica"]["fallback"] is False
+    assert [i["name"] for i in regions["norteamerica"]["indices"]][:2] == ["S&P 500", "Nasdaq"]
+    # Sin datos (o sin índice directo): promedio global, marcado como estimado.
+    assert regions["europa"]["fallback"] is True
+    assert regions["rusia-asia-central"]["change_percent"] == pytest.approx(1.0)
+
+
+def test_world_map_covers_every_region():
+    from app.moainvest.barometer import region_of
+
+    svg = (STATIC.parent / "templates" / "moainvest" / "_world_map.svg").read_text()
+    for region in barometer.REGIONS:
+        assert f'data-region="{region.slug}"' in svg
+    assert region_of({"ADM0_A3": "RUS", "CONTINENT": "Europe"}) == "rusia-asia-central"
+    assert region_of({"ADM0_A3": "MEX", "CONTINENT": "North America", "SUBREGION": "Central America"}) == "latam"
+    assert region_of({"ADM0_A3": "ATA", "CONTINENT": "Antarctica"}) is None
+
+
+def test_home_js_keeps_15s_polling_and_adds_interactions():
+    js = (STATIC / "moainvest.js").read_text()
+    assert "const QUOTE_POLL_MS = 15000;" in js
+    for name in ("initCarousels", "initBarometer", "initPointerEffects", "enableSparkHover", "renderPeriodRange"):
+        assert f"{name}();" in js or f"function {name}(" in js
+    css = (STATIC / "moainvest.css").read_text()
+    for cls in (".marquee-track", ".tool-accordion", ".spotlight", ".cursor-badge", ".spark-tip", ".hero-glow", ".carousel-viewport", ".map-region", ".asset-card"):
+        assert cls in css

@@ -204,3 +204,45 @@ def test_js_never_writes_html_from_data():
         source = path.read_text(encoding="utf-8")
         assert ".innerHTML" not in source, path.name
     assert "localStorage" in JS.with_name("community-shared.js").read_text(encoding="utf-8")
+
+
+def test_news_image_picks_largest_thumbnail_up_to_limit():
+    thumb = {"thumbnail": {"originalUrl": "https://img/orig.jpg", "resolutions": [
+        {"url": "https://img/140.jpg", "width": 140},
+        {"url": "https://img/800.jpg", "width": 800},
+        {"url": "https://img/4000.jpg", "width": 4000},
+    ]}}
+    assert news._image(thumb) == "https://img/800.jpg"
+    assert news._image({"thumbnail": {"originalUrl": "https://img/orig.jpg"}}) == "https://img/orig.jpg"
+    assert news._image({}) is None
+    row = news._normalize_ticker_news("AAPL", {"id": "x", "content": {"title": "T", **thumb}})
+    assert row["image"] == "https://img/800.jpg"
+
+
+def test_public_comments_hide_ids_and_fill_with_marked_examples(client, monkeypatch):
+    from app.personas import members
+
+    real = [{"ticker": "AAPL", "tag": None, "text": "Buen trimestre", "created": "2026-11-20T10:00:00+00:00",
+             "vote": "sube", "mine": False, "author": {"name": "Ana Pérez", "avatar": "data:x"}, "authorId": "u9"},
+            {"ticker": "UEC", "tag": "Cautela por volatilidad", "text": None, "created": "2026-11-19T10:00:00+00:00",
+             "vote": None, "mine": False, "author": {"name": "Miembro de la comunidad", "avatar": None}, "authorId": None}]
+    monkeypatch.setattr(members, "notes", lambda viewer_id: real)
+    data = client.get("/api/comunidad/comentarios").get_json()
+    first, second = data["items"][:2]
+    assert first == {"ticker": "AAPL", "stance": "sube", "text": "Buen trimestre", "tag": None, "name": "Ana Pérez",
+                     "initials": "AP", "created": "2026-11-20T10:00:00+00:00", "demo": False}
+    assert second["text"] == "Cautela por volatilidad" and second["stance"] == "baja" and second["initials"] == "MC"
+    assert data["demo"] is True and len(data["items"]) == members.MIN_COMMENTS
+    assert all(i["demo"] for i in data["items"][2:])
+
+
+def test_public_comments_without_insforge_are_examples(client, monkeypatch):
+    from app.personas import members
+    from app.personas.db import DBError
+
+    def fail(viewer_id):
+        raise DBError("sin base")
+
+    monkeypatch.setattr(members, "notes", fail)
+    data = client.get("/api/comunidad/comentarios").get_json()
+    assert data["demo"] is True and data["items"] and all(i["demo"] for i in data["items"])

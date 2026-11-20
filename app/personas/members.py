@@ -280,3 +280,67 @@ def social_counts(user_id: str) -> dict[str, int]:
         "followers": sum(1 for r in rel if r["objetivo_id"] == user_id and r["tipo"] == "seguir"),
         "connections": len(connect_out & connect_in),
     }
+
+
+# ── Comentarios públicos (carrusel «Comunidad» del inicio) ────────
+
+# Etiquetas rápidas que implican una postura cuando la nota no tiene voto.
+_TAG_STANCE = {"Alcista por resultados": "sube", "Soporte clave": "sube", "Visión de largo plazo": "sube",
+               "Cautela por volatilidad": "baja", "Resistencia cercana": "baja"}
+
+# DEMO: comentarios de ejemplo sobre los activos del resumen, para completar el
+# carrusel cuando aún hay pocas notas reales. Se marcan con ``demo=True``.
+# (ticker, postura, texto, nombre, horas atrás)
+DEMO_COMMENTS: tuple[tuple[str, str, str, str, int], ...] = (
+    ("^GSPC", "sube", "La amplitud del mercado mejora: más sectores acompañan a las tecnológicas.", "Laura M.", 2),
+    ("BTC-USD", "baja", "Pierde el soporte de la media de 50 días; espero una corrección antes de seguir.", "Andrés P.", 3),
+    ("^IXIC", "sube", "Los resultados de los semiconductores siguen sosteniendo al índice.", "Camila R.", 5),
+    ("EURUSD=X", "baja", "Si la Fed mantiene tasas altas, el dólar debería seguir fuerte frente al euro.", "Santiago G.", 7),
+    ("UEC", "sube", "Contratos de uranio a largo plazo y demanda nuclear: tesis de varios años.", "Valentina S.", 9),
+    ("^DJI", "baja", "Industriales presionados por costos; prefiero esperar al próximo reporte.", "Mateo L.", 12),
+)
+MIN_COMMENTS = 6
+
+
+def _initials(name: str) -> str:
+    words = [w for w in re.split(r"\s+", name.strip()) if w and w[0].isalnum()]
+    parts = [w for w in words if not (len(w) <= 3 and w.islower())] or words  # sin «de», «la»…
+    return "".join(p[0] for p in parts[:2]).upper() or "M"
+
+
+def public_comments(limit: int = 12) -> tuple[list[dict], bool]:
+    """Notas recientes con texto, para mostrarlas a cualquiera (sin sesión).
+
+    Solo sale el nombre de los perfiles visibles (los demás son "Miembro de la
+    comunidad") y nunca el id del autor ni su foto. Si hay menos de
+    ``MIN_COMMENTS``, se completa con ``DEMO_COMMENTS``; el segundo valor dice
+    si se usaron ejemplos.
+    """
+    items = []
+    for note in notes(None):
+        text = note["text"] or note["tag"]
+        if not text:
+            continue
+        stance = note["vote"] or _TAG_STANCE.get(note["tag"] or "")
+        name = note["author"]["name"]
+        items.append({
+            "ticker": note["ticker"], "stance": stance, "text": text, "tag": note["tag"] if note["text"] else None,
+            "name": name, "initials": _initials(name), "created": note["created"], "demo": False,
+        })
+        if len(items) >= limit:
+            break
+    used_demo = len(items) < MIN_COMMENTS
+    if used_demo:
+        items += demo_comments(MIN_COMMENTS - len(items))
+    return items, used_demo
+
+
+def demo_comments(count: int = MIN_COMMENTS) -> list[dict]:
+    now = datetime.now(timezone.utc).timestamp()
+    return [
+        {
+            "ticker": ticker, "stance": stance, "text": text, "tag": None, "name": name, "initials": _initials(name),
+            "created": datetime.fromtimestamp(now - hours * 3600, tz=timezone.utc).isoformat(), "demo": True,
+        }
+        for ticker, stance, text, name, hours in DEMO_COMMENTS[:count]
+    ]

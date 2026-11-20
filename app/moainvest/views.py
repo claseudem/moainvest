@@ -9,11 +9,11 @@ registro de watchlists; los precios, velas e informes los pide el JavaScript
 """
 from __future__ import annotations
 
-from flask import Blueprint, abort, redirect, render_template, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, url_for
 
 from app.core.navigation import default_app
 from app.core.watchlists import WATCHLISTS, Watchlist, get_watchlist
-from app.personas.content import TEAMS
+from app.moainvest import barometer
 
 bp = Blueprint(
     "moainvest",
@@ -51,10 +51,33 @@ def chart_url(watchlist: Watchlist, ticker: str | None = None) -> str:
     return url_for("moainvest.grafica", slug=watchlist.slug, ticker=ticker or watchlist.symbols[0].ticker)
 
 
+def asset_kind(ticker: str) -> str:
+    """Categoría del activo según la convención de tickers de Yahoo Finance."""
+    if ticker.startswith("^"):
+        return "Índice"
+    if ticker.endswith("=X"):
+        return "Divisa"
+    if ticker.endswith("-USD"):
+        return "Cripto"
+    return "Acción"
+
+
 @bp.get("/")
 def resumen():
     overview = get_watchlist("overview") or WATCHLISTS[0]
-    return render_template("moainvest/resumen.html", watchlist=overview, chart_url=chart_url, teams=TEAMS)
+    return render_template(
+        "moainvest/resumen.html",
+        watchlist=overview,
+        chart_url=chart_url,
+        asset_kind=asset_kind,
+        regions=barometer.REGIONS,
+    )
+
+
+@bp.get("/api/barometro")
+def barometro():
+    """Variación del día por región para el Barómetro Global del inicio."""
+    return jsonify({"regions": barometer.snapshot()})
 
 
 @bp.get("/app/", strict_slashes=False)

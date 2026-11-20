@@ -1,6 +1,7 @@
 """API de COMUNIDAD: noticias de activos y votos de sentimiento.
 
 - ``GET  /api/comunidad/noticias?tickers=AAPL,MSFT``  noticias normalizadas
+- ``GET  /api/comunidad/comentarios``                 notas recientes, públicas (inicio)
 - ``GET  /api/comunidad/votos``                       conteo y voto propio
 - ``POST /api/comunidad/votos``  ``{"ticker", "voto": "sube"|"baja"|null}``
 - ``GET  /api/comunidad/notas?ticker=AAPL&mias=1``    notas (tesis) por activo
@@ -41,6 +42,16 @@ def noticias():
     else:
         tickers = [a["ticker"] for a in assets(current_user())]
     items, demo = news.news_for(list(dict.fromkeys(tickers))[:MAX_TICKERS])
+    return jsonify({"items": items, "demo": demo})
+
+
+@bp.get("/comentarios")
+def comentarios():
+    """Comentarios recientes para el carrusel del inicio (no requiere sesión)."""
+    try:
+        items, demo = members.public_comments()
+    except (DBError, VoteStoreError):  # sin InsForge: solo ejemplos
+        items, demo = members.demo_comments(), True
     return jsonify({"items": items, "demo": demo})
 
 

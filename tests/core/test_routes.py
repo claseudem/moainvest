@@ -115,9 +115,13 @@ def _topbar(html: str) -> str:
 
 
 @pytest.mark.parametrize("url", ["/app/graficador/", "/app/analisis-varianza/", "/app/informes/"])
-def test_app_layout_loads_geist_and_moainvest_brand(client, url):
+def test_app_layout_loads_brand_fonts_tokens_and_moainvest_brand(client, url):
     page = client.get(url).get_data(as_text=True)
-    assert "fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono" in page
+    # Inter (UI), Instrument Serif (palabra destacada) y JetBrains Mono (cifras).
+    assert "fonts.googleapis.com/css2?family=Inter:" in page
+    assert "family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:" in page
+    # Los design tokens se cargan antes que los estilos del área App.
+    assert page.index("/static/core/css/tokens.css") < page.index("/static/core/css/style.css")
     assert '<meta name="theme-color" content="#ffffff">' in page
     assert 'href="/static/moainvest/icon.png"' in page
     assert 'href="/static/moainvest/apple-icon.png"' in page

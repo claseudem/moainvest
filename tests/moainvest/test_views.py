@@ -148,5 +148,9 @@ def test_compiled_css_includes_classes_used_by_templates_and_js():
     # Clases que solo aparecen en moainvest.js (tonos que se ponen en tiempo de ejecución).
     for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30"):
         assert cls in css, cls
-    for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e"):
+    for cls in (".accent", ".eyebrow", ".hero-in"):
         assert cls in css, cls
+    # Los valores salen de core/static/css/tokens.css (fuente única), que se
+    # importa al compilar; @theme solo los expone como utilidades.
+    assert "--brand:#c8102e" in css
+    assert "--color-brand:var(--brand)" in css

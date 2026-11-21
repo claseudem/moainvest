@@ -1,19 +1,23 @@
-{#- Piezas reutilizables del sitio MOAINVEST (botones, cabecera de página y
-    enlaces de navegación).
+{#- Piezas reutilizables del sitio MOAINVEST (botones, fondos de marca,
+    cabecera de página y enlaces de navegación).
 
     Las clases son de Tailwind y están escritas enteras a propósito: el CSS
     compilado (moainvest/static/moainvest.css) solo incluye las clases que
-    Tailwind encuentra literalmente en estas plantillas y en moainvest.js. -#}
+    Tailwind encuentra literalmente en estas plantillas y en moainvest.js.
+    Los valores (colores, radios, sombras) salen de core/static/css/tokens.css. -#}
+{% import "core/icons.html" as icons %}
 
-{%- set _btn_base = "group inline-flex items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-out-soft active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50" -%}
+{%- set _btn_base = "group relative inline-flex items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-out-soft hover:-translate-y-px active:translate-y-0 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50" -%}
 {%- set _btn_variants = {
-  "primary": "bg-brand text-white hover:bg-brand-deep shadow-[0_1px_0_rgba(255,255,255,.18)_inset,0_8px_24px_-12px_rgba(200,16,46,.55)]",
-  "secondary": "border border-line bg-white text-ink hover:border-ink/40",
+  "primary": "bg-brand text-white shadow-brand hover:bg-brand-deep",
+  "secondary": "border border-ink/15 bg-white text-ink hover:border-ink/50 hover:bg-mist",
+  "light": "bg-white text-ink hover:bg-brand-soft",
+  "ghost-dark": "border border-white/25 text-white hover:border-white/60 hover:bg-white/5",
 } -%}
 {%- set _btn_sizes = {
-  "sm": "h-9 px-4 text-sm",
-  "md": "h-11 px-5 text-[0.95rem]",
-  "lg": "h-12 px-6 text-base",
+  "sm": "h-10 px-5 text-sm",
+  "md": "h-12 px-6 text-[0.95rem]",
+  "lg": "h-14 px-7 text-base",
 } -%}
 
 {#- Clases de un botón o enlace con aspecto de botón. -#}
@@ -21,17 +25,32 @@
 {{ _btn_base }} {{ _btn_variants[variant] }} {{ _btn_sizes[size] }}{% if extra %} {{ extra }}{% endif %}
 {%- endmacro %}
 
-{#- Cabecera de página con fondo de puntos. El título va en el cuerpo del
+{#- Flecha que se desliza al pasar el mouse por un botón (.group). -#}
+{% macro arrow() -%}
+{{ icons.icon("arrow-right", extra_class="btn-arrow size-4") }}
+{%- endmacro %}
+
+{#- Fondo de marca: manchas de luz difusas y patrón guilloché animado.
+    El SVG lo genera moainvest.js en cada [data-guilloche] (variant: "hero",
+    "panel" o "band"); sin JS solo queda el degradado. -#}
+{% macro brand_backdrop(variant="hero", dark=False) -%}
+<div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
+  {% if not dark %}<div class="brand-glow absolute inset-0"></div>{% endif %}
+  <div class="guilloche{% if dark %} guilloche--dark{% endif %} absolute inset-[-10%]" data-guilloche="{{ variant }}"></div>
+</div>
+{%- endmacro %}
+
+{#- Cabecera de página con fondo guilloché. El título va en el cuerpo del
     {% call %} para poder incluir el <span class="accent">. -#}
 {% macro page_intro(eyebrow, lead=None) -%}
-<section aria-labelledby="page-title" class="relative overflow-hidden border-b border-line">
-  <div aria-hidden="true" class="pointer-events-none absolute inset-0 [background-image:radial-gradient(var(--color-line)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent)]"></div>
-  <div class="relative mx-auto w-full max-w-6xl px-5 pt-16 pb-14 sm:px-8 sm:pt-24 sm:pb-20">
+<section aria-labelledby="page-title" class="relative isolate overflow-hidden border-b border-line">
+  {{ brand_backdrop("panel") }}
+  <div class="site-container relative pt-16 pb-14 sm:pt-24 sm:pb-20">
     <p class="hero-in eyebrow mb-5 flex items-center gap-3">
       <span aria-hidden="true" class="h-px w-6 bg-brand"></span>
       {{ eyebrow }}
     </p>
-    <h1 id="page-title" class="hero-in max-w-4xl text-balance text-[2.5rem] leading-[1.04] font-semibold tracking-[-0.04em] sm:text-6xl" style="--i: 1">
+    <h1 id="page-title" class="hero-in max-w-4xl text-balance text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.04em] sm:text-6xl" style="--i: 1">
       {{ caller() }}
     </h1>
     {% if lead %}
@@ -45,5 +64,5 @@
 {% macro nav_link(endpoint, label, extra="") -%}
 {%- set href = url_for(endpoint) -%}
 {%- set active = (request.path == href) if endpoint == "moainvest.resumen" else request.path.startswith(href) -%}
-<a href="{{ href }}"{% if active %} aria-current="page"{% endif %} class="transition-colors hover:text-ink {{ 'text-ink' if active else 'text-muted' }}{% if extra %} {{ extra }}{% endif %}">{{ label }}</a>
+<a href="{{ href }}"{% if active %} aria-current="page"{% endif %} class="transition-colors hover:text-ink {{ 'text-ink font-medium' if active else 'text-muted' }}{% if extra %} {{ extra }}{% endif %}">{{ label }}</a>
 {%- endmacro %}

@@ -1,0 +1,135 @@
+/* Estilos propios de Insights. Solo usa los tokens de core/static/css/style.css
+   (--brand, --ink, --muted, --line, --mist, --up...); no define colores nuevos. */
+
+.insights-form__asset { flex: 1 1 18rem; }
+.insights-input { width: 100%; font-family: var(--font-mono); letter-spacing: 0.02em; }
+.insights-help { font-size: 0.78rem; color: var(--muted); }
+.insights-loading { margin: 1.25rem 0 0; }
+
+.insights-page { padding-top: 1.5rem; }
+
+.insights-disclaimer {
+  margin: 0 0 1.5rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--mist);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.insights-message { margin: 0 0 1.5rem; }
+.insights-period { margin-bottom: 1rem; }
+
+.insights-empty { padding-top: 1rem; }
+.insights-chips { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+
+/* Advertencias: icono + texto, nunca solo color. */
+.insights-warnings { display: grid; gap: 0.6rem; margin: 0 0 1.5rem; padding: 0; list-style: none; }
+.insights-warning {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  line-height: 1.5;
+}
+.insights-warning--alert { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-deep); }
+.insights-warning__icon {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.insights-warning--alert .insights-warning__icon { background: var(--brand); }
+
+/* Capa 1 */
+.insights-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.insights-card { justify-content: flex-start; gap: 0.6rem; }
+.insights-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.insights-card .qs-metric__label { margin: 0; font-weight: 500; }
+.insights-card .qs-metric__value { margin: 0; }
+.insights-card__sentence { margin: 0; line-height: 1.5; }
+.insights-card__context { margin: 0; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
+.is-attenuated { opacity: 0.55; }
+.insights-card.is-attenuated { opacity: 1; }
+.insights-card.is-attenuated .qs-metric__value { opacity: 0.55; }
+
+.insights-quality {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--mist);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink);
+}
+.insights-quality--good { background: var(--up-soft); color: var(--up); }
+.insights-quality--weak,
+.insights-quality--alert { background: var(--down-soft); color: var(--down); }
+
+.insights-explain { margin-top: auto; padding-top: 0.4rem; border-top: 1px solid var(--line); font-size: 0.85rem; }
+.insights-explain summary { cursor: pointer; color: var(--muted); font-weight: 500; }
+.insights-explain summary:hover { color: var(--brand); }
+.insights-explain dl { margin: 0.6rem 0 0; display: grid; gap: 0.3rem; }
+.insights-explain dt { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.insights-explain dd { margin: 0 0 0.35rem; line-height: 1.45; }
+
+/* Capa 2 */
+.insights-chart-card { padding: 1.25rem; margin-bottom: 1rem; }
+.insights-chart-card .qs-hint { margin-bottom: 0.75rem; }
+.insights-chart-card__title { margin: 0 0 0.35rem; font-size: 1.1rem; }
+.insights-chart { position: relative; height: 320px; }
+.insights-chart__loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--muted); }
+.insights-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0 0 0.75rem; padding: 0; list-style: none; font-size: 0.85rem; }
+.insights-legend li { display: inline-flex; align-items: center; gap: 0.45rem; }
+.insights-swatch { width: 1.4rem; height: 0; border-top: 3px solid var(--brand); }
+.insights-swatch--benchmark { border-top: 3px dashed var(--ink); }
+
+.insights-heatmap th,
+.insights-heatmap td { padding: 0.5rem 0.6rem; text-align: center; font-family: var(--font-mono); font-size: 0.78rem; }
+.insights-heatmap tbody th { background: var(--mist); }
+.insights-heat span { margin-right: 0.15rem; font-size: 0.65rem; }
+.insights-heat--empty { color: var(--line); }
+.insights-heat.is-pos { color: var(--up); }
+.insights-heat.is-neg { color: var(--down); }
+.insights-heat.is-pos.insights-heat--2 { background: var(--up-soft); }
+.insights-heat.is-neg.insights-heat--2 { background: var(--down-soft); }
+.insights-heat.is-pos.insights-heat--3 { background: color-mix(in srgb, var(--up) 22%, var(--paper)); }
+.insights-heat.is-neg.insights-heat--3 { background: color-mix(in srgb, var(--down) 22%, var(--paper)); }
+.insights-heat.is-pos.insights-heat--4 { background: var(--up); color: #fff; }
+.insights-heat.is-neg.insights-heat--4 { background: var(--down); color: #fff; }
+.insights-heat--total { font-weight: 600; border-left: 1px solid var(--line); }
+.insights-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Capa 3 */
+.insights-expert > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.85rem; cursor: pointer; list-style: none; }
+.insights-expert > summary::-webkit-details-marker { display: none; }
+.insights-expert > summary::before { content: "+"; font-family: var(--font-mono); font-size: 1.4rem; color: var(--brand); }
+.insights-expert[open] > summary::before { content: "−"; }
+.insights-risk { margin: 1.25rem 0; }
+.insights-full td:first-child { font-family: var(--font-sans); }
+.insights-full td { font-family: var(--font-mono); }
+.insights-full__sep td { padding: 0.15rem; background: var(--mist); }
+.insights-notes { margin: 1rem 0 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.85rem; line-height: 1.6; }
+
+@media (max-width: 640px) {
+  .insights-chart { height: 260px; }
+  .insights-form .qs-field { flex: 1 1 100%; }
+  .insights-form .qs-input--number { width: 100%; }
+}

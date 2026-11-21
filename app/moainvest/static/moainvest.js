@@ -214,6 +214,92 @@
     return svg;
   }
 
+  /** Globo en líneas (proyección ortográfica): meridianos, paralelos y rutas. */
+  function globePaths() {
+    const R = 460, C = 500, lat0 = (22 * Math.PI) / 180, lon0 = (-8 * Math.PI) / 180;
+    const project = (lat, lon) => {
+      const cosc = Math.sin(lat0) * Math.sin(lat) + Math.cos(lat0) * Math.cos(lat) * Math.cos(lon - lon0);
+      if (cosc < 0) return null;
+      return [C + R * Math.cos(lat) * Math.sin(lon - lon0), C - R * (Math.cos(lat0) * Math.sin(lat) - Math.sin(lat0) * Math.cos(lat) * Math.cos(lon - lon0))];
+    };
+    const line = (pts) => {
+      let d = "", pen = false;
+      pts.forEach((p) => {
+        if (!p) return (pen = false);
+        d += (pen ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+        pen = true;
+      });
+      return d;
+    };
+    const rad = Math.PI / 180;
+    const grid = [];
+    for (let lon = -180; lon < 180; lon += 12) {
+      const pts = [];
+      for (let lat = -90; lat <= 90; lat += 3) pts.push(project(lat * rad, lon * rad));
+      grid.push(line(pts));
+    }
+    for (let lat = -72; lat <= 72; lat += 12) {
+      const pts = [];
+      for (let lon = -180; lon <= 180; lon += 3) pts.push(project(lat * rad, lon * rad));
+      grid.push(line(pts));
+    }
+    // Rutas entre plazas financieras (Nueva York, Londres, Fráncfort, Tokio, São Paulo, Bogotá)
+    const cities = [[40.7, -74], [51.5, -0.1], [50.1, 8.7], [35.7, 139.7], [-23.5, -46.6], [4.7, -74.1]];
+    const routes = [[0, 1], [1, 2], [5, 0], [4, 1], [5, 4], [0, 2]].map(([a, b]) => {
+      const [la1, lo1] = cities[a], [la2, lo2] = cities[b];
+      const pts = [];
+      for (let k = 0; k <= 40; k++) {
+        const t = k / 40;
+        const bump = Math.sin(Math.PI * t) * 14;
+        pts.push(project((la1 + (la2 - la1) * t + bump) * rad, (lo1 + (lo2 - lo1) * t) * rad));
+      }
+      return line(pts);
+    });
+    const dots = cities.map((c) => project(c[0] * rad, c[1] * rad)).filter(Boolean)
+      .map((p) => "M" + (p[0] - 4).toFixed(1) + " " + p[1].toFixed(1) + "a4 4 0 1 0 8 0a4 4 0 1 0 -8 0");
+    return { grid: grid, routes: routes, dots: dots };
+  }
+
+  /** Cinta retorcida de líneas finas (fondo de las cifras y las tarjetas). */
+  function ribbonPaths(lines, width) {
+    const paths = [];
+    for (let j = 0; j < lines; j++) {
+      let d = "";
+      for (let x = 0; x <= width; x += 10) {
+        const y = 130 + 62 * Math.sin(x / 230 + j * 0.05) * Math.cos(x / 520 - j * 0.03) + 22 * Math.sin(x / 95 - j * 0.11);
+        d += (x ? "L" : "M") + x + " " + y.toFixed(1);
+      }
+      paths.push(d);
+    }
+    return paths;
+  }
+
+  function initGlobe(box) {
+    const g = globePaths();
+    const wrap = document.createElement("div");
+    wrap.className = "absolute aspect-square";
+    wrap.style.cssText = "width:min(1100px,120vw);right:-18%;top:calc(50% - min(1100px,120vw) / 2)";
+    const svg = svgFrom("0 0 1000 1000", [{ paths: g.grid, width: 0.8 }]);
+    const routes = document.createElementNS(SVG_NS, "g");
+    routes.setAttribute("stroke-width", "1.4");
+    routes.setAttribute("stroke-dasharray", "4 6");
+    routes.innerHTML = g.routes.map((d) => '<path d="' + d + '"/>').join("") + g.dots.map((d) => '<path d="' + d + '" fill="currentColor"/>').join("");
+    svg.appendChild(routes);
+    wrap.appendChild(svg);
+    const ring = document.createElement("div");
+    ring.className = "guilloche__spin absolute aspect-square";
+    ring.style.cssText = wrap.style.cssText;
+    ring.appendChild(svgFrom("0 0 1000 1000", [{ paths: rosettePaths(5, 476, 6, 8, 48, 0.9), width: 0.7 }]));
+    box.replaceChildren(wrap, ring);
+  }
+
+  function initRibbon(box) {
+    const wave = document.createElement("div");
+    wave.className = "guilloche__wave absolute inset-x-[-6%] inset-y-0";
+    wave.appendChild(svgFrom("0 0 1600 260", [{ paths: ribbonPaths(46, 1600), width: 0.7 }], "none"));
+    box.replaceChildren(wave);
+  }
+
   // Posición de la roseta y de las ondas por variante.
   const GUILLOCHE_LAYOUT = {
     hero: { size: "min(1150px, 125vw)", x: "right: -22%", y: "50%", waves: "bottom: 0; height: 48%" },
@@ -223,6 +309,8 @@
 
   function initGuilloche() {
     document.querySelectorAll("[data-guilloche]").forEach((box) => {
+      if (box.dataset.guilloche === "globe") return initGlobe(box);
+      if (box.dataset.guilloche === "ribbon") return initRibbon(box);
       const layout = GUILLOCHE_LAYOUT[box.dataset.guilloche] || GUILLOCHE_LAYOUT.hero;
 
       const spin = document.createElement("div");
@@ -363,7 +451,8 @@
       getJSON("/api/candles/" + encodeURIComponent(box.dataset.sparkline) + "?range=1mo&interval=1d")
         .then((candles) => {
           const closes = candles.map((c) => c.close);
-          box.innerHTML = closes.length < 2 ? '<div class="h-24" aria-hidden="true"></div>' : areaSVG(closes, 240, 96, "h-24", false);
+          const height = box.dataset.height || "h-24"; // "h-16" o "h-24", escritas en las plantillas
+          box.innerHTML = closes.length < 2 ? '<div class="' + height + '" aria-hidden="true"></div>' : areaSVG(closes, 240, 96, height, false);
           if (box.dataset.visible !== undefined) markDrawn(box);
         })
         .catch(() => (box.innerHTML = '<div class="h-24" aria-hidden="true"></div>'));
@@ -397,15 +486,20 @@
   }
 
   // ───────────────────────── Cinta de cotizaciones ─────────────────────────
+  /** Botón de pausa de una cinta: pausa su [data-marquee] o su bloque [data-pausable]. */
   function initMarquee() {
-    const toggle = document.querySelector("[data-marquee-toggle]");
-    const marquee = document.querySelector("[data-marquee]");
-    if (!toggle || !marquee) return;
+    document.querySelectorAll("[data-marquee-toggle]").forEach(initMarqueeToggle);
+  }
+
+  function initMarqueeToggle(toggle) {
+    const marquee = toggle.closest("[data-pausable]") || document.querySelector("[data-marquee]");
+    if (!marquee) return;
     toggle.addEventListener("click", () => {
       const paused = !marquee.hasAttribute("data-paused");
       marquee.toggleAttribute("data-paused", paused);
       toggle.setAttribute("aria-pressed", String(paused));
-      toggle.setAttribute("aria-label", paused ? "Reanudar la cinta de cotizaciones" : "Pausar la cinta de cotizaciones");
+      const label = toggle.getAttribute("aria-label").replace(/^(Pausar|Reanudar)/, paused ? "Reanudar" : "Pausar");
+      toggle.setAttribute("aria-label", label);
       toggle.querySelector('[data-marquee-icon="pause"]').hidden = paused;
       toggle.querySelector('[data-marquee-icon="play"]').hidden = !paused;
     });

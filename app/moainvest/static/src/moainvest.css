@@ -126,24 +126,80 @@
 
 /* ───────────────────────── Componentes ───────────────────────── */
 @layer components {
-  /* Navbar: se encoge y gana sombra al hacer scroll (moainvest.js pone data-scrolled) */
-  .site-nav {
-    transition:
-      box-shadow var(--dur-base) var(--ease-out-soft),
-      background-color var(--dur-base) var(--ease-out-soft),
-      border-color var(--dur-base) var(--ease-out-soft);
-  }
+  /* Navbar en píldora flotante: se encoge y gana sombra al hacer scroll
+     (moainvest.js pone data-scrolled en [data-site-nav]) */
   .site-nav__bar {
-    height: 4.5rem;
-    transition: height var(--dur-base) var(--ease-out-soft);
-  }
-  .site-nav[data-scrolled] {
-    box-shadow: var(--shadow-nav);
-    border-color: transparent;
-    background-color: rgb(255 255 255 / 0.86);
+    height: 4rem;
+    box-shadow: 0 1px 2px rgba(11, 11, 15, 0.06), 0 12px 32px -18px rgba(11, 11, 15, 0.35);
+    transition:
+      height var(--dur-base) var(--ease-out-soft),
+      box-shadow var(--dur-base) var(--ease-out-soft),
+      background-color var(--dur-base) var(--ease-out-soft);
   }
   .site-nav[data-scrolled] .site-nav__bar {
-    height: 3.75rem;
+    height: 3.5rem;
+    background-color: rgb(255 255 255 / 0.94);
+    box-shadow: var(--shadow-nav), 0 18px 40px -20px rgba(11, 11, 15, 0.35);
+  }
+
+  /* Titular con degradado de marca sobre fondo oscuro */
+  .text-gradient-hero {
+    background: linear-gradient(100deg, #ffffff 0%, #ffd6dc 45%, var(--brand-bright) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-gradient-hero .accent { color: var(--brand-bright); -webkit-text-fill-color: var(--brand-bright); }
+
+  /* Línea iridiscente entre secciones */
+  .iridescent-line {
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-deep), var(--brand), #ff8a99, #ffd9df, var(--brand-bright), var(--brand-deep));
+  }
+
+  /* Halos de color difuminados alrededor de una tarjeta oscura */
+  .glow-blobs {
+    background:
+      radial-gradient(22% 30% at 8% 20%, color-mix(in oklab, var(--brand) 55%, transparent), transparent 70%),
+      radial-gradient(20% 28% at 92% 30%, #ff8a9988, transparent 70%),
+      radial-gradient(24% 30% at 30% 100%, #ffd9dfaa, transparent 70%),
+      radial-gradient(22% 28% at 75% 98%, color-mix(in oklab, var(--brand-bright) 45%, transparent), transparent 70%);
+    filter: blur(28px);
+  }
+
+  /* Columnas de píldoras que se desplazan en vertical (pausables) */
+  .vmarquee {
+    mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  }
+  .vmarquee__track {
+    animation: vmarquee 48s linear infinite;
+  }
+  .vmarquee__track--rev {
+    animation-direction: reverse;
+    animation-duration: 56s;
+  }
+  .vmarquee:hover .vmarquee__track,
+  .vmarquee:focus-within .vmarquee__track,
+  [data-paused] .vmarquee__track {
+    animation-play-state: paused;
+  }
+  @keyframes vmarquee {
+    to { transform: translateY(-50%); }
+  }
+
+  /* Enlace con flecha en círculo (estilo "Explorar") */
+  .circle-arrow {
+    display: inline-grid;
+    place-items: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    transition: transform var(--dur-fast) var(--ease-out-soft), background-color var(--dur-fast), color var(--dur-fast);
+  }
+  .group:hover .circle-arrow,
+  .group:focus-visible .circle-arrow {
+    transform: translateX(3px);
   }
 
   /* Tarjeta base: blanca, borde de 1px, radio grande y sombra en capas */
@@ -334,7 +390,6 @@
   /* Guilloché: rotación y ondulación muy lentas */
   .guilloche__spin {
     transform-origin: center;
-    transform-box: fill-box;
     animation: guilloche-spin 60s linear infinite;
   }
   .guilloche__spin--rev {
@@ -369,6 +424,7 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .marquee__track { animation: none; }
+  .marquee__track, .vmarquee__track { animation: none; }
   .marquee { overflow-x: auto; }
+  .vmarquee { overflow-y: auto; }
 }

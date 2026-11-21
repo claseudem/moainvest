@@ -1,20 +1,48 @@
-{#- Equipos que participan en MOAINVEST (presentación del sitio). Sin nombres
+{#- Equipos que participan en MOAINVEST, en carrusel horizontal (scroll-snap)
+    con flechas anterior/siguiente (moainvest.js: [data-carousel]). Sin nombres
     individuales todavía: se agregarán con sus fotografías. -#}
 {% import "core/icons.html" as icons %}
-<section aria-labelledby="equipos-title" class="mx-auto w-full max-w-6xl border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-  <p class="eyebrow mb-4">Quiénes somos</p>
-  <h2 id="equipos-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-    Los equipos que <span class="accent">construyen MOAINVEST</span>.
-  </h2>
-  <ul class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for team in teams %}
-    <li data-reveal style="--i: {{ loop.index0 }}" class="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
-      <span class="grid size-12 place-items-center rounded-xl bg-mist text-brand">
-        {{ icons.icon(team.icon, extra_class="size-5", stroke_width=1.6) }}
-      </span>
-      <p class="mt-5 text-lg font-semibold tracking-tight">{{ team.name }}</p>
-      <p class="mt-2 leading-relaxed text-muted">{{ team.description }}</p>
-    </li>
-    {% endfor %}
-  </ul>
+<section aria-labelledby="equipos-title" class="section-y overflow-hidden border-t border-line" data-carousel>
+  <div class="site-container">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div>
+        <p class="eyebrow mb-4">Quiénes somos</p>
+        <h2 id="equipos-title" class="max-w-3xl text-balance text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-5xl">
+          Los equipos que <span class="accent">construyen MOAINVEST</span>.
+        </h2>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" data-carousel-prev aria-controls="equipos-lista" aria-label="Equipo anterior"
+                class="grid size-12 place-items-center rounded-full border border-line bg-white text-ink shadow-card transition-[border-color,opacity,transform] duration-300 hover:-translate-y-px hover:border-ink/40 disabled:pointer-events-none disabled:opacity-35">
+          {{ icons.icon("chevron-left", extra_class="size-5") }}
+        </button>
+        <button type="button" data-carousel-next aria-controls="equipos-lista" aria-label="Equipo siguiente"
+                class="grid size-12 place-items-center rounded-full border border-line bg-white text-ink shadow-card transition-[border-color,opacity,transform] duration-300 hover:-translate-y-px hover:border-ink/40 disabled:pointer-events-none disabled:opacity-35">
+          {{ icons.icon("chevron-right", extra_class="size-5") }}
+        </button>
+      </div>
+    </div>
+
+    <ul id="equipos-lista" data-carousel-track aria-label="Equipos de MOAINVEST" tabindex="0"
+        class="carousel -mx-[var(--gutter)] mt-12 flex gap-6 overflow-x-auto px-[var(--gutter)] pt-2 pb-8 [scroll-padding-inline:var(--gutter)] focus-visible:outline-offset-[-2px]">
+      {% for team in teams %}
+      <li class="w-[82%] shrink-0 sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]"
+          aria-roledescription="diapositiva" aria-label="{{ loop.index }} de {{ loop.length }}: {{ team.name }}">
+        <article class="card card-hover group flex h-full min-h-[22rem] flex-col overflow-hidden">
+          <div class="relative h-36 overflow-hidden border-b border-line bg-mist/70">
+            <div aria-hidden="true" class="brand-glow absolute inset-0 opacity-70"></div>
+            <span aria-hidden="true" class="absolute top-5 right-6 font-mono text-sm text-muted">{{ "%02d" | format(loop.index) }}</span>
+            <span class="absolute bottom-5 left-6 grid size-14 place-items-center rounded-2xl bg-white text-brand shadow-card transition-transform duration-500 ease-out-soft group-hover:-translate-y-1">
+              {{ icons.icon(team.icon, extra_class="size-6", stroke_width=1.6) }}
+            </span>
+          </div>
+          <div class="flex flex-1 flex-col p-7">
+            <h3 class="text-xl font-semibold tracking-tight">{{ team.name }}</h3>
+            <p class="mt-2 leading-relaxed text-muted">{{ team.description }}</p>
+          </div>
+        </article>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
 </section>

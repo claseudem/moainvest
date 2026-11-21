@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from flask import Blueprint, abort, redirect, render_template, url_for
 
-from app.core.navigation import default_app
-from app.core.watchlists import WATCHLISTS, Watchlist, get_watchlist
+from app.core.navigation import APPS, default_app
+from app.core.watchlists import WATCHLISTS, Symbol, Watchlist, get_watchlist
 from app.personas.content import TEAMS
 
 bp = Blueprint(
@@ -41,6 +41,9 @@ CHART_RANGES = (
 )
 DEFAULT_RANGE = "1M"
 
+# Cada cuánto refresca los precios moainvest.js (QUOTE_POLL_MS); se muestra en el inicio.
+QUOTE_REFRESH_SECONDS = 15
+
 
 @bp.app_context_processor
 def inject_moainvest_nav() -> dict:
@@ -51,10 +54,38 @@ def chart_url(watchlist: Watchlist, ticker: str | None = None) -> str:
     return url_for("moainvest.grafica", slug=watchlist.slug, ticker=ticker or watchlist.symbols[0].ticker)
 
 
+def tape_symbols() -> list[tuple[Watchlist, Symbol]]:
+    """Todos los símbolos de todas las watchlists, sin repetir ticker (cinta del inicio)."""
+    seen: set[str] = set()
+    tape = []
+    for watchlist in WATCHLISTS:
+        for symbol in watchlist.symbols:
+            if symbol.ticker not in seen:
+                seen.add(symbol.ticker)
+                tape.append((watchlist, symbol))
+    return tape
+
+
 @bp.get("/")
 def resumen():
     overview = get_watchlist("overview") or WATCHLISTS[0]
-    return render_template("moainvest/resumen.html", watchlist=overview, chart_url=chart_url, teams=TEAMS)
+    tape = tape_symbols()
+    # Cifras de la barra de métricas: solo datos reales del registro de la app.
+    metrics = {
+        "assets": len(tape),
+        "watchlists": len(WATCHLISTS),
+        "tools": len(APPS),
+        "refresh_seconds": QUOTE_REFRESH_SECONDS,
+    }
+    return render_template(
+        "moainvest/resumen.html",
+        watchlist=overview,
+        watchlists=WATCHLISTS,
+        tape=tape,
+        metrics=metrics,
+        chart_url=chart_url,
+        teams=TEAMS,
+    )
 
 
 @bp.get("/app/", strict_slashes=False)

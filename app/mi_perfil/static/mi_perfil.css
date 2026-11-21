@@ -503,3 +503,84 @@
     transition: none;
   }
 }
+
+/* ── Sistema visual del rediseño (tokens de core/static/css/tokens.css) ──
+   Mismo lenguaje que el sitio y las páginas de cuenta: tarjetas blancas con
+   borde sutil, radio grande y sombra en capas que se elevan al pasar el
+   mouse, y un encabezado de identidad con la luz de marca. */
+.mp .page-title {
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.mp .card {
+  border-color: var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.mp-identity.card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 1.75rem;
+}
+
+.mp-identity.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 120px;
+  z-index: -1;
+  background:
+    radial-gradient(45% 120% at 85% 0%, color-mix(in oklab, var(--brand) 14%, transparent), transparent 70%),
+    radial-gradient(40% 120% at 10% 0%, #ffd9df88, transparent 70%),
+    repeating-radial-gradient(circle at 85% -40%, transparent 0 9px, color-mix(in oklab, var(--brand) 9%, transparent) 9px 10px),
+    var(--cream);
+  border-bottom: 1px solid var(--line);
+}
+
+.mp-identity .mc-avatar--lg {
+  width: 96px;
+  height: 96px;
+  margin-top: 36px;
+  font-size: 1.75rem;
+  background: var(--paper);
+  color: var(--brand);
+  border: 3px solid var(--paper);
+  box-shadow: 0 0 0 1px var(--line), 0 0 0 5px var(--brand-soft), var(--shadow-card);
+}
+
+.mp-identity .mp-identity__body,
+.mp-identity [data-c-edit] {
+  margin-top: 84px;
+}
+
+.mp-profile {
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-base) var(--ease-out-soft),
+    transform var(--dur-base) var(--ease-out-soft);
+}
+
+.mp-profile:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--brand) 32%, var(--line));
+  box-shadow: var(--shadow-card-hover);
+}
+
+@media (max-width: 640px) {
+  .mp-identity .mp-identity__body,
+  .mp-identity [data-c-edit] {
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-profile,
+  .mp-profile:hover {
+    transition: none;
+    transform: none;
+  }
+}

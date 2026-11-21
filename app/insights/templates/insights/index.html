@@ -1,0 +1,254 @@
+{#- INSIGHTS: rendimiento de un activo o portafolio en 3 capas (¿Cómo voy?,
+    ¿Por qué?, Modo experto). Extiende core/base.html y reutiliza las clases
+    qs-* de core/static/css/style.css; lo propio va en insights.css. -#}
+{% extends "core/base.html" %}
+
+{% block title %}Insights{% if insight %} {{ insight.label }}{% endif %} · {{ site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('insights.static', filename='insights.css') }}">
+{% endblock %}
+
+{% block content %}
+<header class="qs-hero" aria-labelledby="insights-title">
+  <div class="qs-hero__inner">
+    <p class="qs-eyebrow"><span class="qs-eyebrow__rule" aria-hidden="true"></span>Insights · Rendimiento explicado</p>
+    <h1 id="insights-title" class="qs-hero__title">
+      {% if insight %}
+      <span>{{ insight.label }}</span><span class="qs-hero__name">frente a {{ insight.benchmark_label }}</span>
+      {% else %}
+      <span>¿Cómo van</span><span class="qs-hero__name">tus inversiones?</span>
+      {% endif %}
+    </h1>
+    <p class="qs-hero__lead">
+      Escribe un activo o un portafolio y te explicamos, sin jerga, cuánto ganó, cuánto llegó a caer y si el
+      riesgo mereció la pena, <strong>siempre comparado con un benchmark</strong>.
+    </p>
+
+    <form class="qs-form insights-form" method="get" data-insights-form>
+      <label class="qs-field insights-form__asset">
+        <span class="qs-field__label">Activo o portafolio</span>
+        <input class="qs-input insights-input" name="ticker" value="{{ ticker_text }}" required
+               placeholder="AAPL  ·  SPY:60, TLT:40" autocomplete="off" spellcheck="false"
+               aria-describedby="insights-asset-help">
+        <span class="insights-help" id="insights-asset-help">Varios activos separados por comas; el peso tras «:» (opcional).</span>
+      </label>
+      <label class="qs-field">
+        <span class="qs-field__label">Periodo</span>
+        <select name="range" class="qs-select">
+          {% for value, label in ranges.items() %}
+          <option value="{{ value }}" {% if value == range %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="qs-field">
+        <span class="qs-field__label">Comparar con</span>
+        <select name="benchmark" class="qs-select">
+          {% set known = benchmarks | map(attribute=0) | list %}
+          {% if benchmark not in known %}<option value="{{ benchmark }}" selected>{{ benchmark }}</option>{% endif %}
+          {% for value, label in benchmarks %}
+          <option value="{{ value }}" {% if value == benchmark %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="qs-field">
+        <span class="qs-field__label">Tasa libre de riesgo (% anual)</span>
+        <input class="qs-input qs-input--number" name="rf" value="{{ rf_text }}" inputmode="decimal" placeholder="Actual">
+      </label>
+      <button type="submit" class="qs-btn">Analizar</button>
+    </form>
+    <p class="qs-status insights-loading" data-insights-loading hidden role="status">
+      Calculando… descargar el histórico de Yahoo Finance puede tardar unos segundos.
+    </p>
+  </div>
+</header>
+
+<div class="qs-page insights-page">
+  <p class="insights-disclaimer" role="note">
+    Herramienta informativa, no constituye asesoría de inversión. Rendimientos pasados no garantizan resultados futuros.
+  </p>
+
+  {% if error %}
+  <div class="qs-status is-error insights-message" role="alert">
+    <strong>No pudimos hacer el análisis.</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if not insight %}
+  <section class="insights-empty" aria-labelledby="insights-empty-title">
+    <h2 id="insights-empty-title" class="qs-section__title">Empieza por aquí</h2>
+    <p class="qs-hint">Prueba con uno de estos ejemplos (último año frente al S&amp;P 500):</p>
+    <ul class="insights-chips">
+      {% for value, label in suggestions %}
+      <li><a class="qs-btn qs-btn--ghost" href="{{ url_for('insights.index', ticker=value, range=range, benchmark=benchmark) }}" data-insights-link>
+        <span class="qs-mono">{{ value }}</span> · {{ label }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% else %}
+
+  <p class="qs-hint insights-period">
+    Del <span class="qs-mono">{{ insight.start }}</span> al <span class="qs-mono">{{ insight.end }}</span> ·
+    {{ insight.periods }} periodos · tasa libre de riesgo <strong>{{ pct(insight.rf.annual, false) }} anual</strong>
+    ({{ insight.rf.source }}).
+  </p>
+
+  {% if insight.warnings %}
+  <ul class="insights-warnings" aria-label="Advertencias estadísticas">
+    {% for w in insight.warnings %}
+    <li class="insights-warning insights-warning--{{ w.level }}">
+      <span class="insights-warning__icon" aria-hidden="true">{{ "!" if w.level == "alert" else "i" }}</span>
+      <div><strong>{{ w.title }}.</strong> {{ w.text }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {# ---------- Capa 1 ---------- #}
+  <section class="qs-section qs-section--flush" id="como-voy" aria-labelledby="capa-1">
+    <div class="qs-section__head">
+      <h2 class="qs-section__title" id="capa-1">¿Cómo voy?</h2>
+      <span class="qs-tag">frente a {{ insight.benchmark_label }}</span>
+    </div>
+    <div class="insights-cards">
+      {% for card in cards %}
+      <article class="qs-metric insights-card{% if card.attenuated %} is-attenuated{% endif %}" aria-labelledby="card-{{ card.key }}">
+        <header class="insights-card__head">
+          <h3 class="qs-metric__label" id="card-{{ card.key }}">{{ card.title }}</h3>
+          {% if card.quality %}
+          <span class="insights-quality insights-quality--{{ card.quality.level }}">
+            <span aria-hidden="true">{{ card.quality.icon }}</span> {{ card.quality.label }}
+          </span>
+          {% endif %}
+        </header>
+        <p class="qs-metric__value {{ card.sign }}">{{ card.value }}</p>
+        <p class="insights-card__sentence">{{ card.sentence }}</p>
+        {% if card.context %}<p class="insights-card__context"><span class="qs-mono">⇄</span> {{ card.context }}</p>{% endif %}
+        {% if card.attenuated %}<p class="insights-card__context">Muestra corta: tómalo con cautela.</p>{% endif %}
+        <details class="insights-explain">
+          <summary>¿Qué significa?</summary>
+          <dl>
+            <dt>Qué es</dt><dd>{{ card.glossary.definition }}</dd>
+            <dt>Bueno o malo</dt><dd>{{ card.glossary.good_bad }}</dd>
+            <dt>Ojo</dt><dd>{{ card.glossary.limitation }}</dd>
+          </dl>
+        </details>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ---------- Capa 2 ---------- #}
+  <section class="qs-section" id="por-que" aria-labelledby="capa-2">
+    <div class="qs-section__head">
+      <h2 class="qs-section__title" id="capa-2">¿Por qué?</h2>
+    </div>
+
+    <div class="qs-card insights-chart-card">
+      <h3 class="insights-chart-card__title">Crecimiento de $100</h3>
+      <p class="qs-hint">Qué habría pasado con $100 invertidos el primer día en {{ insight.label }} y en {{ insight.benchmark_label }}.</p>
+      <ul class="insights-legend">
+        <li><span class="insights-swatch insights-swatch--strategy" aria-hidden="true"></span>{{ insight.label }} (línea continua)</li>
+        <li><span class="insights-swatch insights-swatch--benchmark" aria-hidden="true"></span>{{ insight.benchmark_label }} (línea discontinua)</li>
+      </ul>
+      <div class="insights-chart" id="insights-equity" role="img"
+           aria-label="Curva de capital: {{ insight.label }} {{ pct(insight.strategy.total_return) }} frente a {{ insight.benchmark_label }} {{ pct(insight.benchmark.total_return) }}">
+        <p class="insights-chart__loading">Cargando gráfico…</p>
+      </div>
+    </div>
+
+    <div class="qs-card insights-chart-card">
+      <h3 class="insights-chart-card__title">Caídas desde el máximo (underwater)</h3>
+      <p class="qs-hint">0 % significa que estás en máximos; cuanto más abajo, más lejos del mejor momento.</p>
+      <ul class="insights-legend">
+        <li><span class="insights-swatch insights-swatch--strategy" aria-hidden="true"></span>{{ insight.label }} (área)</li>
+        <li><span class="insights-swatch insights-swatch--benchmark" aria-hidden="true"></span>{{ insight.benchmark_label }} (línea discontinua)</li>
+      </ul>
+      <div class="insights-chart" id="insights-drawdown" role="img"
+           aria-label="Drawdown: peor caída {{ pct(insight.strategy.max_drawdown) }}; {{ insight.benchmark_label }} {{ pct(insight.benchmark.max_drawdown) }}">
+        <p class="insights-chart__loading">Cargando gráfico…</p>
+      </div>
+    </div>
+
+    <div class="qs-card qs-card--scroll insights-chart-card">
+      <h3 class="insights-chart-card__title">Rentabilidad de cada mes</h3>
+      <p class="qs-hint">▲ verde: mes positivo · ▼ rojo: mes negativo. Cuanto más intenso, mayor el movimiento.</p>
+      <table class="qs-table insights-heatmap">
+        <caption class="insights-sr">Rentabilidad mensual de {{ insight.label }}, en %</caption>
+        <thead><tr><th scope="col">Año</th>{% for m in months %}<th scope="col">{{ m }}</th>{% endfor %}<th scope="col">Año</th></tr></thead>
+        <tbody>
+          {% for row in heatmap %}
+          <tr>
+            <th scope="row">{{ row.year }}</th>
+            {% for value in row.months + [row.total] %}
+            {% if value is none %}<td class="insights-heat insights-heat--empty">·</td>
+            {% else %}
+            {% set level = [((value|abs) * 100 / 2.5)|round(0, 'ceil')|int, 4]|min %}
+            <td class="insights-heat {{ 'is-pos' if value >= 0 else 'is-neg' }} insights-heat--{{ level }}{% if loop.last %} insights-heat--total{% endif %}">
+              <span aria-hidden="true">{{ "▲" if value >= 0 else "▼" }}</span>{{ "%+.1f"|format(value * 100) }}
+            </td>
+            {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {# ---------- Capa 3 ---------- #}
+  <section class="qs-section" id="modo-experto" aria-labelledby="capa-3">
+    <details class="insights-expert">
+      <summary><h2 class="qs-section__title" id="capa-3">Modo experto</h2><span class="qs-tag">qs.reports.metrics(mode="full")</span></summary>
+
+      <div class="qs-metrics insights-risk">
+        {% for label, key, help in [("VaR diario (95 %)", "var", "Un día malo de cada 20 puede perderse al menos esto."),
+                                    ("CVaR / Expected Shortfall", "cvar", "Pérdida media en ese 5 % de peores días.")] %}
+        <div class="qs-metric">
+          <span class="qs-metric__label">{{ label }}</span>
+          <span class="qs-metric__value is-down">{{ pct(insight.strategy[key]) }}</span>
+          <span class="insights-card__context">{{ help }} {{ insight.benchmark_label }}: {{ pct(insight.benchmark[key]) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <p class="qs-hint">
+        Parámetros: retornos <strong>simples</strong> diarios · <strong>compuestos</strong> (compounded=True) ·
+        <strong>{{ insight.rf.periods }}</strong> periodos por año · rf {{ pct(insight.rf.annual, false) }} anual
+        (= {{ "%.5f"|format(insight.rf.per_period * 100) }} % por periodo) ·
+        beta {{ "%.2f"|format(insight.beta) if insight.beta is not none else "—" }}.
+        {% if insight.unreliable %}Con tan pocos periodos, Sortino, Calmar y tail ratio no son representativos.{% endif %}
+      </p>
+
+      {% if insight.full_table %}
+      <div class="qs-card qs-card--scroll">
+        <table class="qs-table insights-full">
+          <thead><tr><th scope="col">Métrica</th><th scope="col">{{ insight.label }}</th><th scope="col">{{ insight.benchmark_label }}</th></tr></thead>
+          <tbody>
+            {% set dim = {"Sortino": "sortino", "Smart Sortino": "sortino", "Sortino/√2": "sortino", "Smart Sortino/√2": "sortino", "Calmar": "calmar", "Tail Ratio": "tail_ratio"} %}
+            {% for metric, s, b in insight.full_table %}
+            {% if metric %}
+            <tr{% if dim.get(metric) in insight.unreliable %} class="is-attenuated" title="Poco fiable con menos de 30 periodos"{% endif %}><td>{{ metric }}</td><td>{{ s }}</td><td>{{ b }}</td></tr>
+            {% else %}<tr class="insights-full__sep" aria-hidden="true"><td colspan="3"></td></tr>{% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if insight.data_notes or insight.errors %}
+      <ul class="insights-notes" aria-label="Notas sobre los datos">
+        {% for note in insight.data_notes + insight.errors %}<li>{{ note }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </details>
+  </section>
+
+  <script type="application/json" id="insights-data">{{ charts | tojson }}</script>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('insights.static', filename='insights.js') }}"></script>
+{% endblock %}

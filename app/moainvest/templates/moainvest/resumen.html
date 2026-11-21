@@ -1,66 +1,344 @@
 {% extends "moainvest/base.html" %}
 {% import "moainvest/_macros.html" as ui with context %}
 {% import "core/icons.html" as icons %}
+{% from "cuentas/_auth.html" import field, submit %}
+
+{#- Página principal (estructura de referencia: plaid.com/en-eu, con la marca
+    y los datos de MOAINVEST). Los precios los rellena moainvest.js: cada
+    bloque con [data-watchlist-quotes="slug ..."] pinta sus [data-quote] con
+    /api/watchlist/<slug>/quotes cada 15 s (una petición por slug). -#}
 
 {% block content %}
-{% call ui.page_intro("Mercado en vivo · Yahoo Finance", lead="Índices, cripto y divisas de un vistazo. Los precios se actualizan cada 15 segundos.") %}
-  Resumen del <span class="accent">mercado</span>.
-{% endcall %}
+{% set hero = watchlist.symbols[0] %}
+{% set half = (tape | length / 2) | round(0, "ceil") | int %}
 
-<div class="mx-auto w-full max-w-6xl px-5 sm:px-8 py-12 sm:py-16" data-watchlist-quotes="{{ watchlist.slug }}">
-  <p role="status" data-quotes-failed hidden class="mb-6 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-deep">
-    No pudimos actualizar los precios. Se muestran los últimos valores disponibles.
-  </p>
-  <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for s in watchlist.symbols %}
-    <li data-reveal style="--i: {{ loop.index0 }}">
-      <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}"
-         class="group block h-full rounded-2xl border border-line bg-white p-6 transition-[border-color,box-shadow,transform] duration-500 ease-out-soft hover:-translate-y-1 hover:border-ink/20 hover:shadow-[0_24px_48px_-30px_rgba(23,23,23,.4)]">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="truncate text-lg font-semibold tracking-tight">{{ s.display_name }}</p>
-            <p class="font-mono text-xs tracking-[0.1em] text-muted">{{ s.ticker }}</p>
+{# ───────────────────────── 1. Hero oscuro ───────────────────────── #}
+<section aria-labelledby="page-title" class="relative isolate -mt-[4.75rem] overflow-hidden bg-ink text-white sm:-mt-20">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+    <div class="absolute inset-0 bg-[radial-gradient(60%_70%_at_85%_30%,color-mix(in_oklab,var(--brand)_55%,transparent),transparent_70%),radial-gradient(50%_60%_at_10%_100%,color-mix(in_oklab,var(--brand-deep)_80%,transparent),transparent_70%),linear-gradient(160deg,#0b0b0f_0%,#1a0509_55%,#3a0712_100%)]"></div>
+    <div class="guilloche guilloche--dark absolute inset-0 opacity-[0.4]" data-guilloche="globe"></div>
+  </div>
+
+  <div class="site-container relative grid items-center gap-14 pt-36 pb-14 lg:min-h-[44rem] lg:grid-cols-[1.1fr_1fr] lg:pt-40">
+    <div>
+      <p class="hero-in eyebrow inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-white/85 backdrop-blur">
+        <span class="live-dot" aria-hidden="true"></span>
+        Mercado en vivo · Yahoo Finance
+      </p>
+      <h1 id="page-title" class="hero-in text-gradient-hero mt-8 max-w-[11ch] pb-2 text-[length:var(--text-hero)] leading-[1] font-semibold tracking-[-0.045em]" style="--i: 1">
+        Resumen del <span class="accent">mercado</span>.
+      </h1>
+      <p class="hero-in mt-6 max-w-lg text-pretty text-lg leading-relaxed text-white/80 sm:text-xl" style="--i: 2">
+        Índices, cripto y divisas de un vistazo. Los precios se actualizan cada {{ metrics.refresh_seconds }} segundos.
+      </p>
+      <div class="hero-in mt-10 flex flex-wrap items-center gap-3" style="--i: 3">
+        <a href="{{ url_for('moainvest.app_home') }}" class="{{ ui.btn('light', 'lg') }}">Abrir app {{ ui.arrow() }}</a>
+        <a href="{{ url_for('moainvest.graficas') }}" class="{{ ui.btn('ghost-dark', 'lg') }}">Ver gráficas</a>
+      </div>
+    </div>
+
+    {# Tarjeta flotante: S&P 500 de los últimos 6 meses (se dibuja al cargar) #}
+    <div class="hero-in relative" style="--i: 3" data-watchlist-quotes="{{ watchlist.slug }}">
+      <div class="motion-safe:animate-float">
+        <a href="{{ chart_url(watchlist, hero.ticker) }}" data-quote="{{ hero.ticker }}"
+           class="card card-hover group block p-6 text-ink shadow-float sm:p-8">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-lg font-semibold tracking-tight">{{ hero.display_name }}</p>
+              <p class="font-mono text-xs tracking-[0.12em] text-muted">{{ hero.ticker }} · ÚLTIMOS 6 MESES</p>
+            </div>
+            <span data-field="change-pill" class="inline-flex items-center rounded-full px-3 py-1 font-mono text-sm tabular-nums bg-mist text-muted">—</span>
           </div>
-          {{ icons.icon("arrow-up-right", extra_class="size-5 shrink-0 text-muted transition-[color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand") }}
-        </div>
-        <div class="mt-5 flex items-end justify-between gap-3">
-          <p class="font-mono text-2xl font-medium tabular-nums tracking-tight" aria-live="polite">
-            <span data-field="price"><span class="inline-block h-7 w-28 animate-pulse rounded bg-mist align-middle"></span></span><span data-field="currency" class="ml-1.5 text-xs text-muted"></span>
+          <p class="mt-6 font-mono text-[2.5rem] leading-none font-medium tracking-tight tabular-nums sm:text-5xl">
+            <span data-field="price" data-animate-price class="-mx-1 rounded-lg px-1"><span class="inline-block h-10 w-48 animate-pulse rounded-lg bg-mist align-middle"></span></span><span data-field="currency" class="ml-2 text-sm text-muted"></span>
           </p>
-          <span data-field="change-pill" class="inline-flex items-center rounded-full px-2.5 py-1 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
-        </div>
-        <div class="mt-4" data-sparkline="{{ s.ticker }}">
-          <div class="h-16 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
-        </div>
-        <p class="mt-2 text-xs text-muted">Último mes · ver gráfica</p>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
+          <div class="mt-6 h-44 sm:h-52" data-area-chart="{{ hero.ticker }}" data-range="6mo">
+            <div class="h-full animate-pulse rounded-xl bg-mist" aria-hidden="true"></div>
+          </div>
+          <dl class="mt-6 grid grid-cols-3 gap-4 border-t border-line pt-5 text-sm">
+            <div><dt class="text-muted">Máximo 6M</dt><dd class="mt-1 font-mono tabular-nums" data-chart-stat="max">—</dd></div>
+            <div><dt class="text-muted">Mínimo 6M</dt><dd class="mt-1 font-mono tabular-nums" data-chart-stat="min">—</dd></div>
+            <div><dt class="text-muted">Variación 6M</dt><dd class="mt-1 font-mono tabular-nums" data-chart-stat="change">—</dd></div>
+          </dl>
+        </a>
+      </div>
+    </div>
+  </div>
 
-  {% set shortcuts = [
-    ("moainvest.graficas", "candlestick-chart", "Gráficas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico."),
-    ("moainvest.informe", "file-text", "Informe", "Elige tus watchlists, revisa el informe de activos y envíalo por correo."),
-    ("personas.index", "layers", "Comunidad", "Noticias de los activos y el sentimiento de los miembros: vota si cada activo sube o baja."),
-  ] %}
-  <ul class="mt-16 grid gap-4 md:grid-cols-2">
-    {% for endpoint, icon, title, body in shortcuts %}
-    <li data-reveal style="--i: {{ loop.index0 }}">
-      <a href="{{ url_for(endpoint) }}" class="group flex h-full items-start gap-5 rounded-2xl border border-line bg-mist p-6 transition-colors hover:border-brand/40 sm:p-8">
-        <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-white text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-          {{ icons.icon(icon, extra_class="size-5", stroke_width=1.6) }}
-        </span>
-        <span>
-          <span class="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            {{ title }}
-            {{ icons.icon("arrow-right", extra_class="size-4 transition-transform group-hover:translate-x-0.5") }}
+  {# Franja de activos (en lugar de logos de clientes), con precio en vivo #}
+  <div class="site-container relative pb-14" data-watchlist-quotes="{{ watchlist.slug }}">
+    <p role="status" data-quotes-failed hidden class="mb-4 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-white/85">
+      No pudimos actualizar los precios. Se muestran los últimos valores disponibles.
+    </p>
+    <ul class="grid grid-cols-2 gap-x-8 gap-y-8 border-t border-white/10 pt-10 sm:grid-cols-3 lg:grid-cols-6">
+      {% for s in watchlist.symbols %}
+      <li class="hero-in" style="--i: {{ loop.index0 + 4 }}">
+        <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}" class="group block">
+          <span class="block text-xl font-semibold tracking-tight text-white transition-colors group-hover:text-brand-bright">{{ s.display_name }}</span>
+          <span class="mt-1 flex flex-wrap items-center gap-2 font-mono text-sm tabular-nums text-white/75">
+            <span data-field="price">—</span>
+            <span data-field="change-pill" class="inline-flex items-center rounded-full px-2 py-0.5 text-xs bg-mist text-muted">—</span>
           </span>
-          <span class="mt-1.5 block leading-relaxed text-muted">{{ body }}</span>
-        </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="iridescent-line"></div>
+</section>
+
+{# ───────────────────────── 2. Funcionalidades (2×2) ───────────────────────── #}
+<section aria-labelledby="funciones-title" class="relative isolate overflow-hidden section-y">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(60%_40%_at_50%_0%,var(--brand-soft),transparent_70%)]"></div>
+    <div class="guilloche absolute inset-x-0 top-[30%] h-[70%] opacity-[0.1]" data-guilloche="ribbon"></div>
+  </div>
+  <div class="site-container">
+    <h2 id="funciones-title" data-reveal class="mx-auto max-w-3xl text-center text-balance text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-5xl">
+      Todo lo que necesitas para leer el <span class="accent">mercado</span>.
+    </h2>
+    {% set features = [
+      ("moainvest.graficas", "Gráficas que se leen solas", "Velas en vivo de cada activo, por watchlist y con rangos de 1 día a todo el histórico.", "Explorar gráficas", "candles", "bg-[linear-gradient(135deg,var(--brand-deep),var(--brand)_60%,#ff5a6e)]"),
+      ("moainvest.informe", "Informes listos para enviar", "Elige tus watchlists, revisa el informe de activos y envíalo por correo.", "Crear un informe", "report", "bg-[linear-gradient(135deg,#0b0b0f,#3a0712_60%,var(--brand-deep))]"),
+      ("personas.index", "La comunidad opina", "Noticias de los activos y el sentimiento de los miembros: vota si cada activo sube o baja.", "Ir a la comunidad", "votes", "bg-[linear-gradient(135deg,var(--brand),#ff8a99_60%,#ffd9df)]"),
+      ("favoritos.index", "Tus activos, a mano", "Guarda los activos que sigues y revísalos juntos desde la app.", "Ver mis activos", "list", "bg-[linear-gradient(135deg,#2a0a10,#0b0b0f_55%,#3a0712)]"),
+    ] %}
+    <ul class="mt-16 grid gap-x-8 gap-y-14 md:grid-cols-2">
+      {% for endpoint, title, body, cta, preview, bg in features %}
+      <li data-reveal style="--i: {{ loop.index0 % 2 }}">
+        <a href="{{ url_for(endpoint) }}" class="group block">
+          <div aria-hidden="true" class="relative h-64 overflow-hidden rounded-[20px] sm:h-80 {{ bg }}">
+            <div class="guilloche guilloche--dark absolute inset-0 opacity-[0.18]" data-guilloche="ribbon"></div>
+            <div class="absolute inset-x-8 top-10 bottom-0 transition-transform duration-700 ease-out-soft group-hover:-translate-y-2 sm:inset-x-16">
+              <div class="h-full rounded-t-2xl border border-white/60 bg-white p-5 text-ink shadow-float">
+                {% if preview == "candles" %}
+                <div class="flex items-center justify-between"><span class="h-2.5 w-24 rounded-full bg-ink/80"></span><span class="rounded-full bg-up-soft px-2 py-0.5 font-mono text-[0.65rem] text-up">1M</span></div>
+                <svg viewBox="0 0 320 150" class="mt-4 h-[70%] w-full">
+                  {% for x, o, c, h, l in [(20,110,92,82,120),(52,94,74,64,102),(84,74,86,66,94),(116,84,62,54,92),(148,64,50,42,74),(180,52,68,44,76),(212,66,46,38,72),(244,48,38,30,56),(276,40,30,22,48),(304,32,24,16,40)] %}
+                  {% set up = c < o %}
+                  <line x1="{{ x }}" x2="{{ x }}" y1="{{ h }}" y2="{{ l }}" stroke="{{ 'var(--up)' if up else 'var(--brand)' }}" stroke-width="1.5"/>
+                  <rect x="{{ x - 7 }}" y="{{ [o, c] | min }}" width="14" height="{{ ([o - c, c - o] | max) or 2 }}" rx="2" fill="{{ 'var(--up)' if up else 'var(--brand)' }}"/>
+                  {% endfor %}
+                </svg>
+                {% elif preview == "report" %}
+                <div class="flex items-center gap-2"><span class="size-2 rounded-full bg-brand"></span><span class="h-2.5 w-28 rounded-full bg-ink/80"></span></div>
+                <div class="mt-5 grid gap-3">
+                  {% for w, up in [(72, true), (56, false), (64, true), (48, true), (60, false)] %}
+                  <div class="flex items-center gap-3"><span class="h-2 rounded-full bg-line" style="width: {{ w }}%"></span><span class="ml-auto h-2 w-10 rounded-full {{ 'bg-up/60' if up else 'bg-brand/60' }}"></span></div>
+                  {% endfor %}
+                </div>
+                <span class="mt-6 inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-xs font-medium text-white">{{ icons.icon("send", extra_class="size-3.5") }} Enviar por correo</span>
+                {% elif preview == "votes" %}
+                <p class="text-sm font-semibold">¿Sube o baja?</p>
+                <div class="mt-4 flex gap-2">
+                  <span class="flex-1 rounded-xl bg-up-soft py-2.5 text-center text-sm font-medium text-up">▲ Sube</span>
+                  <span class="flex-1 rounded-xl bg-brand-soft py-2.5 text-center text-sm font-medium text-brand-deep">▼ Baja</span>
+                </div>
+                <div class="mt-5 flex h-2.5 overflow-hidden rounded-full bg-line"><span class="w-[60%] bg-up/70 transition-[width] duration-700 ease-out-soft group-hover:w-[68%]"></span></div>
+                <div class="mt-5 flex -space-x-2">{% for c in ["bg-brand", "bg-ink", "bg-up", "bg-brand-deep", "bg-muted"] %}<span class="size-8 rounded-full border-2 border-white {{ c }}"></span>{% endfor %}</div>
+                {% else %}
+                <div class="grid gap-2.5">
+                  {% for name in ["S&P 500", "Bitcoin", "Apple", "Nintendo"] %}
+                  <div class="flex items-center gap-3 rounded-xl border border-line px-3 py-2.5">
+                    {{ icons.icon("star", extra_class="size-4 text-brand") }}
+                    <span class="text-sm font-medium">{{ name }}</span>
+                    <span class="ml-auto h-2 w-12 rounded-full bg-line"></span>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <h3 class="mt-7 text-2xl font-semibold tracking-tight">{{ title }}</h3>
+          <p class="mt-2 max-w-md text-lg leading-relaxed text-muted">{{ body }}</p>
+          <span class="mt-5 inline-flex items-center gap-2.5 font-semibold text-ink group-hover:text-brand">
+            <span class="circle-arrow">{{ icons.icon("arrow-right", extra_class="size-3") }}</span>{{ cta }}
+          </span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+{# ───────────────────────── 3. Banda oscura: todos los activos ───────────────────────── #}
+<section aria-labelledby="activos-vivo-title" class="relative isolate overflow-hidden bg-ink text-white">
+  <div class="iridescent-line"></div>
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(50%_70%_at_0%_50%,color-mix(in_oklab,var(--brand-deep)_70%,transparent),transparent_70%)]"></div>
+    <div class="guilloche guilloche--dark absolute inset-0 opacity-[0.16]" data-guilloche="band"></div>
+  </div>
+  <div class="site-container grid items-center gap-14 py-24 lg:grid-cols-2 lg:py-28"
+       data-watchlist-quotes="{{ watchlists | map(attribute='slug') | join(' ') }}" data-pausable>
+    <div data-reveal>
+      <h2 id="activos-vivo-title" class="text-balance text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-5xl [&_.accent]:text-brand-bright">
+        Hecho para seguir el <span class="accent">mercado</span>.
+      </h2>
+      <p class="mt-6 max-w-md text-lg leading-relaxed text-white/75">
+        {{ metrics.assets }} activos en {{ metrics.watchlists }} watchlists temáticas: índices, cripto, divisas, electrónica de consumo y gaming. Todos con su variación del día.
+      </p>
+      <div class="mt-10 flex flex-wrap items-center gap-3">
+        <a href="{{ url_for('moainvest.graficas') }}" class="{{ ui.btn('light', 'lg') }}">Ver gráficas {{ ui.arrow() }}</a>
+        <button type="button" data-marquee-toggle aria-pressed="false" aria-label="Pausar el desplazamiento de los activos"
+                class="grid size-12 place-items-center rounded-full border border-white/25 text-white transition-colors hover:border-white/60">
+          <span data-marquee-icon="pause">{{ icons.icon("pause", extra_class="size-4") }}</span>
+          <span data-marquee-icon="play" hidden>{{ icons.icon("play", extra_class="size-4") }}</span>
+        </button>
+      </div>
+    </div>
+    <div class="vmarquee grid h-[28rem] w-full grid-cols-1 gap-4 overflow-hidden sm:grid-cols-2 lg:max-w-[38rem] lg:justify-self-end" aria-label="Activos y variación del día" role="group">
+      {% for column in [tape[:half], tape[half:]] %}
+      <div class="vmarquee__track{% if loop.index == 2 %} vmarquee__track--rev{% endif %}">
+        {% for copy in range(2) %}
+        <ul class="grid gap-4 pb-4"{% if copy %} aria-hidden="true"{% endif %}>
+          {% for w, s in column %}
+          <li>
+            <a href="{{ chart_url(w, s.ticker) }}" data-quote="{{ s.ticker }}"{% if copy %} tabindex="-1"{% endif %}
+               class="flex items-center gap-3 rounded-full border border-white/20 bg-white/[0.06] py-2 pr-3 pl-2 backdrop-blur transition-colors hover:border-white/50 hover:bg-white/10">
+              <span class="grid size-8 shrink-0 place-items-center rounded-full bg-white font-mono text-[0.65rem] font-semibold text-ink">{{ s.display_name[:2] | upper }}</span>
+              <span class="min-w-0 flex-1 truncate text-[0.95rem] font-medium">{{ s.display_name }}</span>
+              <span data-field="change-pill" class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="iridescent-line"></div>
+</section>
+
+{# ───────────────────────── 4. Collage de activos + texto ───────────────────────── #}
+<section aria-labelledby="activos-title" class="section-y">
+  <div class="site-container grid items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-20" data-watchlist-quotes="{{ watchlist.slug }}">
+    <div class="relative overflow-hidden rounded-[28px] bg-[linear-gradient(160deg,var(--cream),var(--brand-soft)_55%,#ffd9df)] p-5 sm:p-8">
+      <div aria-hidden="true" class="guilloche absolute inset-0 opacity-[0.12]" data-guilloche="ribbon"></div>
+      <ul class="relative grid grid-cols-2 gap-4 sm:gap-5">
+        {% for s in watchlist.symbols %}
+        <li data-reveal style="--i: {{ loop.index0 }}" class="{{ 'translate-y-8' if loop.index0 % 2 else '' }}">
+          <a href="{{ chart_url(watchlist, s.ticker) }}" data-quote="{{ s.ticker }}" class="card card-hover group block p-4 sm:p-5">
+            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <p class="min-w-0 font-semibold leading-tight tracking-tight">{{ s.display_name }}</p>
+              <span data-field="change-pill" class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-mono text-xs tabular-nums bg-mist text-muted">—</span>
+            </div>
+            <p class="mt-1 font-mono text-xs tracking-[0.08em] text-muted">{{ s.ticker }}</p>
+            <p class="mt-3 font-mono text-xl font-medium tracking-tight tabular-nums sm:text-2xl">
+              <span data-field="price" data-animate-price class="-mx-1 rounded-md px-1"><span class="inline-block h-6 w-24 animate-pulse rounded bg-mist align-middle"></span></span><span data-field="currency" class="ml-1 text-[0.65rem] text-muted"></span>
+            </p>
+            <div class="mt-3" data-sparkline="{{ s.ticker }}" data-height="h-16">
+              <div class="h-16 animate-pulse rounded-lg bg-mist" aria-hidden="true"></div>
+            </div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="h-8" aria-hidden="true"></div>
+    </div>
+    <div data-reveal>
+      <p class="eyebrow mb-4">Watchlist {{ watchlist.name }}</p>
+      <h2 id="activos-title" class="text-balance text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-5xl">
+        Seis activos, <span class="accent">un vistazo</span>.
+      </h2>
+      <p class="mt-6 max-w-md text-lg leading-relaxed text-muted">
+        Índices, cripto, divisas y acciones con su último mes y el precio de ahora mismo. Toca cualquiera para abrir su gráfica de velas.
+      </p>
+      <a href="{{ url_for('moainvest.graficas') }}" class="group mt-8 inline-flex items-center gap-2.5 font-semibold text-ink hover:text-brand">
+        <span class="circle-arrow">{{ icons.icon("arrow-right", extra_class="size-3") }}</span>Ver todas las gráficas
       </a>
-    </li>
+    </div>
+  </div>
+</section>
+
+{# ───────────────────────── 5. Cifras sobre cinta de líneas ───────────────────────── #}
+<section aria-label="MOAINVEST en cifras" class="relative isolate overflow-hidden py-24 sm:py-32">
+  <div aria-hidden="true" class="guilloche absolute inset-x-0 top-1/2 -z-10 h-80 -translate-y-1/2 opacity-[0.22]" data-guilloche="ribbon"></div>
+  <dl class="site-container grid grid-cols-2 gap-y-14 text-center lg:grid-cols-4">
+    {% set figures = [
+      (metrics.assets, "", "activos seguidos en vivo"),
+      (metrics.watchlists, "", "watchlists temáticas"),
+      (metrics.refresh_seconds, " s", "entre cada actualización de precios"),
+      (metrics.tools, "", "herramientas en la app"),
+    ] %}
+    {% for value, suffix, label in figures %}
+    <div data-reveal style="--i: {{ loop.index0 }}" class="flex flex-col-reverse items-center gap-2 px-4">
+      <dt class="max-w-[12rem] text-lg leading-snug text-ink/80">{{ label }}</dt>
+      <dd class="font-serif text-7xl leading-none tracking-[-0.02em] text-brand tabular-nums sm:text-8xl">
+        <span data-count-to="{{ value }}">{{ value }}</span>{{ suffix }}
+      </dd>
+    </div>
     {% endfor %}
-  </ul>
-</div>
+  </dl>
+</section>
+
+{# ───────────────────────── 6. Tarjeta oscura: la API ───────────────────────── #}
+<section aria-labelledby="api-title" class="site-container pb-[var(--section-y)]">
+  <div class="relative mx-auto max-w-5xl">
+    <div aria-hidden="true" class="glow-blobs absolute -inset-10 -z-10"></div>
+    <div data-reveal class="relative isolate overflow-hidden rounded-[32px] bg-ink px-6 pt-16 text-white sm:px-14 sm:pt-20">
+      <div aria-hidden="true" class="guilloche guilloche--dark absolute inset-x-0 bottom-0 -z-10 h-2/3 opacity-[0.2]" data-guilloche="ribbon"></div>
+      <h2 id="api-title" class="text-gradient-hero mx-auto max-w-2xl text-center text-balance text-4xl leading-[1.08] font-semibold tracking-[-0.035em] sm:text-5xl">
+        ¿Quieres los datos? Tenemos la <span class="accent">API</span>.
+      </h2>
+      <p class="mx-auto mt-5 max-w-lg text-center text-white/75">
+        Los mismos endpoints JSON que usa esta página: precios, velas y watchlists, listos para tus propios análisis.
+      </p>
+      <div class="mx-auto mt-12 max-w-3xl overflow-hidden rounded-t-2xl border border-b-0 border-white/15 bg-[#121218]">
+        <p class="border-b border-white/10 px-5 py-3.5 font-mono text-sm text-white/80">/api/quote/&lt;ticker&gt;</p>
+        <div class="overflow-x-auto">
+          <pre class="flex font-mono text-[0.85rem] leading-7 sm:text-sm"><code aria-hidden="true" class="border-r border-white/10 px-4 py-4 text-right text-white/30 select-none">1
+2
+3
+4
+5</code><code class="px-5 py-4 text-white/85"><span class="text-[#ff8a99]">const</span> res = <span class="text-[#ff8a99]">await</span> <span class="text-[#ffd6dc]">fetch</span>(<span class="text-[#9be3c2]">"/api/quote/%5EGSPC"</span>)
+<span class="text-[#ff8a99]">const</span> quote = <span class="text-[#ff8a99]">await</span> res.<span class="text-[#ffd6dc]">json</span>()
+quote.price           <span class="text-white/40">// último precio</span>
+quote.change_percent  <span class="text-white/40">// variación del día, en %</span>
+<span class="text-[#ff8a99]">const</span> velas = <span class="text-[#ff8a99]">await</span> <span class="text-[#ffd6dc]">fetch</span>(<span class="text-[#9be3c2]">"/api/candles/BTC-USD?range=1mo&amp;interval=1d"</span>)</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ───────────────────────── 7. Equipos (carrusel) ───────────────────────── #}
 {% include "moainvest/_equipos.html" %}
+
+{# ───────────────────────── 8. Cierre con registro ───────────────────────── #}
+<section aria-labelledby="cierre-title" class="relative isolate overflow-hidden bg-ink text-white">
+  <div class="iridescent-line"></div>
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-[linear-gradient(120deg,#0b0b0f_0%,#3a0712_45%,var(--brand)_100%)]"></div>
+    <div class="guilloche guilloche--dark absolute inset-0 opacity-[0.2]" data-guilloche="band"></div>
+  </div>
+  <div class="site-container grid items-center gap-14 py-24 lg:grid-cols-[1fr_minmax(0,32rem)] lg:py-32">
+    <h2 id="cierre-title" data-reveal class="text-balance text-[length:clamp(2.75rem,6vw,5rem)] leading-[1] font-semibold tracking-[-0.045em] [&_.accent]:text-brand-bright">
+      Mejores datos.<br>Mejores decisiones.<br>Invierte con <span class="accent">información</span>.
+    </h2>
+    <div data-reveal style="--i: 1" class="rounded-[28px] bg-[linear-gradient(135deg,#ff8a99,var(--brand-bright),#ffd9df)] p-[2px] shadow-float">
+      <div class="rounded-[26px] bg-white p-7 text-ink sm:p-10">
+        {% if current_user %}
+        <h3 class="text-2xl font-semibold tracking-tight">Hola, {{ current_user.name }}.</h3>
+        <p class="mt-2 text-muted">Tu cuenta está lista. Sigue donde lo dejaste.</p>
+        <a href="{{ url_for('moainvest.app_home') }}" class="{{ ui.btn('primary', 'lg', 'mt-8 w-full') }}">Abrir app {{ ui.arrow() }}</a>
+        {% else %}
+        <h3 class="text-2xl font-semibold tracking-tight">Crea tu cuenta</h3>
+        <p class="mt-2 text-muted">Gratis. Te enviaremos un código para verificar tu correo.</p>
+        <form method="post" action="{{ url_for('cuentas.registro') }}" class="mt-7 grid gap-4" novalidate data-auth-form>
+          <div class="grid gap-4 sm:grid-cols-2">
+            {{ field("name", "Nombre", "text", "", "name") }}
+            {{ field("email", "Correo", "email", "", "email", "required") }}
+          </div>
+          {{ field("password", "Contraseña", "password", "", "new-password", "required minlength=6", hint="Mínimo 6 caracteres.") }}
+          {{ field("password2", "Repite la contraseña", "password", "", "new-password", "required minlength=6", matches="password") }}
+          <div class="mt-2">{{ submit("Crear cuenta", "Creando cuenta…") }}</div>
+        </form>
+        <p class="mt-5 text-center text-sm text-muted">¿Ya tienes cuenta? <a href="{{ url_for('cuentas.ingresar') }}" class="font-medium text-brand underline-offset-4 hover:underline">Ingresar</a></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}

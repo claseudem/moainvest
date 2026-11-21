@@ -1,0 +1,75 @@
+/*
+ * MOAINVEST · design tokens (fuente única).
+ *
+ * Colores, tipografías, radios, sombras, easing y medidas de layout de todo el
+ * sitio. Lo usan:
+ *   - el sitio rojo (moainvest/static/src/moainvest.css lo importa al compilar
+ *     Tailwind, y su bloque @theme apunta a estas variables), y
+ *   - el área App (core/templates/core/base.html lo enlaza antes de style.css).
+ *
+ * Cambia un valor aquí y cambia en todas partes.
+ */
+:root {
+  /* ── Marca ─────────────────────────────────────────────── */
+  --brand: #c8102e;        /* rojo MOAINVEST: botones, acentos, foco */
+  --brand-deep: #8f1025;   /* hover del rojo, texto rojo sobre fondo rosado */
+  --brand-soft: #fbeef0;   /* fondos rosados (chips de bajada, avisos) */
+  --brand-bright: #ff5a6e; /* rojo para texto sobre fondo casi negro */
+  --brand-ring: rgba(200, 16, 46, 0.16); /* anillo de foco de los inputs */
+  --logo: #d7020a;
+
+  /* ── Neutros ───────────────────────────────────────────── */
+  --ink: #0b0b0f;          /* casi negro: texto principal */
+  --muted: #5f5f66;        /* texto secundario (AA sobre blanco y mist) */
+  --paper: #ffffff;
+  --mist: #f7f7f5;
+  --line: #e9e7e2;         /* bordes sutiles de 1px */
+  --cream: #fff7ef;        /* luz cálida del degradado del hero */
+
+  /* ── Mercado ───────────────────────────────────────────── */
+  --up: #0f8a5f;
+  --up-soft: #e7f5ef;
+  --down: var(--brand);
+  --down-soft: var(--brand-soft);
+
+  /* ── Tipografía (Google Fonts, se cargan en los layouts) ─ */
+  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-accent: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-data: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-base: 1.0625rem;  /* 17px */
+  --text-hero: clamp(2.5rem, 6vw, 5rem); /* 40px → 80px */
+
+  /* ── Radios ────────────────────────────────────────────── */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-card: 18px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* ── Sombras en capas ──────────────────────────────────── */
+  --shadow-card:
+    0 1px 1px rgba(11, 11, 15, 0.03),
+    0 2px 4px -1px rgba(11, 11, 15, 0.04),
+    0 12px 24px -12px rgba(11, 11, 15, 0.1);
+  --shadow-card-hover:
+    0 1px 2px rgba(11, 11, 15, 0.04),
+    0 8px 16px -6px rgba(11, 11, 15, 0.08),
+    0 28px 48px -20px rgba(11, 11, 15, 0.22);
+  --shadow-float:
+    0 2px 4px rgba(11, 11, 15, 0.04),
+    0 24px 48px -16px rgba(11, 11, 15, 0.18),
+    0 48px 96px -32px rgba(200, 16, 46, 0.18);
+  --shadow-nav: 0 1px 0 rgba(11, 11, 15, 0.04), 0 8px 24px -16px rgba(11, 11, 15, 0.18);
+  --shadow-brand: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 10px 24px -12px rgba(200, 16, 46, 0.6);
+
+  /* ── Movimiento ────────────────────────────────────────── */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 300ms;
+  --dur-base: 500ms;
+  --dur-slow: 700ms;
+
+  /* ── Layout ────────────────────────────────────────────── */
+  --container: 77.5rem;    /* 1240px */
+  --gutter: clamp(1.25rem, 4vw, 2rem);
+  --section-y: clamp(6rem, 10vw, 8rem); /* 96px → 128px */
+}

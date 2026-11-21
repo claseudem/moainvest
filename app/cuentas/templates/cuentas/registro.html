@@ -1,15 +1,16 @@
 {% extends "cuentas/_auth.html" %}
-{% from "cuentas/_auth.html" import field %}
+{% from "cuentas/_auth.html" import field, submit %}
 {% block title %}Crear cuenta | MOAINVEST{% endblock %}
 {% block eyebrow %}Crear cuenta{% endblock %}
 {% block heading %}Empieza a <span class="accent">invertir</span> con datos.{% endblock %}
+{% block lead %}<p class="mt-4 text-lg text-muted">Crea tu cuenta gratis. Te enviaremos un código para verificar tu correo.</p>{% endblock %}
 {% block fields %}
 {{ field("name", "Nombre", "text", name, "name") }}
 {{ field("email", "Correo", "email", email, "email", "required") }}
-{{ field("password", "Contraseña (mínimo 6 caracteres)", "password", "", "new-password", "required minlength=6") }}
-{{ field("password2", "Repite la contraseña", "password", "", "new-password", "required minlength=6") }}
-<button type="submit" class="{{ ui.btn('primary', 'lg') }}">Crear cuenta</button>
+{{ field("password", "Contraseña", "password", "", "new-password", "required minlength=6", hint="Mínimo 6 caracteres.") }}
+{{ field("password2", "Repite la contraseña", "password", "", "new-password", "required minlength=6", matches="password") }}
+{{ submit("Crear cuenta", "Creando cuenta…") }}
 {% endblock %}
 {% block footer %}
-<p>¿Ya tienes cuenta? <a href="{{ url_for('cuentas.ingresar', next=next) }}" class="text-brand hover:text-brand-deep">Ingresar</a></p>
+<p>¿Ya tienes cuenta? <a href="{{ url_for('cuentas.ingresar', next=next) }}" class="font-medium text-brand underline-offset-4 hover:text-brand-deep hover:underline">Ingresar</a></p>
 {% endblock %}

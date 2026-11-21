@@ -20,7 +20,7 @@
   <link rel="apple-touch-icon" href="{{ url_for('moainvest.static', filename='apple-icon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400..700&display=swap">
   <link rel="stylesheet" href="{{ url_for('moainvest.static', filename='moainvest.css') }}">
   {# Activa las animaciones de entrada solo si hay JS; sin JS todo es visible. #}
   <script>document.documentElement.classList.add("js")</script>
@@ -28,13 +28,15 @@
 <body class="flex min-h-svh flex-col">
   <a href="#contenido" class="sr-only z-[60] rounded-full bg-ink px-4 py-2 text-sm text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Saltar al contenido</a>
 
-  <header class="sticky top-0 z-50 border-b border-line/70 bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70">
-    <div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-6 px-5 sm:px-8">
+  {#- Navbar en píldora flotante: el <header> es transparente y solo la
+      barra recibe clics, así la píldora puede flotar sobre el hero oscuro. -#}
+  <header class="site-nav pointer-events-none sticky top-0 z-50 px-3 pt-3 sm:px-[var(--gutter)] sm:pt-4" data-site-nav>
+    <div class="site-nav__bar pointer-events-auto mx-auto flex w-full max-w-[calc(var(--container)+2rem)] items-center justify-between gap-6 rounded-full border border-white/70 bg-white/85 pr-2 pl-5 backdrop-blur-xl sm:pl-7">
       <a href="{{ url_for('moainvest.resumen') }}" aria-label="MOAINVEST — inicio" class="inline-flex shrink-0 items-center">
         <img src="{{ url_for('moainvest.static', filename='logo/moainvest-compact.png') }}" alt="MOAINVEST" width="844" height="110" class="h-6 w-auto sm:h-7">
       </a>
       <nav aria-label="Menú principal" class="hidden md:block">
-        <ul class="flex items-center gap-7 text-[0.92rem]">
+        <ul class="flex items-center gap-8 text-[0.95rem]">
           {% for endpoint, label in moainvest_nav %}
           <li>{{ ui.nav_link(endpoint, label) }}</li>
           {% endfor %}
@@ -51,7 +53,7 @@
       </div>
       <div class="md:hidden">
         <button type="button" data-menu-toggle aria-expanded="false" aria-controls="menu-movil" aria-label="Abrir menú"
-                class="grid size-10 place-items-center rounded-full border border-line bg-white text-ink">
+                class="grid size-11 place-items-center rounded-full border border-line bg-white text-ink">
           <span data-menu-icon="open">{{ icons.icon("menu", extra_class="size-5") }}</span>
           <span data-menu-icon="close" hidden>{{ icons.icon("x", extra_class="size-5") }}</span>
         </button>
@@ -59,7 +61,7 @@
     </div>
   </header>
 
-  <div id="menu-movil" hidden class="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto border-t border-line bg-white px-5 pt-6 pb-10 md:hidden">
+  <div id="menu-movil" hidden class="fixed inset-x-3 top-[4.75rem] bottom-3 z-40 overflow-y-auto rounded-3xl border border-line bg-white px-5 pt-4 pb-8 shadow-float md:hidden">
     <nav aria-label="Menú principal móvil">
       <ul class="divide-y divide-line">
         {% for endpoint, label in moainvest_nav %}
@@ -77,33 +79,79 @@
     </div>
   </div>
 
-  <main id="contenido" class="flex-1">
+  <main id="contenido" class="flex-1 overflow-x-clip">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="border-t border-line bg-white">
-    <div class="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 py-12 sm:px-8 md:flex-row md:items-start md:justify-between">
+  {% block site_footer %}
+  <footer class="bg-ink text-white">
+    <div class="site-container grid gap-12 pt-20 pb-14 lg:grid-cols-[1fr_3fr] lg:gap-16">
       <div>
-        <img src="{{ url_for('moainvest.static', filename='logo/moainvest-compact.png') }}" alt="MOAINVEST" width="844" height="110" class="h-6 w-auto" loading="lazy">
-        <p class="mt-4 max-w-sm text-sm leading-relaxed text-muted">
-          Datos de mercado de Yahoo Finance. Pueden tener retraso y no constituyen asesoría financiera.
-        </p>
+        <img src="{{ url_for('moainvest.static', filename='logo/moainvest-compact.png') }}" alt="MOAINVEST" width="844" height="110" class="h-7 w-auto" loading="lazy">
+        <p class="mt-5 max-w-xs leading-relaxed text-white/70 [&_.accent]:text-brand-bright">Precios en vivo, gráficas e informes de mercado para decidir con <span class="accent">información</span>.</p>
       </div>
-      <nav aria-label="Navegación del pie de página">
-        <ul class="flex gap-6 text-sm">
-          {% for endpoint, label in moainvest_nav %}
-          <li><a href="{{ url_for(endpoint) }}" class="text-ink/80 transition-colors hover:text-brand">{{ label }}</a></li>
-          {% endfor %}
-        </ul>
-      </nav>
+      <div class="grid grid-cols-2 gap-10 sm:grid-cols-4">
+        <div>
+          <p class="mb-4 text-sm font-semibold text-brand-bright">Sitio</p>
+          <nav aria-label="Navegación del pie de página">
+            <ul class="grid gap-2.5 text-[0.95rem]">
+              {% for endpoint, label in moainvest_nav %}
+              <li><a href="{{ url_for(endpoint) }}" class="text-white/75 transition-colors hover:text-white">{{ label }}</a></li>
+              {% endfor %}
+            </ul>
+          </nav>
+        </div>
+        <div>
+          <p class="mb-4 text-sm font-semibold text-brand-bright">Herramientas</p>
+          <nav aria-label="Herramientas">
+            <ul class="grid gap-2.5 text-[0.95rem]">
+              <li><a href="{{ url_for('moainvest.graficas') }}" class="text-white/75 transition-colors hover:text-white">Gráficas</a></li>
+              <li><a href="{{ url_for('moainvest.informe') }}" class="text-white/75 transition-colors hover:text-white">Informe</a></li>
+              <li><a href="{{ url_for('personas.index') }}" class="text-white/75 transition-colors hover:text-white">Comunidad</a></li>
+            </ul>
+          </nav>
+        </div>
+        <div>
+          <p class="mb-4 text-sm font-semibold text-brand-bright">App</p>
+          <nav aria-label="App">
+            <ul class="grid gap-2.5 text-[0.95rem]">
+              <li><a href="{{ url_for('graficador.index') }}" class="text-white/75 transition-colors hover:text-white">Graficador</a></li>
+              <li><a href="{{ url_for('favoritos.index') }}" class="text-white/75 transition-colors hover:text-white">Mis activos</a></li>
+              <li><a href="{{ url_for('varianza.index') }}" class="text-white/75 transition-colors hover:text-white">Análisis de varianza</a></li>
+              <li><a href="{{ url_for('quant_stats.index') }}" class="text-white/75 transition-colors hover:text-white">Quant stats</a></li>
+              <li><a href="{{ url_for('pronosticador.index') }}" class="text-white/75 transition-colors hover:text-white">Pronosticador</a></li>
+            </ul>
+          </nav>
+        </div>
+        <div>
+          <p class="mb-4 text-sm font-semibold text-brand-bright">Cuenta</p>
+          <nav aria-label="Cuenta">
+            <ul class="grid gap-2.5 text-[0.95rem]">
+              {% if current_user %}
+              <li><a href="{{ url_for('mi_perfil.index') }}" class="text-white/75 transition-colors hover:text-white">Mi perfil</a></li>
+              {% else %}
+              <li><a href="{{ url_for('cuentas.ingresar') }}" class="text-white/75 transition-colors hover:text-white">Ingresar</a></li>
+              <li><a href="{{ url_for('cuentas.registro') }}" class="text-white/75 transition-colors hover:text-white">Crear cuenta</a></li>
+              <li><a href="{{ url_for('cuentas.recuperar') }}" class="text-white/75 transition-colors hover:text-white">Recuperar contraseña</a></li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
-    <div class="border-t border-line">
-      <div class="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    <div class="site-container pb-12">
+      <div class="flex flex-col gap-3 pb-6 text-sm text-white/70 sm:flex-row sm:items-center sm:justify-between">
         <p>© 2026 MOAINVEST</p>
-        <p class="font-mono tracking-[0.14em] uppercase">Personas — Conocimiento — Oportunidades</p>
+        <p class="font-mono text-xs tracking-[0.14em] uppercase">Personas — Conocimiento — Oportunidades</p>
+      </div>
+      <div class="iridescent-line h-px opacity-70"></div>
+      <div class="mt-6 grid gap-2 text-sm leading-relaxed text-white/70">
+        <p class="flex gap-2.5">{{ icons.icon("clock", extra_class="mt-0.5 size-4 shrink-0 text-brand-bright") }}<span><strong class="font-semibold text-white">Datos de mercado de Yahoo Finance. Pueden tener retraso y no constituyen asesoría financiera.</strong></span></p>
+        <p>Los precios se consultan a Yahoo Finance a través de la propia app y se refrescan cada 15 segundos. Las gráficas, informes y votos de la comunidad son herramientas de estudio, no recomendaciones de inversión.</p>
       </div>
     </div>
   </footer>
+  {% endblock %}
 
   {% block scripts %}{% endblock %}
   <script src="{{ url_for('moainvest.static', filename='moainvest.js') }}"></script>

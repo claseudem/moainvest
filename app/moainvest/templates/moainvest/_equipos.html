@@ -1,20 +1,48 @@
-{#- Equipos que participan en MOAINVEST (presentación del sitio). Sin nombres
+{#- Equipos que participan en MOAINVEST, en carrusel horizontal (scroll-snap)
+    con flechas anterior/siguiente (moainvest.js: [data-carousel]). Sin nombres
     individuales todavía: se agregarán con sus fotografías. -#}
 {% import "core/icons.html" as icons %}
-<section aria-labelledby="equipos-title" class="mx-auto w-full max-w-6xl border-t border-line px-5 py-16 sm:px-8 sm:py-20">
-  <p class="eyebrow mb-4">Quiénes somos</p>
-  <h2 id="equipos-title" class="max-w-3xl text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-    Los equipos que <span class="accent">construyen MOAINVEST</span>.
-  </h2>
-  <ul class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    {% for team in teams %}
-    <li data-reveal style="--i: {{ loop.index0 }}" class="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
-      <span class="grid size-12 place-items-center rounded-xl bg-mist text-brand">
-        {{ icons.icon(team.icon, extra_class="size-5", stroke_width=1.6) }}
-      </span>
-      <p class="mt-5 text-lg font-semibold tracking-tight">{{ team.name }}</p>
-      <p class="mt-2 leading-relaxed text-muted">{{ team.description }}</p>
-    </li>
-    {% endfor %}
-  </ul>
+{% set tiles = [
+  "bg-brand text-white",
+  "bg-ink text-white",
+  "bg-brand-deep text-white",
+  "bg-[#ff8a99] text-ink",
+  "bg-[#2a0a10] text-brand-bright",
+] %}
+<section aria-labelledby="equipos-title" class="relative isolate overflow-hidden section-y" data-carousel>
+  <div class="site-container">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <h2 id="equipos-title" data-reveal class="max-w-2xl text-balance text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-6xl">
+        Conoce a los equipos que <span class="accent">construyen MOAINVEST</span>
+      </h2>
+      <div class="flex gap-2">
+        <button type="button" data-carousel-prev aria-controls="equipos-lista" aria-label="Equipo anterior"
+                class="grid size-11 place-items-center rounded-full border border-line bg-white text-ink transition-[border-color,background-color,opacity] duration-300 hover:border-ink/40 disabled:pointer-events-none disabled:opacity-35">
+          {{ icons.icon("arrow-right", extra_class="size-4 rotate-180") }}
+        </button>
+        <button type="button" data-carousel-next aria-controls="equipos-lista" aria-label="Equipo siguiente"
+                class="grid size-11 place-items-center rounded-full bg-brand-soft text-brand transition-[background-color,color,opacity] duration-300 hover:bg-brand hover:text-white disabled:pointer-events-none disabled:opacity-35">
+          {{ icons.icon("arrow-right", extra_class="size-4") }}
+        </button>
+      </div>
+    </div>
+
+    <ul id="equipos-lista" data-carousel-track aria-label="Equipos de MOAINVEST" tabindex="0"
+        class="carousel -mx-[var(--gutter)] mt-12 flex gap-6 overflow-x-auto px-[var(--gutter)] pt-2 pb-6 [scroll-padding-inline:var(--gutter)] focus-visible:outline-offset-[-2px]">
+      {% for team in teams %}
+      <li class="w-[78%] shrink-0 sm:w-[calc(50%-0.75rem)] lg:w-[calc(28%-1rem)]"
+          aria-roledescription="diapositiva" aria-label="{{ loop.index }} de {{ loop.length }}: {{ team.name }}">
+        <article class="group">
+          <div class="relative grid h-44 place-items-center overflow-hidden rounded-[18px] transition-transform duration-500 ease-out-soft group-hover:-translate-y-1 {{ tiles[loop.index0 % tiles | length] }}">
+            <span aria-hidden="true" class="absolute top-4 left-5 font-mono text-xs opacity-70">{{ "%02d" | format(loop.index) }}</span>
+            {{ icons.icon(team.icon, extra_class="size-14", stroke_width=1.4) }}
+          </div>
+          <h3 class="mt-5 text-xl font-semibold tracking-tight">{{ team.name }}</h3>
+          <p class="mt-1.5 text-lg leading-snug text-muted">{{ team.description }}</p>
+        </article>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div aria-hidden="true" class="guilloche pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-56 opacity-[0.14]" data-guilloche="ribbon"></div>
 </section>

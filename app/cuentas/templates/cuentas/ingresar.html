@@ -1,14 +1,15 @@
 {% extends "cuentas/_auth.html" %}
-{% from "cuentas/_auth.html" import field %}
+{% from "cuentas/_auth.html" import field, submit %}
 {% block title %}Ingresar | MOAINVEST{% endblock %}
 {% block eyebrow %}Ingresar{% endblock %}
 {% block heading %}Bienvenido de <span class="accent">vuelta</span>.{% endblock %}
+{% block lead %}<p class="mt-4 text-lg text-muted">Entra para usar las gráficas, los informes y la comunidad.</p>{% endblock %}
 {% block fields %}
 {{ field("email", "Correo", "email", email, "email", "required autofocus") }}
 {{ field("password", "Contraseña", "password", "", "current-password", "required") }}
-<button type="submit" class="{{ ui.btn('primary', 'lg') }}">Ingresar</button>
+<p class="-mt-1 text-right text-sm"><a href="{{ url_for('cuentas.recuperar') }}" class="font-medium text-ink/80 underline-offset-4 hover:text-brand hover:underline">¿Olvidaste tu contraseña?</a></p>
+{{ submit("Ingresar", "Ingresando…") }}
 {% endblock %}
 {% block footer %}
-<p><a href="{{ url_for('cuentas.recuperar') }}" class="text-ink/80 hover:text-brand">¿Olvidaste tu contraseña?</a></p>
-<p class="mt-2">¿No tienes cuenta? <a href="{{ url_for('cuentas.registro', next=next) }}" class="text-brand hover:text-brand-deep">Crear cuenta</a></p>
+<p>¿No tienes cuenta? <a href="{{ url_for('cuentas.registro', next=next) }}" class="font-medium text-brand underline-offset-4 hover:text-brand-deep hover:underline">Crear cuenta</a></p>
 {% endblock %}

@@ -1,6 +1,7 @@
 /*
- * MOAINVEST: comportamiento de las páginas de moainvest/templates/moainvest/ (precios en
- * vivo, sparklines, gráfico de velas, informe y menú móvil), sin framework.
+ * MOAINVEST: comportamiento de las páginas de moainvest/templates/moainvest/ y
+ * cuentas/templates/cuentas/ (precios en vivo, sparklines, gráficas, guilloché,
+ * cinta, carrusel, formularios, informe y menú móvil), sin framework.
  * Cada bloque se activa solo si su página contiene el elemento
  * correspondiente (data-*).
  *
@@ -11,6 +12,8 @@
   "use strict";
 
   const QUOTE_POLL_MS = 15000;
+  const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const EASE = (t) => 1 - Math.pow(1 - t, 3); // ease-out, cercano a cubic-bezier(.22,1,.36,1)
 
   const PILL_TONES = {
     none: "bg-mist text-muted",
@@ -63,25 +66,72 @@
     return setInterval(load, QUOTE_POLL_MS);
   }
 
-  // ───────────────────────── Animación al hacer scroll ─────────────────────────
-  function initReveal() {
-    const els = document.querySelectorAll("[data-reveal]:not([data-visible]), [data-scene]:not([data-visible])");
+  /** Llama a fn(el) la primera vez que el elemento entra en pantalla. */
+  function onVisible(els, fn, options) {
+    els = Array.from(els);
     if (!("IntersectionObserver" in window)) {
-      els.forEach((el) => el.setAttribute("data-visible", ""));
+      els.forEach(fn);
       return;
     }
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            entry.target.setAttribute("data-visible", "");
             io.unobserve(entry.target);
+            fn(entry.target);
           }
         }
       },
-      { rootMargin: "0px 0px -12% 0px", threshold: 0.12 },
+      options || { rootMargin: "0px 0px -10% 0px", threshold: 0.15 },
     );
     els.forEach((el) => io.observe(el));
+  }
+
+  /** Anima un número de `from` a `to` y lo escribe con `format`. */
+  function countTo(el, from, to, format, duration) {
+    if (REDUCED_MOTION || from === to) {
+      el.textContent = format(to);
+      return;
+    }
+    const start = performance.now();
+    const dur = duration || 600;
+    function frame(now) {
+      const t = Math.min(1, (now - start) / dur);
+      el.textContent = format(from + (to - from) * EASE(t));
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ───────────────────────── Animación al hacer scroll ─────────────────────────
+  function initReveal() {
+    onVisible(document.querySelectorAll("[data-reveal]:not([data-visible])"), (el) => el.setAttribute("data-visible", ""), {
+      rootMargin: "0px 0px -12% 0px",
+      threshold: 0.12,
+    });
+  }
+
+  // ───────────────────────── Navbar ─────────────────────────
+  /** Se encoge y gana sombra al bajar (CSS: .site-nav[data-scrolled]). */
+  function initNavbar() {
+    const nav = document.querySelector("[data-site-nav]");
+    if (!nav) return;
+    let ticking = false;
+    function update() {
+      nav.toggleAttribute("data-scrolled", window.scrollY > 12);
+      ticking = false;
+    }
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true },
+    );
+    update();
   }
 
   // ───────────────────────── Menú móvil ─────────────────────────
@@ -108,65 +158,496 @@
     });
   }
 
-  // ───────────────────────── Precios de una watchlist ─────────────────────────
-  /** Rellena cada [data-quote="TICKER"] con su precio; se refresca cada 15 s. */
-  function initWatchlistQuotes() {
-    document.querySelectorAll("[data-watchlist-quotes]").forEach((root) => {
-      const slug = root.dataset.watchlistQuotes;
-      const failed = root.querySelector("[data-quotes-failed]");
-      poll(() =>
-        getJSON("/api/watchlist/" + encodeURIComponent(slug) + "/quotes")
-          .then((quotes) => {
-            if (failed) failed.hidden = true;
-            root.querySelectorAll("[data-quote]").forEach((card) => {
-              const q = quotes[card.dataset.quote];
-              if (!q) return;
-              setText(card, '[data-field="price"]', fmtPrice(q.price));
-              setText(card, '[data-field="currency"]', q.currency || "");
-              const pill = setText(card, '[data-field="change-pill"]', fmtPercent(q.change_percent));
-              if (pill) setTone(pill, PILL_TONES, toneOf(q.change_percent));
-              const tone = setText(card, '[data-field="change-tone"]', fmtPercent(q.change_percent));
-              if (tone) setTone(tone, TEXT_TONES, toneOf(q.change_percent));
-            });
-          })
-          // Se mantienen en pantalla los últimos valores.
-          .catch(() => failed && (failed.hidden = false)),
+  // ───────────────────────── Guilloché ─────────────────────────
+  /*
+   * Patrón tipo billete generado en SVG: una roseta de anillos ondulados
+   * entrelazados (dos familias con fase opuesta) que gira muy lento, y bandas
+   * de ondas que se desplazan. Cada capa es un <div> que se anima con
+   * transform (lo compone la GPU, sin repintar el SVG).
+   */
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function rosettePaths(rings, base, step, amp, petals, phaseStep) {
+    const paths = [];
+    const SAMPLES = 360;
+    for (let i = 0; i < rings; i++) {
+      const r0 = base + i * step;
+      const phase = i * phaseStep;
+      let d = "";
+      for (let k = 0; k <= SAMPLES; k++) {
+        const t = (k / SAMPLES) * Math.PI * 2;
+        const r = r0 + amp * Math.sin(petals * t + phase);
+        d += (k ? "L" : "M") + (500 + r * Math.cos(t)).toFixed(1) + " " + (500 + r * Math.sin(t)).toFixed(1);
+      }
+      paths.push(d + "Z");
+    }
+    return paths;
+  }
+
+  function wavePaths(lines, width, gap, amp, length, phaseStep) {
+    const paths = [];
+    for (let j = 0; j < lines; j++) {
+      const y0 = 40 + j * gap;
+      let d = "";
+      for (let x = 0; x <= width; x += 8) {
+        const envelope = 0.55 + 0.45 * Math.sin((x / width) * Math.PI);
+        const y = y0 + amp * envelope * Math.sin(x / length + j * phaseStep);
+        d += (x ? "L" : "M") + x + " " + y.toFixed(1);
+      }
+      paths.push(d);
+    }
+    return paths;
+  }
+
+  function svgFrom(viewBox, groups, aspect) {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("preserveAspectRatio", aspect || "xMidYMid meet");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    groups.forEach(({ paths, width }) => {
+      const g = document.createElementNS(SVG_NS, "g");
+      g.setAttribute("stroke-width", width);
+      g.innerHTML = paths.map((d) => '<path d="' + d + '"/>').join("");
+      svg.appendChild(g);
+    });
+    return svg;
+  }
+
+  /** Globo en líneas (proyección ortográfica): meridianos, paralelos y rutas. */
+  function globePaths() {
+    const R = 460, C = 500, lat0 = (22 * Math.PI) / 180, lon0 = (-8 * Math.PI) / 180;
+    const project = (lat, lon) => {
+      const cosc = Math.sin(lat0) * Math.sin(lat) + Math.cos(lat0) * Math.cos(lat) * Math.cos(lon - lon0);
+      if (cosc < 0) return null;
+      return [C + R * Math.cos(lat) * Math.sin(lon - lon0), C - R * (Math.cos(lat0) * Math.sin(lat) - Math.sin(lat0) * Math.cos(lat) * Math.cos(lon - lon0))];
+    };
+    const line = (pts) => {
+      let d = "", pen = false;
+      pts.forEach((p) => {
+        if (!p) return (pen = false);
+        d += (pen ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1);
+        pen = true;
+      });
+      return d;
+    };
+    const rad = Math.PI / 180;
+    const grid = [];
+    for (let lon = -180; lon < 180; lon += 12) {
+      const pts = [];
+      for (let lat = -90; lat <= 90; lat += 3) pts.push(project(lat * rad, lon * rad));
+      grid.push(line(pts));
+    }
+    for (let lat = -72; lat <= 72; lat += 12) {
+      const pts = [];
+      for (let lon = -180; lon <= 180; lon += 3) pts.push(project(lat * rad, lon * rad));
+      grid.push(line(pts));
+    }
+    // Rutas entre plazas financieras (Nueva York, Londres, Fráncfort, Tokio, São Paulo, Bogotá)
+    const cities = [[40.7, -74], [51.5, -0.1], [50.1, 8.7], [35.7, 139.7], [-23.5, -46.6], [4.7, -74.1]];
+    const routes = [[0, 1], [1, 2], [5, 0], [4, 1], [5, 4], [0, 2]].map(([a, b]) => {
+      const [la1, lo1] = cities[a], [la2, lo2] = cities[b];
+      const pts = [];
+      for (let k = 0; k <= 40; k++) {
+        const t = k / 40;
+        const bump = Math.sin(Math.PI * t) * 14;
+        pts.push(project((la1 + (la2 - la1) * t + bump) * rad, (lo1 + (lo2 - lo1) * t) * rad));
+      }
+      return line(pts);
+    });
+    const dots = cities.map((c) => project(c[0] * rad, c[1] * rad)).filter(Boolean)
+      .map((p) => "M" + (p[0] - 4).toFixed(1) + " " + p[1].toFixed(1) + "a4 4 0 1 0 8 0a4 4 0 1 0 -8 0");
+    return { grid: grid, routes: routes, dots: dots };
+  }
+
+  /** Cinta retorcida de líneas finas (fondo de las cifras y las tarjetas). */
+  function ribbonPaths(lines, width) {
+    const paths = [];
+    for (let j = 0; j < lines; j++) {
+      let d = "";
+      for (let x = 0; x <= width; x += 10) {
+        const y = 130 + 62 * Math.sin(x / 230 + j * 0.05) * Math.cos(x / 520 - j * 0.03) + 22 * Math.sin(x / 95 - j * 0.11);
+        d += (x ? "L" : "M") + x + " " + y.toFixed(1);
+      }
+      paths.push(d);
+    }
+    return paths;
+  }
+
+  function initGlobe(box) {
+    const g = globePaths();
+    const wrap = document.createElement("div");
+    wrap.className = "absolute aspect-square";
+    wrap.style.cssText = "width:min(1100px,120vw);right:-18%;top:calc(50% - min(1100px,120vw) / 2)";
+    const svg = svgFrom("0 0 1000 1000", [{ paths: g.grid, width: 0.8 }]);
+    const routes = document.createElementNS(SVG_NS, "g");
+    routes.setAttribute("stroke-width", "1.4");
+    routes.setAttribute("stroke-dasharray", "4 6");
+    routes.innerHTML = g.routes.map((d) => '<path d="' + d + '"/>').join("") + g.dots.map((d) => '<path d="' + d + '" fill="currentColor"/>').join("");
+    svg.appendChild(routes);
+    wrap.appendChild(svg);
+    const ring = document.createElement("div");
+    ring.className = "guilloche__spin absolute aspect-square";
+    ring.style.cssText = wrap.style.cssText;
+    ring.appendChild(svgFrom("0 0 1000 1000", [{ paths: rosettePaths(5, 476, 6, 8, 48, 0.9), width: 0.7 }]));
+    box.replaceChildren(wrap, ring);
+  }
+
+  function initRibbon(box) {
+    const wave = document.createElement("div");
+    wave.className = "guilloche__wave absolute inset-x-[-6%] inset-y-0";
+    wave.appendChild(svgFrom("0 0 1600 260", [{ paths: ribbonPaths(46, 1600), width: 0.7 }], "none"));
+    box.replaceChildren(wave);
+  }
+
+  // Posición de la roseta y de las ondas por variante.
+  const GUILLOCHE_LAYOUT = {
+    hero: { size: "min(1150px, 125vw)", x: "right: -22%", y: "50%", waves: "bottom: 0; height: 48%" },
+    panel: { size: "max(720px, 120%)", x: "right: -45%", y: "45%", waves: "bottom: 0; height: 55%" },
+    band: { size: "min(1100px, 160%)", x: "left: calc(50% - min(1100px, 160%) / 2)", y: "50%", waves: "top: 0; height: 100%" },
+  };
+
+  function initGuilloche() {
+    document.querySelectorAll("[data-guilloche]").forEach((box) => {
+      if (box.dataset.guilloche === "globe") return initGlobe(box);
+      if (box.dataset.guilloche === "ribbon") return initRibbon(box);
+      const layout = GUILLOCHE_LAYOUT[box.dataset.guilloche] || GUILLOCHE_LAYOUT.hero;
+
+      const spin = document.createElement("div");
+      spin.className = "guilloche__spin absolute aspect-square";
+      spin.style.cssText = "width:" + layout.size + ";" + layout.x + ";top:calc(" + layout.y + " - " + layout.size + " / 2)";
+      spin.appendChild(
+        svgFrom("0 0 1000 1000", [
+          { paths: rosettePaths(26, 150, 12, 16, 18, 0.32), width: 0.9 },
+          { paths: rosettePaths(26, 156, 12, 16, 18, Math.PI + 0.32 * 0.5), width: 0.6 },
+          { paths: rosettePaths(8, 60, 10, 9, 12, 0.5), width: 0.7 },
+        ]),
       );
+
+      const spinRev = document.createElement("div");
+      spinRev.className = "guilloche__spin guilloche__spin--rev absolute aspect-square";
+      spinRev.style.cssText = spin.style.cssText;
+      spinRev.appendChild(svgFrom("0 0 1000 1000", [{ paths: rosettePaths(6, 470, 7, 10, 40, 0.8), width: 0.7 }]));
+
+      const waves = document.createElement("div");
+      waves.className = "guilloche__wave absolute inset-x-[-6%]";
+      waves.style.cssText += layout.waves;
+      waves.appendChild(
+        svgFrom(
+          "0 0 1600 260",
+          [
+            { paths: wavePaths(22, 1600, 9, 34, 120, 0.22), width: 0.8 },
+            { paths: wavePaths(22, 1600, 9, 34, 120, Math.PI + 0.22), width: 0.5 },
+          ],
+          "none",
+        ),
+      );
+
+      box.replaceChildren(waves, spinRev, spin);
     });
   }
 
-  // ───────────────────────── Sparklines ─────────────────────────
-  /** Línea de cierres del último mes como SVG plano (sin librería de gráficos). */
-  function renderSparkline(box, closes) {
-    if (closes.length < 2) {
-      box.innerHTML = '<div class="h-16" aria-hidden="true"></div>';
+  // ───────────────────────── Precios en vivo ─────────────────────────
+  /**
+   * Rellena cada [data-quote="TICKER"] de los bloques [data-watchlist-quotes]
+   * ("slug" o "slug1 slug2 ...") con su precio; se refresca cada 15 s. Aunque
+   * varios bloques compartan watchlist, cada slug se pide una sola vez.
+   */
+  function updatePrice(el, price) {
+    if (price === null || price === undefined) {
+      el.textContent = "—";
       return;
     }
-    const W = 240;
-    const H = 64;
+    const prev = el.dataset.value === undefined ? null : Number(el.dataset.value);
+    el.dataset.value = String(price);
+    if (prev === null || !el.hasAttribute("data-animate-price")) {
+      el.textContent = fmtPrice(price);
+      return;
+    }
+    if (prev === price) return;
+    countTo(el, prev, price, fmtPrice, 650);
+    if (!REDUCED_MOTION) {
+      el.classList.remove("flash-up", "flash-down");
+      void el.offsetWidth; // reinicia la animación del destello
+      el.classList.add(price > prev ? "flash-up" : "flash-down");
+    }
+  }
+
+  function paintQuote(card, q) {
+    card.querySelectorAll('[data-field="price"]').forEach((el) => updatePrice(el, q.price));
+    setText(card, '[data-field="currency"]', q.currency || "");
+    const pill = setText(card, '[data-field="change-pill"]', fmtPercent(q.change_percent));
+    if (pill) setTone(pill, PILL_TONES, toneOf(q.change_percent));
+    const tone = setText(card, '[data-field="change-tone"]', fmtPercent(q.change_percent));
+    if (tone) setTone(tone, TEXT_TONES, toneOf(q.change_percent));
+  }
+
+  function initWatchlistQuotes() {
+    const roots = Array.from(document.querySelectorAll("[data-watchlist-quotes]"));
+    if (!roots.length) return;
+    const slugsOf = (root) => root.dataset.watchlistQuotes.split(/\s+/).filter(Boolean);
+    const slugs = Array.from(new Set(roots.flatMap(slugsOf)));
+
+    poll(() => {
+      const requests = slugs.map((slug) =>
+        getJSON("/api/watchlist/" + encodeURIComponent(slug) + "/quotes").then(
+          (quotes) => [slug, quotes],
+          () => [slug, null],
+        ),
+      );
+      Promise.all(requests).then((results) => {
+        const bySlug = Object.fromEntries(results);
+        roots.forEach((root) => {
+          const failed = root.querySelector("[data-quotes-failed]");
+          const lists = slugsOf(root).map((s) => bySlug[s]);
+          if (failed) failed.hidden = lists.every(Boolean);
+          // Si falla, se mantienen en pantalla los últimos valores.
+          const quotes = Object.assign({}, ...lists.filter(Boolean));
+          root.querySelectorAll("[data-quote]").forEach((card) => {
+            const q = quotes[card.dataset.quote];
+            if (q) paintQuote(card, q);
+          });
+        });
+      });
+    });
+  }
+
+  // ───────────────────────── Sparklines y gráfica del hero ─────────────────────────
+  /** Trazado SVG (línea y área) de una serie de cierres en un lienzo W×H. */
+  function seriesPath(closes, W, H, pad) {
     const min = Math.min(...closes);
     const max = Math.max(...closes);
     const span = max - min || 1;
-    const line = closes
-      .map((v, i) => (i ? "L" : "M") + ((i / (closes.length - 1)) * W).toFixed(1) + " " + (H - 4 - ((v - min) / span) * (H - 8)).toFixed(1))
-      .join(" ");
-    const color = closes[closes.length - 1] >= closes[0] ? "var(--color-up)" : "var(--color-brand)";
-    const gid = "spark-" + box.dataset.sparkline.replace(/[^a-z0-9]/gi, "");
-    box.innerHTML =
-      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" class="h-16 w-full" aria-hidden="true">' +
-      '<defs><linearGradient id="' + gid + '" x1="0" x2="0" y1="0" y2="1">' +
-      '<stop offset="0" stop-color="' + color + '" stop-opacity="0.18"/><stop offset="1" stop-color="' + color + '" stop-opacity="0"/>' +
-      "</linearGradient></defs>" +
-      '<path d="' + line + " L" + W + " " + H + " L0 " + H + ' Z" fill="url(#' + gid + ')"/>' +
-      '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="1.75" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>' +
-      "</svg>";
+    const pts = closes.map((v, i) => [(i / (closes.length - 1)) * W, H - pad - ((v - min) / span) * (H - pad * 2)]);
+    const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    return { line: line, area: line + " L" + W + " " + H + " L0 " + H + " Z", last: pts[pts.length - 1] };
   }
 
+  let gradientId = 0;
+  function areaSVG(closes, W, H, heightClass, withDot) {
+    const color = closes[closes.length - 1] >= closes[0] ? "var(--up)" : "var(--brand)";
+    const gid = "area-" + ++gradientId;
+    const p = seriesPath(closes, W, H, withDot ? 10 : 6);
+    return (
+      '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" class="' + heightClass + ' w-full overflow-visible" aria-hidden="true">' +
+      '<defs><linearGradient id="' + gid + '" x1="0" x2="0" y1="0" y2="1">' +
+      '<stop offset="0" stop-color="' + color + '" stop-opacity="0.24"/><stop offset="1" stop-color="' + color + '" stop-opacity="0"/>' +
+      "</linearGradient></defs>" +
+      '<path class="draw-fill" d="' + p.area + '" fill="url(#' + gid + ')"/>' +
+      '<path class="draw-line" pathLength="1" d="' + p.line + '" fill="none" stroke="' + color + '" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  /** Marca el bloque como dibujado en el siguiente frame (arranca la transición). */
+  function markDrawn(box) {
+    requestAnimationFrame(() => requestAnimationFrame(() => box.setAttribute("data-drawn", "")));
+  }
+
+  /** Línea de cierres del último mes; se dibuja al entrar en pantalla. */
   function initSparklines() {
-    document.querySelectorAll("[data-sparkline]").forEach((box) => {
+    const boxes = document.querySelectorAll("[data-sparkline]");
+    boxes.forEach((box) => {
       getJSON("/api/candles/" + encodeURIComponent(box.dataset.sparkline) + "?range=1mo&interval=1d")
-        .then((candles) => renderSparkline(box, candles.map((c) => c.close)))
-        .catch(() => renderSparkline(box, []));
+        .then((candles) => {
+          const closes = candles.map((c) => c.close);
+          const height = box.dataset.height || "h-24"; // "h-16" o "h-24", escritas en las plantillas
+          box.innerHTML = closes.length < 2 ? '<div class="' + height + '" aria-hidden="true"></div>' : areaSVG(closes, 240, 96, height, false);
+          if (box.dataset.visible !== undefined) markDrawn(box);
+        })
+        .catch(() => (box.innerHTML = '<div class="h-24" aria-hidden="true"></div>'));
+    });
+    onVisible(boxes, (box) => {
+      box.dataset.visible = "";
+      if (box.querySelector("svg")) markDrawn(box);
+    });
+  }
+
+  /** Gráfica de área grande (hero) con máximo, mínimo y variación del periodo. */
+  function initAreaCharts() {
+    document.querySelectorAll("[data-area-chart]").forEach((box) => {
+      const card = box.closest("[data-quote]") || box.parentElement;
+      getJSON("/api/candles/" + encodeURIComponent(box.dataset.areaChart) + "?range=" + (box.dataset.range || "6mo") + "&interval=1d")
+        .then((candles) => {
+          const closes = candles.map((c) => c.close).filter((v) => v !== null && v !== undefined);
+          if (closes.length < 2) throw new Error("sin datos");
+          box.innerHTML = areaSVG(closes, 600, 220, "h-full", true);
+          markDrawn(box);
+          const change = (closes[closes.length - 1] / closes[0] - 1) * 100;
+          setText(card, '[data-chart-stat="max"]', fmtPrice(Math.max(...closes)));
+          setText(card, '[data-chart-stat="min"]', fmtPrice(Math.min(...closes)));
+          const stat = setText(card, '[data-chart-stat="change"]', fmtPercent(change));
+          if (stat) setTone(stat, TEXT_TONES, toneOf(change));
+        })
+        .catch(() => {
+          box.innerHTML = '<p class="grid h-full place-items-center rounded-xl bg-mist text-sm text-muted">No pudimos cargar la gráfica.</p>';
+        });
+    });
+  }
+
+  // ───────────────────────── Cinta de cotizaciones ─────────────────────────
+  /** Botón de pausa de una cinta: pausa su [data-marquee] o su bloque [data-pausable]. */
+  function initMarquee() {
+    document.querySelectorAll("[data-marquee-toggle]").forEach(initMarqueeToggle);
+  }
+
+  function initMarqueeToggle(toggle) {
+    const marquee = toggle.closest("[data-pausable]") || document.querySelector("[data-marquee]");
+    if (!marquee) return;
+    toggle.addEventListener("click", () => {
+      const paused = !marquee.hasAttribute("data-paused");
+      marquee.toggleAttribute("data-paused", paused);
+      toggle.setAttribute("aria-pressed", String(paused));
+      const label = toggle.getAttribute("aria-label").replace(/^(Pausar|Reanudar)/, paused ? "Reanudar" : "Pausar");
+      toggle.setAttribute("aria-label", label);
+      toggle.querySelector('[data-marquee-icon="pause"]').hidden = paused;
+      toggle.querySelector('[data-marquee-icon="play"]').hidden = !paused;
+    });
+  }
+
+  // ───────────────────────── Contadores de métricas ─────────────────────────
+  function initCounters() {
+    const els = document.querySelectorAll("[data-count-to]");
+    if (REDUCED_MOTION) return; // el servidor ya pinta la cifra final
+    els.forEach((el) => (el.textContent = "0"));
+    onVisible(els, (el) => countTo(el, 0, Number(el.dataset.countTo), (v) => String(Math.round(v)), 1200));
+  }
+
+  // ───────────────────────── Carrusel ─────────────────────────
+  function initCarousels() {
+    document.querySelectorAll("[data-carousel]").forEach((root) => {
+      const track = root.querySelector("[data-carousel-track]");
+      const prev = root.querySelector("[data-carousel-prev]");
+      const next = root.querySelector("[data-carousel-next]");
+      if (!track || !prev || !next) return;
+
+      function step() {
+        const item = track.firstElementChild;
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+        return item ? item.getBoundingClientRect().width + gap : track.clientWidth;
+      }
+      function update() {
+        const max = track.scrollWidth - track.clientWidth - 2;
+        prev.disabled = track.scrollLeft <= 2;
+        next.disabled = track.scrollLeft >= max;
+      }
+      const behavior = REDUCED_MOTION ? "auto" : "smooth";
+      prev.addEventListener("click", () => track.scrollBy({ left: -step(), behavior: behavior }));
+      next.addEventListener("click", () => track.scrollBy({ left: step(), behavior: behavior }));
+      track.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") track.scrollBy({ left: step(), behavior: behavior });
+        else if (e.key === "ArrowLeft") track.scrollBy({ left: -step(), behavior: behavior });
+        else return;
+        e.preventDefault();
+      });
+      track.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update);
+      update();
+    });
+  }
+
+  // ───────────────────────── Formularios de cuenta ─────────────────────────
+  /** Botón para mostrar u ocultar la contraseña. */
+  function initPasswordToggles() {
+    document.querySelectorAll("[data-password-toggle]").forEach((btn) => {
+      const input = document.getElementById(btn.getAttribute("aria-controls"));
+      if (!input) return;
+      btn.hidden = false;
+      btn.addEventListener("click", () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.setAttribute("aria-pressed", String(show));
+        btn.setAttribute("aria-label", show ? "Ocultar contraseña" : "Mostrar contraseña");
+        btn.querySelector('[data-eye="show"]').hidden = show;
+        btn.querySelector('[data-eye="hide"]').hidden = !show;
+      });
+    });
+  }
+
+  /** Mensaje de error de un campo (null si es válido). */
+  function fieldError(input, form) {
+    const value = input.value.trim();
+    if (input.required && !value) {
+      return input.type === "email" ? "Escribe tu correo." : input.type === "password" ? "Escribe tu contraseña." : "Este campo es obligatorio.";
+    }
+    if (!value) return null;
+    if (input.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Escribe un correo válido, por ejemplo nombre@correo.com.";
+    if (input.minLength > 0 && input.value.length < input.minLength) return "Usa al menos " + input.minLength + " caracteres.";
+    if (input.pattern && !new RegExp("^(?:" + input.pattern + ")$").test(value)) return "El código tiene 6 dígitos.";
+    const match = input.dataset.matches && form.querySelector("#" + input.dataset.matches);
+    if (match && input.value !== match.value) return "Las contraseñas no coinciden.";
+    return null;
+  }
+
+  function showFieldError(input, message) {
+    const box = document.getElementById(input.id + "-error");
+    input.setAttribute("aria-invalid", message ? "true" : "false");
+    if (!box) return;
+    box.hidden = !message;
+    box.querySelector("[data-error-text]").textContent = message || "";
+  }
+
+  function setLoading(btn, on) {
+    const label = btn.querySelector("[data-label]");
+    btn.toggleAttribute("data-loading", on);
+    btn.setAttribute("aria-busy", String(on));
+    if (label) {
+      if (on && !btn.dataset.idleLabel) btn.dataset.idleLabel = label.textContent;
+      label.textContent = on ? btn.dataset.loadingLabel || "Enviando…" : btn.dataset.idleLabel || label.textContent;
+    }
+    const spinner = btn.querySelector(".spinner");
+    if (on && !spinner) btn.insertAdjacentHTML("afterbegin", '<span class="spinner" aria-hidden="true"></span>');
+    if (!on && spinner) spinner.remove();
+  }
+
+  /** Validación inline en español y estado de carga del botón al enviar. */
+  function initAuthForms() {
+    document.querySelectorAll("[data-auth-form]").forEach((form) => {
+      const inputs = Array.from(form.querySelectorAll("input.field-input"));
+      inputs.forEach((input) =>
+        input.addEventListener("input", () => {
+          if (input.getAttribute("aria-invalid") === "true") showFieldError(input, fieldError(input, form));
+        }),
+      );
+      inputs.forEach((input) =>
+        input.addEventListener("blur", () => {
+          if (input.value) showFieldError(input, fieldError(input, form));
+        }),
+      );
+
+      form.addEventListener("submit", (e) => {
+        const submitter = e.submitter || form.querySelector('button[type="submit"]');
+        if (form.dataset.submitting) {
+          e.preventDefault();
+          return;
+        }
+        // "Reenviar código" (formnovalidate) no necesita validar los campos.
+        if (!(submitter && submitter.formNoValidate)) {
+          let firstInvalid = null;
+          inputs.forEach((input) => {
+            const message = fieldError(input, form);
+            showFieldError(input, message);
+            if (message && !firstInvalid) firstInvalid = input;
+          });
+          if (firstInvalid) {
+            e.preventDefault();
+            firstInvalid.focus();
+            return;
+          }
+        }
+        // No se deshabilita el botón: así el navegador envía su name/value.
+        form.dataset.submitting = "1";
+        if (submitter) setLoading(submitter, true);
+      });
+    });
+
+    // Al volver con "atrás" (bfcache) los botones no deben quedarse cargando.
+    window.addEventListener("pageshow", (e) => {
+      if (!e.persisted) return;
+      document.querySelectorAll("[data-auth-form]").forEach((form) => {
+        delete form.dataset.submitting;
+        form.querySelectorAll("[data-loading]").forEach((btn) => setLoading(btn, false));
+      });
     });
   }
 
@@ -184,7 +665,7 @@
 
     const chart = LC.createChart(root.querySelector("[data-chart]"), {
       autoSize: true,
-      layout: { background: { type: LC.ColorType.Solid, color: "#ffffff" }, textColor: "#6b6b6b", fontFamily: '"Geist Mono", monospace' },
+      layout: { background: { type: LC.ColorType.Solid, color: "#ffffff" }, textColor: "#6b6b6b", fontFamily: '"JetBrains Mono", monospace' },
       grid: { vertLines: { color: "#f3f2ef" }, horzLines: { color: "#f3f2ef" } },
       rightPriceScale: { borderColor: "#e6e4df" },
       timeScale: { borderColor: "#e6e4df", timeVisible: true, secondsVisible: false },
@@ -314,9 +795,17 @@
   }
 
   initReveal();
+  initNavbar();
   initMobileNav();
+  initGuilloche();
   initWatchlistQuotes();
   initSparklines();
+  initAreaCharts();
+  initMarquee();
+  initCounters();
+  initCarousels();
+  initPasswordToggles();
+  initAuthForms();
   initChartWorkspace();
   initReportBuilder();
 })();

@@ -1,33 +1,125 @@
 {% extends "moainvest/base.html" %}
 {% import "moainvest/_macros.html" as ui with context %}
+{% import "core/icons.html" as icons %}
 
-{#- Tarjeta centrada para las pantallas de cuenta. Las clases van enteras
-    porque Tailwind solo compila las que encuentra literalmente (ver
-    moainvest/static/src/moainvest.css). -#}
+{#- Pantalla dividida para las páginas de cuenta: a la izquierda el formulario
+    y a la derecha un panel de marca (guilloché animado + tarjeta de un activo
+    en vivo). En móvil el panel pasa arriba en versión compacta.
+
+    Las clases van enteras porque Tailwind solo compila las que encuentra
+    literalmente (ver moainvest/static/src/moainvest.css). Los formularios
+    siguen enviándose por POST a la misma URL (con su ?next=); moainvest.js
+    solo añade la validación inline y el estado de carga. -#}
 {% block robots %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="mx-auto grid min-h-[70svh] w-full max-w-md place-content-center px-5 py-16 sm:px-0">
-  <p class="eyebrow mb-4 flex items-center gap-3"><span aria-hidden="true" class="h-px w-6 bg-brand"></span>{% block eyebrow %}Cuenta{% endblock %}</p>
-  <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{% block heading %}{% endblock %}</h1>
-  {% block lead %}{% endblock %}
+<div class="grid lg:min-h-[calc(100svh-4.5rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% for category, message in messages %}
-  <p role="{{ 'alert' if category == 'error' else 'status' }}" class="mt-6 rounded-xl border px-4 py-3 text-sm {{ 'border-brand/30 bg-brand-soft text-brand-deep' if category == 'error' else 'border-line bg-mist text-ink' }}">{{ message }}</p>
-  {% endfor %}
-  {% endwith %}
+  {# ── Panel de marca ── #}
+  <aside aria-label="MOAINVEST en vivo" class="relative isolate order-first overflow-hidden border-b border-line bg-cream/40 lg:order-last lg:border-b-0 lg:border-l"
+         data-watchlist-quotes="overview">
+    {{ ui.brand_backdrop("panel") }}
+    <div class="relative flex h-full flex-col justify-between gap-10 px-[var(--gutter)] py-8 lg:p-14 xl:p-16">
+      <p class="eyebrow hidden items-center gap-3 text-ink lg:inline-flex">
+        <span class="live-dot" aria-hidden="true"></span>
+        Mercado en vivo · Yahoo Finance
+      </p>
 
-  <form method="post" class="mt-6 grid gap-4" novalidate>
-    {% block fields %}{% endblock %}
-  </form>
-  <div class="mt-6 text-sm text-muted">{% block footer %}{% endblock %}</div>
+      {# Tarjeta flotante de un activo con su sparkline en vivo #}
+      <div class="motion-safe:lg:animate-float mx-auto w-full max-w-md">
+        <div data-quote="BTC-USD" class="card p-5 shadow-float lg:p-7">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <span class="grid size-10 place-items-center rounded-full bg-brand-soft text-brand">{{ icons.icon("activity", extra_class="size-5") }}</span>
+              <div>
+                <p class="font-semibold tracking-tight">Bitcoin</p>
+                <p class="font-mono text-xs tracking-[0.1em] text-muted">BTC-USD</p>
+              </div>
+            </div>
+            <span data-field="change-pill" class="inline-flex items-center rounded-full px-3 py-1 font-mono text-sm tabular-nums bg-mist text-muted">—</span>
+          </div>
+          <p class="mt-5 font-mono text-3xl font-medium tracking-tight tabular-nums lg:text-4xl">
+            <span data-field="price" data-animate-price class="-mx-1 rounded-lg px-1">—</span><span data-field="currency" class="ml-1.5 text-xs text-muted"></span>
+          </p>
+          <div class="mt-4 hidden sm:block" data-sparkline="BTC-USD">
+            <div class="h-24 animate-pulse rounded-xl bg-mist" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+
+      <blockquote class="hidden max-w-md lg:block">
+        <p class="text-3xl leading-tight font-semibold tracking-[-0.03em] text-balance">
+          Decide con <span class="accent">datos</span>, no con corazonadas.
+        </p>
+        <footer class="mt-4 font-mono text-xs tracking-[0.14em] text-muted uppercase">Personas — Conocimiento — Oportunidades</footer>
+      </blockquote>
+    </div>
+  </aside>
+
+  {# ── Formulario ── #}
+  <section aria-labelledby="auth-title" class="flex items-center justify-center px-[var(--gutter)] py-14 sm:py-20">
+    <div class="w-full max-w-[28rem]">
+      <p class="hero-in eyebrow mb-5 flex items-center gap-3"><span aria-hidden="true" class="h-px w-6 bg-brand"></span>{% block eyebrow %}Cuenta{% endblock %}</p>
+      <h1 id="auth-title" class="hero-in text-balance text-4xl leading-[1.05] font-semibold tracking-[-0.035em] sm:text-5xl" style="--i: 1">{% block heading %}{% endblock %}</h1>
+      <div class="hero-in" style="--i: 2">{% block lead %}{% endblock %}</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+      <p role="{{ 'alert' if category == 'error' else 'status' }}" class="mt-8 flex gap-3 rounded-2xl border px-4 py-3.5 text-[0.95rem] {{ 'border-brand/25 bg-brand-soft text-brand-deep' if category == 'error' else 'border-line bg-mist text-ink' }}">
+        {{ icons.icon("alert-circle" if category == "error" else "check", extra_class="mt-0.5 size-4 shrink-0") }}
+        <span>{{ message }}</span>
+      </p>
+      {% endfor %}
+      {% endwith %}
+
+      <form method="post" class="hero-in mt-8 grid gap-5" style="--i: 3" novalidate data-auth-form>
+        {% block fields %}{% endblock %}
+      </form>
+      <div class="mt-8 grid gap-2 border-t border-line pt-6 text-[0.95rem] text-muted">{% block footer %}{% endblock %}</div>
+    </div>
+  </section>
 </div>
 {% endblock %}
 
-{% macro field(name, label, type="text", value="", autocomplete="off", extra="") -%}
-<label class="grid gap-1.5 text-sm font-medium" for="{{ name }}">{{ label }}
-  <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}" autocomplete="{{ autocomplete }}" {{ extra }}
-         class="h-11 w-full rounded-xl border border-line bg-white px-4 text-[0.95rem] font-normal text-ink outline-none transition-colors focus:border-brand">
-</label>
+{#- Las páginas de cuenta usan un pie mínimo, con el aviso de datos visible. -#}
+{% block site_footer %}
+<footer class="border-t border-line bg-white">
+  <div class="site-container flex flex-col gap-2 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+    <p>Datos de mercado de Yahoo Finance. Pueden tener retraso y no constituyen asesoría financiera.</p>
+    <p>© 2026 MOAINVEST</p>
+  </div>
+</footer>
+{% endblock %}
+
+{#- Campo de formulario: label, input de 48px, botón mostrar/ocultar en las
+    contraseñas y mensaje de error inline (lo rellena moainvest.js). -#}
+{% macro field(name, label, type="text", value="", autocomplete="off", extra="", hint=None, matches=None) -%}
+<div class="grid gap-2">
+  <label class="text-[0.95rem] font-medium text-ink" for="{{ name }}">{{ label }}</label>
+  <div class="relative">
+    <input id="{{ name }}" name="{{ name }}" type="{{ type }}" value="{{ value }}" autocomplete="{{ autocomplete }}" {{ extra | safe }}
+           aria-describedby="{{ name }}-error{% if hint %} {{ name }}-hint{% endif %}"{% if matches %} data-matches="{{ matches }}"{% endif %}
+           class="field-input{% if type == 'password' %} pr-12{% endif %}">
+    {% if type == "password" %}
+    <button type="button" hidden data-password-toggle aria-controls="{{ name }}" aria-pressed="false" aria-label="Mostrar contraseña"
+            class="absolute inset-y-0 right-1 my-auto grid size-10 place-items-center rounded-full text-muted transition-colors hover:bg-mist hover:text-ink">
+      <span data-eye="show">{{ icons.icon("eye", extra_class="size-[1.125rem]") }}</span>
+      <span data-eye="hide" hidden>{{ icons.icon("eye-off", extra_class="size-[1.125rem]") }}</span>
+    </button>
+    {% endif %}
+  </div>
+  {% if hint %}<p id="{{ name }}-hint" class="text-sm text-muted">{{ hint }}</p>{% endif %}
+  <p id="{{ name }}-error" hidden class="flex items-center gap-1.5 text-sm font-medium text-brand-deep">
+    {{ icons.icon("alert-circle", extra_class="size-4 shrink-0") }}<span data-error-text></span>
+  </p>
+</div>
+{%- endmacro %}
+
+{#- Botón de envío con etiqueta y texto de carga. ``extra``/``attrs`` son
+    atributos literales escritos en las plantillas (nunca datos del usuario):
+    se marcan como seguros para que el autoescape no rompa sus comillas. -#}
+{% macro submit(label, loading_label, variant="primary", size="lg", attrs="") -%}
+<button type="submit" data-loading-label="{{ loading_label }}" {{ attrs | safe }} class="{{ ui.btn(variant, size, 'w-full') }}">
+  <span data-label>{{ label }}</span>{% if variant == "primary" %} {{ ui.arrow() }}{% endif %}
+</button>
 {%- endmacro %}

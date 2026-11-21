@@ -148,5 +148,32 @@ def test_compiled_css_includes_classes_used_by_templates_and_js():
     # Clases que solo aparecen en moainvest.js (tonos que se ponen en tiempo de ejecución).
     for cls in ("bg-up-soft", "text-brand-deep", r"hover\:bg-line", r"border-ink\/30"):
         assert cls in css, cls
-    for cls in (".accent", ".eyebrow", ".hero-in", "--color-brand:#c8102e"):
+    for cls in (".accent", ".eyebrow", ".hero-in"):
         assert cls in css, cls
+    # Los valores salen de core/static/css/tokens.css (fuente única), que se
+    # importa al compilar; @theme solo los expone como utilidades.
+    assert "--brand:#c8102e" in css
+    assert "--color-brand:var(--brand)" in css
+
+
+def test_home_shows_every_asset_and_a_real_signup_form(client):
+    page = client.get("/").get_data(as_text=True)
+    # La banda oscura muestra todos los activos de todas las watchlists, sin repetir.
+    tickers = {s.ticker for w in WATCHLISTS for s in w.symbols}
+    slugs = " ".join(w.slug for w in WATCHLISTS)
+    assert f'data-watchlist-quotes="{slugs}"' in page
+    for ticker in tickers:
+        assert f'data-quote="{ticker}"' in page
+    # El cierre tiene el registro real (POST a /registro) cuando no hay sesión.
+    assert '<form method="post" action="/registro"' in page
+    for name in ("name", "email", "password", "password2"):
+        assert f'name="{name}"' in page
+    assert "Invierte con" in page and "Datos de mercado de Yahoo Finance." in page
+
+
+def test_home_hides_signup_form_when_logged_in(client):
+    with client.session_transaction() as s:
+        s["user"] = {"id": "u1", "email": "ana@example.com", "name": "Ana"}
+    page = client.get("/").get_data(as_text=True)
+    assert 'action="/registro"' not in page
+    assert "Hola, Ana." in page
